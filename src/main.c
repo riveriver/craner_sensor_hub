@@ -6,6 +6,7 @@ int main(void)
 {
 	printf("craner_encoder_hub started on craner_general_board_v110\n");
 	printk("printk is also routed to UART5 PB6/PB5\n");
+	printk("Type 'fw_time' in shell to show firmware build time\n");
 
 	while (1) {
 		k_sleep(K_SECONDS(1));
