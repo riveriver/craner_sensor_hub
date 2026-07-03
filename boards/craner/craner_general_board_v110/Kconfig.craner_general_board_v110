@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_CRANER_GENERAL_BOARD_V110
+	select SOC_STM32H743XX

@@ -1,0 +1,56 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <st/h7/stm32h743Xi.dtsi>
+#include <st/h7/stm32h743vitx-pinctrl.dtsi>
+
+/ {
+	model = "Craner General Board V1.10";
+	compatible = "craner,craner-general-board-v110";
+
+	chosen {
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,console = &uart5;
+		zephyr,shell-uart = &uart5;
+	};
+};
+
+&clk_hse {
+	clock-frequency = <DT_FREQ_M(25)>;
+	status = "okay";
+};
+
+&pll {
+	div-m = <5>;
+	mul-n = <96>;
+	div-p = <2>;
+	div-q = <10>;
+	div-r = <2>;
+	clocks = <&clk_hse>;
+	status = "okay";
+};
+
+&rcc {
+	clocks = <&pll>;
+	clock-frequency = <DT_FREQ_M(240)>;
+	d1cpre = <1>;
+	hpre = <2>;
+	d1ppre = <1>;
+	d2ppre1 = <1>;
+	d2ppre2 = <1>;
+	d3ppre = <1>;
+};
+
+&pwr {
+	power-supply = "ldo";
+};
+
+&uart5 {
+	pinctrl-0 = <&uart5_tx_pb6 &uart5_rx_pb5>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};

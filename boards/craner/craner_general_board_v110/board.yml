@@ -1,0 +1,6 @@
+board:
+  name: craner_general_board_v110
+  full_name: Craner General Board V1.10
+  vendor: craner
+  socs:
+    - name: stm32h743xx
