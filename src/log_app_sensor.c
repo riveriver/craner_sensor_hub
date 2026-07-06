@@ -18,5 +18,5 @@ static void log_app_sensor_thread(void)
 	}
 }
 
-K_THREAD_DEFINE(log_app_sensor_tid, LOG_APP_SENSOR_STACK_SIZE, log_app_sensor_thread,
-		NULL, NULL, NULL, LOG_APP_SENSOR_PRIORITY, 0, 0);
+// K_THREAD_DEFINE(log_app_sensor_tid, LOG_APP_SENSOR_STACK_SIZE, log_app_sensor_thread,
+// 		NULL, NULL, NULL, LOG_APP_SENSOR_PRIORITY, 0, 0);

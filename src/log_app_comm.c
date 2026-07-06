@@ -18,5 +18,5 @@ static void log_app_comm_thread(void)
 	}
 }
 
-K_THREAD_DEFINE(log_app_comm_tid, LOG_APP_COMM_STACK_SIZE, log_app_comm_thread,
-		NULL, NULL, NULL, LOG_APP_COMM_PRIORITY, 0, 0);
+// K_THREAD_DEFINE(log_app_comm_tid, LOG_APP_COMM_STACK_SIZE, log_app_comm_thread,
+// 		NULL, NULL, NULL, LOG_APP_COMM_PRIORITY, 0, 0);

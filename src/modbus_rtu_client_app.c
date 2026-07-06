@@ -86,6 +86,6 @@ static void modbus_rtu_client_thread(void)
 	}
 }
 
-K_THREAD_DEFINE(modbus_rtu_client_tid, MODBUS_CLIENT_STACK_SIZE,
-		modbus_rtu_client_thread, NULL, NULL, NULL,
-		MODBUS_CLIENT_PRIORITY, 0, 0);
+// K_THREAD_DEFINE(modbus_rtu_client_tid, MODBUS_CLIENT_STACK_SIZE,
+// 		modbus_rtu_client_thread, NULL, NULL, NULL,
+// 		MODBUS_CLIENT_PRIORITY, 0, 0);
