@@ -11,4 +11,5 @@ target_sources(app PRIVATE
 	src/log_app_comm.c
 	src/shell_app.c
 	src/modbus_rtu_client_app.c
+	src/ethernet_app.c
 )
