@@ -5,10 +5,11 @@
 /dts-v1/;
 #include <st/h7/stm32h743Xi.dtsi>
 #include <st/h7/stm32h743vitx-pinctrl.dtsi>
+#include <zephyr/dt-bindings/gpio/gpio.h>
 
 / {
-	model = "Craner General Board V1.10";
-	compatible = "craner,craner-general-board-v110";
+	model = "Craner General STM32H743VIT6 PCB V1.1.0";
+	compatible = "craner,craner-general-stm32h743vit6";
 
 	chosen {
 		zephyr,sram = &sram0;
@@ -20,6 +21,10 @@
 
 &clk_hse {
 	clock-frequency = <DT_FREQ_M(25)>;
+	status = "okay";
+};
+
+&clk_hsi48 {
 	status = "okay";
 };
 
@@ -48,6 +53,10 @@
 	power-supply = "ldo";
 };
 
+&rng {
+	status = "okay";
+};
+
 &uart5 {
 	pinctrl-0 = <&uart5_tx_pb6 &uart5_rx_pb5>;
 	pinctrl-names = "default";
@@ -64,5 +73,34 @@
 	modbus0 {
 		compatible = "zephyr,modbus-serial";
 		status = "okay";
+	};
+};
+
+&mac {
+	pinctrl-0 = <&eth_ref_clk_pa1
+		     &eth_crs_dv_pa7
+		     &eth_rxd0_pc4
+		     &eth_rxd1_pc5
+		     &eth_tx_en_pb11
+		     &eth_txd0_pb12
+		     &eth_txd1_pb13>;
+	pinctrl-names = "default";
+	local-mac-address = [02 00 00 00 01 32];
+	phy-connection-type = "rmii";
+	phy-handle = <&eth_phy>;
+	status = "okay";
+};
+
+&mdio {
+	pinctrl-0 = <&eth_mdio_pa2 &eth_mdc_pc1>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	eth_phy: ethernet-phy@0 {
+		compatible = "ethernet-phy";
+		reg = <0x00>;
+		reset-gpios = <&gpioc 0 GPIO_ACTIVE_LOW>;
+		reset-assert-duration-us = <10000>;
+		reset-deassertion-timeout-ms = <100>;
 	};
 };

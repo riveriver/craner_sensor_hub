@@ -1,0 +1,11 @@
+identifier: craner_general_stm32h743vit6
+name: Craner General STM32H743VIT6 PCB V1.1.0
+type: mcu
+arch: arm
+ram: 1024
+flash: 2048
+toolchain:
+  - zephyr
+supported:
+  - uart
+  - ethernet

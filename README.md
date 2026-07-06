@@ -1,16 +1,17 @@
 # craner_encoder_hub
 
-用于 `craner_general_board_v110` 板子的独立 Zephyr 应用。
+用于 `craner_general_stm32h743vit6` 板子的独立 Zephyr 应用。
 
 ## 板卡信息
 
 | 项目 | 值 |
 | --- | --- |
-| Zephyr 板卡 ID | `craner_general_board_v110` |
-| 板卡 | Craner General Board V1.10 |
+| Zephyr 板卡 ID | `craner_general_stm32h743vit6` |
+| 板卡 | Craner General STM32H743VIT6 PCB V1.1.0 |
+| PCB 硬件版本 | `1.1.0` |
 | 主控 | STM32H743VIT6 |
 | 控制台串口 | UART5，PB6 TX / PB5 RX，115200 波特率 |
-| Zephyr 板级文件 | `boards/craner/craner_general_board_v110/` |
+| Zephyr 板级文件 | `boards/craner/craner_general_stm32h743vit6/` |
 
 ## 编译
 
@@ -24,7 +25,7 @@
 
 ```powershell
 $env:ZEPHYR_BASE = "C:\Users\river\dev\zephyr_ws\zephyrproject\zephyr"
-python -m west build -b craner_general_board_v110 . -d build\craner_general_board_v110
+python -m west build -b craner_general_stm32h743vit6 . -d build\craner_general_stm32h743vit6
 ```
 
 ## 烧录
@@ -38,5 +39,5 @@ python -m west build -b craner_general_board_v110 . -d build\craner_general_boar
 等价的手动命令：
 
 ```powershell
-python -m west flash -d build\craner_general_board_v110 --runner stm32cubeprogrammer
+python -m west flash -d build\craner_general_stm32h743vit6 --runner stm32cubeprogrammer
 ```

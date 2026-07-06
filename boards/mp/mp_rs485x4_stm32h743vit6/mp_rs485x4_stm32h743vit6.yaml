@@ -1,0 +1,11 @@
+identifier: mp_rs485x4_stm32h743vit6
+name: MP RS485x4 STM32H743VIT6 PCB V1.2.0
+type: mcu
+arch: arm
+ram: 1024
+flash: 2048
+toolchain:
+  - zephyr
+supported:
+  - uart
+  - ethernet

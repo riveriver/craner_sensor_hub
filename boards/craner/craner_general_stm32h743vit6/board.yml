@@ -1,0 +1,6 @@
+board:
+  name: craner_general_stm32h743vit6
+  full_name: Craner General STM32H743VIT6 PCB V1.1.0
+  vendor: craner
+  socs:
+    - name: stm32h743xx

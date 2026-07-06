@@ -1,5 +1,5 @@
 param(
-    [string]$Board = "craner_general_board_v110"
+    [string]$Board = "craner_general_stm32h743vit6"
 )
 
 $workspaceRoot = Resolve-Path "$PSScriptRoot\.."

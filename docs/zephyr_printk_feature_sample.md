@@ -2,7 +2,7 @@
 
 本文面向刚接触本项目的同事，说明如何在 Zephyr 中把 `printf()` 输出重定向到指定 UART，并在电脑终端中看到打印信息。
 
-本项目当前使用的板子是 `craner_general_board_v110`，主控是 `STM32H743VIT6`，控制台串口配置为：
+本项目当前使用的板子是 `craner_general_stm32h743vit6`，主控是 `STM32H743VIT6`，控制台串口配置为：
 
 | 项目 | 配置 |
 | --- | --- |
@@ -43,14 +43,14 @@ printf()
 板级 devicetree 文件位于：
 
 ```text
-boards/craner/craner_general_board_v110/craner_general_board_v110.dts
+boards/craner/craner_general_stm32h743vit6/craner_general_stm32h743vit6.dts
 ```
 
 在根节点的 `chosen` 中指定控制台：
 
 ```dts
 / {
-	model = "Craner General Board V1.10";
+	model = "Craner General STM32H743VIT6 PCB V1.1.0";
 	compatible = "craner,craner-general-board-v110";
 
 	chosen {
@@ -164,7 +164,7 @@ src/main.c
 
 int main(void)
 {
-	printf("craner_encoder_hub started on craner_general_board_v110\n");
+	printf("craner_encoder_hub started on craner_general_stm32h743vit6\n");
 	printk("printk is also routed to UART5 PB6/PB5\n");
 
 	while (1) {
@@ -206,13 +206,13 @@ printf("hello uart5\n");
 当前脚本默认使用的板子是：
 
 ```text
-craner_general_board_v110
+craner_general_stm32h743vit6
 ```
 
 构建输出目录是：
 
 ```text
-build/craner_general_board_v110
+build/craner_general_stm32h743vit6
 ```
 
 ## 第六步：打开串口终端
@@ -232,7 +232,7 @@ build/craner_general_board_v110
 打开终端后，复位板子，应该能看到类似输出：
 
 ```text
-craner_encoder_hub started on craner_general_board_v110
+craner_encoder_hub started on craner_general_stm32h743vit6
 printk is also routed to UART5 PB6/PB5
 ```
 
@@ -241,8 +241,8 @@ printk is also routed to UART5 PB6/PB5
 编译后可以检查生成文件：
 
 ```text
-build/craner_general_board_v110/zephyr/zephyr.dts
-build/craner_general_board_v110/zephyr/.config
+build/craner_general_stm32h743vit6/zephyr/zephyr.dts
+build/craner_general_stm32h743vit6/zephyr/.config
 ```
 
 在 `zephyr.dts` 中应该能看到：
@@ -325,14 +325,14 @@ list(APPEND BOARD_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 可以清理后重新编译：
 
 ```powershell
-Remove-Item -Recurse -Force .\build\craner_general_board_v110
+Remove-Item -Recurse -Force .\build\craner_general_stm32h743vit6
 .\build.ps1
 ```
 
 也可以直接使用 pristine build：
 
 ```powershell
-python -m west build -p always -b craner_general_board_v110 . -d build\craner_general_board_v110
+python -m west build -p always -b craner_general_stm32h743vit6 . -d build\craner_general_stm32h743vit6
 ```
 
 ## 新板子迁移 checklist

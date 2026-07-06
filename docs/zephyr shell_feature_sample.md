@@ -6,7 +6,7 @@
 
 | 项目 | 配置 |
 | --- | --- |
-| 板卡 | `craner_general_board_v110` |
+| 板卡 | `craner_general_stm32h743vit6` |
 | 串口 | UART5 |
 | TX | PB6 |
 | RX | PB5 |
@@ -44,7 +44,7 @@ Shell 常用于：
 板级 DTS 文件：
 
 ```text
-boards/craner/craner_general_board_v110/craner_general_board_v110.dts
+boards/craner/craner_general_stm32h743vit6/craner_general_stm32h743vit6.dts
 ```
 
 在 `chosen` 节点中指定 Shell 使用的 UART：
@@ -177,7 +177,7 @@ CONFIG_SHELL_PROMPT_UART="craner:~$ "
 复位板子后，终端中会看到启动打印和 Shell 提示符，类似：
 
 ```text
-craner_encoder_hub started on craner_general_board_v110
+craner_encoder_hub started on craner_general_stm32h743vit6
 printk is also routed to UART5 PB6/PB5
 Type 'fw_time' in shell to show firmware build time
 craner:~$

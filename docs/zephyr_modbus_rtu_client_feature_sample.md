@@ -1,6 +1,6 @@
 # Zephyr Modbus RTU Client 功能实现说明
 
-本文说明本项目如何在 `craner_general_board_v110` 上启用 Modbus RTU client，并通过 USART6 周期读取从站寄存器。
+本文说明本项目如何在 `craner_general_stm32h743vit6` 上启用 Modbus RTU client，并通过 USART6 周期读取从站寄存器。
 
 当前实现：
 
@@ -23,7 +23,7 @@
 板级 DTS 文件：
 
 ```text
-boards/craner/craner_general_board_v110/craner_general_board_v110.dts
+boards/craner/craner_general_stm32h743vit6/craner_general_stm32h743vit6.dts
 ```
 
 启用 USART6，并把 PC6/PC7 配置为 Modbus RTU 使用的串口：

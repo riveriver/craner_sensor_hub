@@ -1,0 +1,6 @@
+board:
+  name: mp_rs485x4_stm32h743vit6
+  full_name: MP RS485x4 STM32H743VIT6 PCB V1.2.0
+  vendor: mp
+  socs:
+    - name: stm32h743xx
