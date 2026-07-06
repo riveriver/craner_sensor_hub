@@ -1,5 +1,5 @@
 param(
-    [string]$Board = "craner_general_stm32h743vit6",
+    [string]$Board = "mp_rs485x4_stm32h743vit6",
     [string]$Runner = "stm32cubeprogrammer"
 )
 
