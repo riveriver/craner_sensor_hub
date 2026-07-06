@@ -1,32 +1,86 @@
-# Zephyr Modbus RTU Client 功能实现说明
+# Zephyr Modbus RTU Client 示例：串口轮询寄存器
 
-本文说明本项目如何在 `craner_general_stm32h743vit6` 上启用 Modbus RTU client，并通过 USART6 周期读取从站寄存器。
+## 1. 示例实现了什么
 
-当前实现：
+本示例演示如何在 Zephyr 中使用 Modbus RTU client，通过板卡上的 Modbus 串口周期读取从站 Holding Register。
 
-| 项目 | 配置 |
+当前业务参数在 `src/modbus_rtu_client_app.c`：
+
+| 项目 | 值 |
 | --- | --- |
-| 串口 | USART6 |
-| TX | PC6 |
-| RX | PC7 |
-| 波特率 | 115200 |
-| 数据格式 | 8N1 |
-| Modbus 模式 | RTU client |
-| 从站地址 | `1` |
-| 功能码 | FC03，读保持寄存器 |
+| Unit ID | `1` |
+| 功能码 | FC03 Read Holding Registers |
 | 起始地址 | `0x0002` |
-| 寄存器数量 | 2 |
-| 读取频率 | 25 Hz |
+| 数量 | `2` |
+| 轮询周期 | `40 ms`，即 25 Hz |
+| 串口格式 | `115200 8N1` |
 
-## 一、板级串口配置
+两块板的 Modbus 串口不同：
 
-板级 DTS 文件：
+| 板卡 | Modbus UART | TX | RX |
+| --- | --- | --- | --- |
+| `craner_general_stm32h743vit6` | USART6 | PC6 | PC7 |
+| `mp_rs485x4_stm32h743vit6` | UART7 | PE8 | PE7 |
 
-```text
-boards/craner/craner_general_stm32h743vit6/craner_general_stm32h743vit6.dts
+注意：当前 `K_THREAD_DEFINE(modbus_rtu_client_tid, ...)` 是注释状态，所以默认固件不会自动启动 RTU client。需要启用该宏后才会周期读取。
+
+## 2. 怎么使用
+
+启用线程：
+
+```c
+K_THREAD_DEFINE(modbus_rtu_client_tid, MODBUS_CLIENT_STACK_SIZE,
+		modbus_rtu_client_thread, NULL, NULL, NULL,
+		MODBUS_CLIENT_PRIORITY, 0, 0);
 ```
 
-启用 USART6，并把 PC6/PC7 配置为 Modbus RTU 使用的串口：
+编译：
+
+```powershell
+.\build.ps1
+```
+
+连接 Modbus RTU 从站，参数设置为：
+
+| 参数 | 值 |
+| --- | --- |
+| Slave ID | `1` |
+| Baudrate | `115200` |
+| Data bits | `8` |
+| Parity | None |
+| Stop bits | `1` |
+
+读取成功时日志类似：
+
+```text
+FC03 addr=0x0002 qty=2 value[0]=0x1234 value[1]=0x5678
+```
+
+读取失败时日志类似：
+
+```text
+FC03 addr=0x0002 qty=2 failed: -116
+```
+
+## 3. 前置条件
+
+需要：
+
+| 项目 | 说明 |
+| --- | --- |
+| RS-485 收发器 | MCU UART 不能直接接 A/B 总线 |
+| 从站设备 | Unit ID 为 `1`，支持 FC03 |
+| 串口参数 | `115200 8N1` |
+| 接线 | TX/RX 或 RS-485 A/B 正确连接，GND 共地 |
+| 方向控制 | 当前 DTS 未配置 DE/nRE GPIO，如硬件需要需补充 |
+
+如果硬件是 RS-485 半双工且需要 MCU 控制方向脚，需要在 `modbus0` 节点增加方向控制 GPIO。
+
+## 4. 设备树：硬件描述
+
+Zephyr Modbus 串口接口由 UART 子节点描述：
+
+Craner 板：
 
 ```dts
 &usart6 {
@@ -42,59 +96,85 @@ boards/craner/craner_general_stm32h743vit6/craner_general_stm32h743vit6.dts
 };
 ```
 
-`modbus0` 节点使用 Zephyr 的 `zephyr,modbus-serial` binding。应用启动时会通过这个节点找到 Modbus 串口接口。
+MP 板：
 
-## 二、项目配置
+```dts
+&uart7 {
+	pinctrl-0 = <&uart7_tx_pe8 &uart7_rx_pe7>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
 
-项目配置文件：
-
-```text
-prj.conf
+	modbus0 {
+		compatible = "zephyr,modbus-serial";
+		status = "okay";
+	};
+};
 ```
 
-新增配置：
+关键点：
+
+| DTS 项 | 作用 |
+| --- | --- |
+| `pinctrl-0` | 把 UART TX/RX 绑定到具体引脚 |
+| `current-speed` | UART 默认波特率 |
+| `status = "okay"` | 启用该 UART |
+| `compatible = "zephyr,modbus-serial"` | 让 Zephyr 创建 Modbus serial interface |
+
+业务代码通过这个宏找到第一个可用的 Modbus serial 节点：
+
+```c
+#define MODBUS_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_modbus_serial)
+```
+
+## 5. Kconfig/prj.conf：软件配置
+
+相关配置：
 
 ```conf
 CONFIG_UART_INTERRUPT_DRIVEN=y
 CONFIG_UART_LINE_CTRL=n
+
 CONFIG_MODBUS=y
-CONFIG_MODBUS_ROLE_CLIENT=y
+CONFIG_MODBUS_ROLE_CLIENT_SERVER=y
 CONFIG_MODBUS_NONCOMPLIANT_SERIAL_MODE=y
 ```
 
-其中：
+含义：
 
 | 配置 | 作用 |
 | --- | --- |
-| `CONFIG_UART_INTERRUPT_DRIVEN=y` | Modbus 串口后端使用 UART 中断收发 |
-| `CONFIG_MODBUS=y` | 启用 Zephyr Modbus 子系统 |
-| `CONFIG_MODBUS_ROLE_CLIENT=y` | 只启用 Modbus client 角色 |
-| `CONFIG_MODBUS_NONCOMPLIANT_SERIAL_MODE=y` | 允许显式配置 8N1 的 1 个停止位 |
+| `CONFIG_UART_INTERRUPT_DRIVEN=y` | Modbus serial 后端使用中断驱动 UART |
+| `CONFIG_MODBUS=y` | 启用 Modbus 子系统 |
+| `CONFIG_MODBUS_ROLE_CLIENT_SERVER=y` | 同时编译 client 和 server 能力 |
+| `CONFIG_MODBUS_NONCOMPLIANT_SERIAL_MODE=y` | 允许 RTU 使用 8N1 的 1 个停止位 |
 
-Zephyr Modbus RTU 在无校验时默认按规范使用 2 个停止位。本项目为了匹配常见设备的 8N1 参数，启用了 non-compliant serial mode，并在代码中设置 `UART_CFG_STOP_BITS_1`。
+Modbus 标准在无校验时常见要求 2 个停止位，但很多设备使用 8N1。本项目显式设置 `UART_CFG_STOP_BITS_1`，所以打开 non-compliant 模式。
 
-## 三、应用模块
+## 6. 业务/应用代码
 
-源码文件：
-
-```text
-src/modbus_rtu_client_app.c
-```
-
-关键参数集中在文件顶部：
+初始化参数：
 
 ```c
-#define MODBUS_CLIENT_UNIT_ID 1
-#define MODBUS_CLIENT_BAUDRATE 115200
-#define MODBUS_CLIENT_RX_TIMEOUT_US 20000
-#define MODBUS_CLIENT_POLL_PERIOD_MS 40
-#define MODBUS_CLIENT_START_ADDR 0x0002
-#define MODBUS_CLIENT_REGISTER_COUNT 2
+static const struct modbus_iface_param modbus_client_param = {
+	.mode = MODBUS_MODE_RTU,
+	.rx_timeout = MODBUS_CLIENT_RX_TIMEOUT_US,
+	.serial = {
+		.baud = MODBUS_CLIENT_BAUDRATE,
+		.parity = UART_CFG_PARITY_NONE,
+		.stop_bits = UART_CFG_STOP_BITS_1,
+	},
+};
 ```
 
-`MODBUS_CLIENT_POLL_PERIOD_MS` 为 40 ms，对应 25 Hz。
+初始化流程：
 
-读取逻辑使用 Zephyr 原生 API：
+```c
+modbus_client_iface = modbus_iface_get_by_name(iface_name);
+modbus_init_client(modbus_client_iface, modbus_client_param);
+```
+
+读取寄存器：
 
 ```c
 err = modbus_read_holding_regs(modbus_client_iface,
@@ -104,92 +184,34 @@ err = modbus_read_holding_regs(modbus_client_iface,
 			       ARRAY_SIZE(regs));
 ```
 
-读取成功后会通过日志打印：
+线程用 `next_poll_time` 控制 40 ms 周期，避免每次读操作耗时造成长期漂移。
 
-```text
-FC03 addr=0x0002 qty=2 value[0]=0x1234 value[1]=0x5678
-```
+## 7. 如何扩展
 
-## 四、编译和烧录
+常见修改：
 
-编译：
+| 需求 | 修改位置 |
+| --- | --- |
+| 改从站地址 | `MODBUS_CLIENT_UNIT_ID` |
+| 改读取地址 | `MODBUS_CLIENT_START_ADDR` |
+| 改读取数量 | `MODBUS_CLIENT_REGISTER_COUNT` |
+| 改频率 | `MODBUS_CLIENT_POLL_PERIOD_MS` |
+| 改波特率 | DTS 的 `current-speed` 和 `MODBUS_CLIENT_BAUDRATE` |
+| 读 Input Register | 改用 `modbus_read_input_regs()` |
+
+## 8. 常见问题排查
+
+| 现象 | 检查项 |
+| --- | --- |
+| 没有任何 RTU 日志 | `K_THREAD_DEFINE()` 当前是否仍注释 |
+| 返回超时 | 从站 ID、波特率、A/B 接线、方向控制 |
+| 编译找不到 Modbus 节点 | DTS 是否有 `zephyr,modbus-serial` 且 `status = "okay"` |
+| 数据错误 | 检查寄存器地址是否需要 0-based 或 1-based 转换 |
+| RS-485 只能发不能收 | 检查 DE/nRE 控制和收发器电路 |
+
+生成文件检查：
 
 ```powershell
-.\build.ps1
+Select-String build\mp_rs485x4_stm32h743vit6\zephyr\zephyr.dts -Pattern "modbus0|zephyr,modbus-serial|uart7"
+Select-String build\mp_rs485x4_stm32h743vit6\zephyr\.config -Pattern "CONFIG_MODBUS|CONFIG_UART_INTERRUPT_DRIVEN"
 ```
-
-烧录：
-
-```powershell
-.\flash.ps1
-```
-
-打开 UART5 控制台串口查看日志：
-
-| 参数 | 值 |
-| --- | --- |
-| 波特率 | 115200 |
-| 数据位 | 8 |
-| 校验位 | None |
-| 停止位 | 1 |
-| 流控 | None |
-
-注意：控制台仍然使用 UART5，Modbus RTU 使用 USART6。
-
-## 五、硬件接线
-
-如果接的是 TTL 串口 Modbus 设备：
-
-```text
-板子 PC6 / USART6_TX -> 从站 RX
-板子 PC7 / USART6_RX -> 从站 TX
-板子 GND             -> 从站 GND
-```
-
-如果接的是 RS-485 Modbus 设备，需要外接 RS-485 收发器。本次实现没有配置 DE/nRE 方向控制引脚，因为当前需求只提供了 USART6 的 TX/RX 引脚。若硬件需要 MCU 控制方向，需要在 `modbus0` 节点中补充 `de-gpios` 或 `re-gpios`。
-
-## 六、常见问题
-
-### 1. 一直打印 FC03 failed
-
-检查：
-
-| 检查项 | 说明 |
-| --- | --- |
-| 从站地址 | 当前代码默认 `MODBUS_CLIENT_UNIT_ID` 为 `1` |
-| 寄存器类型 | 当前读的是保持寄存器 FC03，不是输入寄存器 FC04 |
-| 寄存器地址 | 当前起始地址为 `0x0002`，数量为 2 |
-| 串口参数 | 当前为 115200 8N1 |
-| 接线 | TX/RX 需要交叉连接，且 GND 必须共地 |
-
-### 2. 设备要求 9600 或偶校验
-
-修改 `src/modbus_rtu_client_app.c`：
-
-```c
-#define MODBUS_CLIENT_BAUDRATE 9600
-```
-
-并调整：
-
-```c
-.parity = UART_CFG_PARITY_EVEN,
-```
-
-### 3. 设备需要读输入寄存器
-
-当前代码使用：
-
-```c
-modbus_read_holding_regs(...)
-```
-
-如果设备文档要求 FC04，需要改成：
-
-```c
-modbus_read_input_regs(...)
-```
-
-### 4. 25 Hz 不稳定
-
-当前线程按 40 ms 周期发起读取。若从站响应慢、超时、串口速率低，实际读取频率会下降。可以降低读取频率，或缩短 `MODBUS_CLIENT_RX_TIMEOUT_US`，但超时过短会导致正常响应也被判失败。
