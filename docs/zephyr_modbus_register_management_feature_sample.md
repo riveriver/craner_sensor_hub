@@ -1,4 +1,4 @@
-# Zephyr Modbus Register 管理示例
+﻿# Zephyr Modbus Register 管理示例
 
 ## 1. 示例实现了什么
 
@@ -35,12 +35,12 @@
 | `0x0009` | `REG_LUFFING_ONLINE_CODE` | 变幅在线码，成功为 `1`，失败为 `0` |
 | `0x000A` | `REG_LUFFING_TRUN_CNT` | 变幅圈数 |
 | `0x000B` | `REG_LUFFING_SINAGLE_VAL` | 变幅单圈值 |
-| `0x000C` | `REG_HOOK_TIMESTAMP_H` | 吊钩上一次成功更新时间戳高 16 位 |
-| `0x000D` | `REG_HOOK_TIMESTAMP_L` | 吊钩上一次成功更新时间戳低 16 位 |
-| `0x000E` | `REG_HOOK_ERROR_CODE` | 吊钩最近一次通信错误码，成功为 `0` |
-| `0x000F` | `REG_HOOK_ONLINE_CODE` | 吊钩在线码，成功为 `1`，失败为 `0` |
-| `0x0010` | `REG_HOOK_TRUN_CNT` | 吊钩圈数 |
-| `0x0011` | `REG_HOOK_SINAGLE_VAL` | 吊钩单圈值 |
+| `0x000C` | `REG_HOIST_TIMESTAMP_H` | 吊钩上一次成功更新时间戳高 16 位 |
+| `0x000D` | `REG_HOIST_TIMESTAMP_L` | 吊钩上一次成功更新时间戳低 16 位 |
+| `0x000E` | `REG_HOIST_ERROR_CODE` | 吊钩最近一次通信错误码，成功为 `0` |
+| `0x000F` | `REG_HOIST_ONLINE_CODE` | 吊钩在线码，成功为 `1`，失败为 `0` |
+| `0x0010` | `REG_HOIST_TRUN_CNT` | 吊钩圈数 |
+| `0x0011` | `REG_HOIST_SINAGLE_VAL` | 吊钩单圈值 |
 
 其他寄存器：
 
@@ -114,9 +114,9 @@ RTU 采集依赖 3 个 Modbus serial alias：
 
 ```dts
 aliases {
-	modbus-encoder-uart7 = &modbus_encoder_uart7;
-	modbus-encoder-uart8 = &modbus_encoder_uart8;
-	modbus-encoder-uart4 = &modbus_encoder_uart4;
+	modbus-slewing-encoder = &modbus_slewing_encoder;
+	modbus-luffing-encoder = &modbus_luffing_encoder;
+	modbus-hook-encoder = &modbus_hook_encoder;
 };
 ```
 

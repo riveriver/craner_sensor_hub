@@ -25,12 +25,12 @@ static struct modbus_register_input input_register_table[] = {
 	{ .name = "REG_LUFFING_ONLINE_CODE", .addr = 0x0009, .default_value = 0 },
 	{ .name = "REG_LUFFING_TRUN_CNT", .addr = 0x000A, .default_value = 0 },
 	{ .name = "REG_LUFFING_SINAGLE_VAL", .addr = 0x000B, .default_value = 0 },
-	{ .name = "REG_HOOK_TIMESTAMP_H", .addr = 0x000C, .default_value = 0 },
-	{ .name = "REG_HOOK_TIMESTAMP_L", .addr = 0x000D, .default_value = 0 },
-	{ .name = "REG_HOOK_ERROR_CODE", .addr = 0x000E, .default_value = 0 },
-	{ .name = "REG_HOOK_ONLINE_CODE", .addr = 0x000F, .default_value = 0 },
-	{ .name = "REG_HOOK_TRUN_CNT", .addr = 0x0010, .default_value = 0 },
-	{ .name = "REG_HOOK_SINAGLE_VAL", .addr = 0x0011, .default_value = 0 },
+	{ .name = "REG_HOIST_TIMESTAMP_H", .addr = 0x000C, .default_value = 0 },
+	{ .name = "REG_HOIST_TIMESTAMP_L", .addr = 0x000D, .default_value = 0 },
+	{ .name = "REG_HOIST_ERROR_CODE", .addr = 0x000E, .default_value = 0 },
+	{ .name = "REG_HOIST_ONLINE_CODE", .addr = 0x000F, .default_value = 0 },
+	{ .name = "REG_HOIST_TRUN_CNT", .addr = 0x0010, .default_value = 0 },
+	{ .name = "REG_HOIST_SINAGLE_VAL", .addr = 0x0011, .default_value = 0 },
 };
 
 static struct modbus_register_holding holding_register_table[] = {

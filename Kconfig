@@ -1,0 +1,56 @@
+source "Kconfig.zephyr"
+
+menu "Craner Encoder Hub application"
+
+config CRANER_ENABLE_HEARTBEAT_LED_THREAD
+	bool "Enable heartbeat LED thread"
+	default y
+	depends on GPIO
+	help
+	  Enable the PD10 heartbeat LED thread.
+
+config CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD
+	bool "Enable Modbus TCP server thread"
+	default y
+	depends on MODBUS && NET_TCP && NET_SOCKETS && POSIX_API
+	help
+	  Enable the Modbus TCP server thread on TCP port 502.
+
+config CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD
+	bool "Enable slewing encoder Modbus RTU thread"
+	default y
+	depends on MODBUS
+	help
+	  Enable the Modbus RTU client thread for the slewing encoder.
+
+config CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD
+	bool "Enable luffing encoder Modbus RTU thread"
+	default y
+	depends on MODBUS
+	help
+	  Enable the Modbus RTU client thread for the luffing encoder.
+
+config CRANER_ENABLE_READ_HOIST_ENCODER_THREAD
+	bool "Enable hook encoder Modbus RTU thread"
+	default y
+	depends on MODBUS
+	help
+	  Enable the Modbus RTU client thread for the hook encoder.
+
+config CRANER_ENABLE_OTA_CONTROL
+	bool "Enable MCUboot swap OTA control shell"
+	default y
+	depends on SHELL && FLASH && FLASH_MAP && IMG_MANAGER && MCUBOOT_IMG_MANAGER
+	help
+	  Enable shell commands that drive MCUboot's standard swap-based OTA
+	  state machine.
+
+config CRANER_OTA_TEST_TIMEOUT_S
+	int "OTA test image confirmation timeout in seconds"
+	default 3600
+	depends on CRANER_ENABLE_OTA_CONTROL
+	help
+	  Time allowed for an unconfirmed test image to call ota confirm before
+	  the application reboots and lets MCUboot roll back.
+	  
+endmenu

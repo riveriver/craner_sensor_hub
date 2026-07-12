@@ -1,4 +1,4 @@
-# Zephyr Modbus RTU Client 示例：三路编码器采集
+﻿# Zephyr Modbus RTU Client 示例：三路编码器采集
 
 ## 1. 示例实现了什么
 
@@ -20,9 +20,9 @@
 
 | 机构 | UART | TX | RX | Modbus interface alias |
 | --- | --- | --- | --- | --- |
-| 回转 SWING/SLEWING | UART7 | PE8 | PE7 | `modbus-encoder-uart7` |
-| 变幅 LUFFING | UART8 | PE1 | PE0 | `modbus-encoder-uart8` |
-| 吊钩 HOOK | UART4 | PD1 | PD0 | `modbus-encoder-uart4` |
+| 回转 SWING/SLEWING | UART7 | PE8 | PE7 | `modbus-slewing-encoder` |
+| 变幅 LUFFING | UART8 | PE1 | PE0 | `modbus-luffing-encoder` |
+| 吊钩 HOIST | UART4 | PD1 | PD0 | `modbus-hook-encoder` |
 
 每个编码器读取远端 Holding Register：
 
@@ -48,16 +48,16 @@
 确认 3 个线程已启用：
 
 ```c
-K_THREAD_DEFINE(modbus_encoder_uart7_tid, MODBUS_ENCODER_STACK_SIZE,
-		modbus_encoder_thread, &encoder_uart7, NULL, NULL,
+K_THREAD_DEFINE(slewing_encoder_tid, MODBUS_ENCODER_STACK_SIZE,
+		modbus_encoder_thread, &slewing_encoder, NULL, NULL,
 		MODBUS_ENCODER_PRIORITY, 0, 0);
 
-K_THREAD_DEFINE(modbus_encoder_uart8_tid, MODBUS_ENCODER_STACK_SIZE,
-		modbus_encoder_thread, &encoder_uart8, NULL, NULL,
+K_THREAD_DEFINE(luffing_encoder_tid, MODBUS_ENCODER_STACK_SIZE,
+		modbus_encoder_thread, &luffing_encoder, NULL, NULL,
 		MODBUS_ENCODER_PRIORITY, 0, 0);
 
-K_THREAD_DEFINE(modbus_encoder_uart4_tid, MODBUS_ENCODER_STACK_SIZE,
-		modbus_encoder_thread, &encoder_uart4, NULL, NULL,
+K_THREAD_DEFINE(hook_encoder_tid, MODBUS_ENCODER_STACK_SIZE,
+		modbus_encoder_thread, &hook_encoder, NULL, NULL,
 		MODBUS_ENCODER_PRIORITY, 0, 0);
 ```
 
@@ -82,7 +82,7 @@ K_THREAD_DEFINE(modbus_encoder_uart4_tid, MODBUS_ENCODER_STACK_SIZE,
 读取失败时日志类似：
 
 ```text
-SWING encoder_uart7 PE8_TX/PE7_RX FC03 addr=0x0002 qty=2 failed: -116
+SLEWING encoder FC03 addr=0x0002 qty=2 failed: -116
 ```
 
 查看 3 路 RTU 通信统计：
@@ -101,9 +101,9 @@ clear_encoder_stats
 
 ```text
 Modbus RTU stats; avg/max use successful intervals only:
-SWING encoder_uart7 PE8_TX/PE7_RX: total=42 success=40 failure=2 success_rate=95.23% success_intervals=39 avg=3000 ms max=3001 ms last_error=0
-LUFFING encoder_uart8 PE1_TX/PE0_RX: total=42 success=42 failure=0 success_rate=100.00% success_intervals=41 avg=3000 ms max=3001 ms last_error=0
-HOOK encoder_uart4 PD1_TX/PD0_RX: total=42 success=38 failure=4 success_rate=90.47% success_intervals=37 avg=3158 ms max=6000 ms last_error=-116
+SLEWING encoder: total=42 success=40 failure=2 success_rate=95.23% success_intervals=39 avg=3000 ms max=3001 ms last_error=0
+LUFFING encoder: total=42 success=42 failure=0 success_rate=100.00% success_intervals=41 avg=3000 ms max=3001 ms last_error=0
+HOIST encoder: total=42 success=38 failure=4 success_rate=90.47% success_intervals=37 avg=3158 ms max=6000 ms last_error=-116
 ```
 
 如果需要看每次成功通信间隔的 DBG 日志，可以在 shell 中调高日志级别：
@@ -133,9 +133,9 @@ Zephyr Modbus 串口接口由 UART 子节点描述。每一路 UART 下面放一
 
 ```dts
 aliases {
-	modbus-encoder-uart7 = &modbus_encoder_uart7;
-	modbus-encoder-uart8 = &modbus_encoder_uart8;
-	modbus-encoder-uart4 = &modbus_encoder_uart4;
+	modbus-slewing-encoder = &modbus_slewing_encoder;
+	modbus-luffing-encoder = &modbus_luffing_encoder;
+	modbus-hook-encoder = &modbus_hook_encoder;
 };
 ```
 
@@ -148,7 +148,7 @@ UART7 编码器：
 	current-speed = <9600>;
 	status = "okay";
 
-	modbus_encoder_uart7: modbus-encoder-uart7 {
+	modbus_slewing_encoder: modbus-slewing-encoder {
 		compatible = "zephyr,modbus-serial";
 		status = "okay";
 	};
@@ -164,7 +164,7 @@ UART8 编码器：
 	current-speed = <9600>;
 	status = "okay";
 
-	modbus_encoder_uart8: modbus-encoder-uart8 {
+	modbus_luffing_encoder: modbus-luffing-encoder {
 		compatible = "zephyr,modbus-serial";
 		status = "okay";
 	};
@@ -180,7 +180,7 @@ UART4 编码器：
 	current-speed = <9600>;
 	status = "okay";
 
-	modbus_encoder_uart4: modbus-encoder-uart4 {
+	modbus_hook_encoder: modbus-hook-encoder {
 		compatible = "zephyr,modbus-serial";
 		status = "okay";
 	};
@@ -200,9 +200,9 @@ UART4 编码器：
 业务代码通过 alias 找到 3 个 Modbus serial 节点：
 
 ```c
-#define MODBUS_ENCODER_UART7_NODE DT_ALIAS(modbus_encoder_uart7)
-#define MODBUS_ENCODER_UART8_NODE DT_ALIAS(modbus_encoder_uart8)
-#define MODBUS_ENCODER_UART4_NODE DT_ALIAS(modbus_encoder_uart4)
+#define MODBUS_SLEWING_ENCODER_NODE DT_ALIAS(modbus_slewing_encoder)
+#define MODBUS_LUFFING_ENCODER_NODE DT_ALIAS(modbus_luffing_encoder)
+#define MODBUS_HOIST_ENCODER_NODE DT_ALIAS(modbus_hook_encoder)
 ```
 
 ## 5. Kconfig/prj.conf：软件配置
@@ -248,9 +248,9 @@ static const struct modbus_iface_param modbus_encoder_param = {
 每一路编码器保存自己的 interface name、Modbus 参数和本地寄存器名字：
 
 ```c
-static struct modbus_encoder_client encoder_uart7 = {
-	.name = "SWING encoder_uart7 PE8_TX/PE7_RX",
-	.iface_name = DEVICE_DT_NAME(MODBUS_ENCODER_UART7_NODE),
+static struct modbus_encoder_client slewing_encoder = {
+	.name = "SLEWING encoder",
+	.iface_name = DEVICE_DT_NAME(MODBUS_SLEWING_ENCODER_NODE),
 	.unit_id = MODBUS_ENCODER_UNIT_ID,
 	.start_addr = MODBUS_ENCODER_START_ADDR,
 	.register_count = MODBUS_ENCODER_REGISTER_COUNT,
@@ -322,13 +322,13 @@ modbus_register_service_write_inputs_by_name(
 
 | 需求 | 修改位置 |
 | --- | --- |
-| 改从站地址 | `MODBUS_ENCODER_UNIT_ID`，或给每个 `encoder_uart*` 单独设置 |
+| 改从站地址 | `MODBUS_ENCODER_UNIT_ID`，或给每个 `*_encoder` 单独设置 |
 | 改读取地址 | `MODBUS_ENCODER_START_ADDR` |
 | 改读取数量 | `MODBUS_ENCODER_REGISTER_COUNT`，并同步本地记录逻辑 |
 | 改轮询频率 | `MODBUS_ENCODER_POLL_PERIOD_MS` |
 | 改波特率 | DTS 的 `current-speed` 和 `MODBUS_ENCODER_BAUDRATE` |
-| 增减编码器 | DTS 增减 UART 子节点，C 代码增减 `encoder_uart*` 和 `K_THREAD_DEFINE()` |
-| 改本地寄存器映射 | 修改 `encoder_uart*` 中的 `*_name` 字段，并保证 map 中存在对应名字 |
+| 增减编码器 | DTS 增减 UART 子节点，C 代码增减 `*_encoder` 和 `K_THREAD_DEFINE()` |
+| 改本地寄存器映射 | 修改 `*_encoder` 中的 `*_name` 字段，并保证 map 中存在对应名字 |
 
 ## 8. 常见问题排查
 

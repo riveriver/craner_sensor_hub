@@ -1,4 +1,4 @@
-# MP RS485x4 STM32H743VIT6 板卡入门
+﻿# MP RS485x4 STM32H743VIT6 板卡入门
 
 ## 1. 示例实现了什么
 
@@ -162,9 +162,9 @@ Modbus RTU 使用 3 路 UART 连接编码器：
 
 ```dts
 aliases {
-	modbus-encoder-uart7 = &modbus_encoder_uart7;
-	modbus-encoder-uart8 = &modbus_encoder_uart8;
-	modbus-encoder-uart4 = &modbus_encoder_uart4;
+	modbus-slewing-encoder = &modbus_slewing_encoder;
+	modbus-luffing-encoder = &modbus_luffing_encoder;
+	modbus-hook-encoder = &modbus_hook_encoder;
 };
 
 &uart7 {
@@ -173,7 +173,7 @@ aliases {
 	current-speed = <9600>;
 	status = "okay";
 
-	modbus_encoder_uart7: modbus-encoder-uart7 {
+	modbus_slewing_encoder: modbus-slewing-encoder {
 		compatible = "zephyr,modbus-serial";
 		status = "okay";
 	};
@@ -185,7 +185,7 @@ aliases {
 	current-speed = <9600>;
 	status = "okay";
 
-	modbus_encoder_uart8: modbus-encoder-uart8 {
+	modbus_luffing_encoder: modbus-luffing-encoder {
 		compatible = "zephyr,modbus-serial";
 		status = "okay";
 	};
@@ -197,7 +197,7 @@ aliases {
 	current-speed = <9600>;
 	status = "okay";
 
-	modbus_encoder_uart4: modbus-encoder-uart4 {
+	modbus_hook_encoder: modbus-hook-encoder {
 		compatible = "zephyr,modbus-serial";
 		status = "okay";
 	};

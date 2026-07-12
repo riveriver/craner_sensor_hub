@@ -12,16 +12,24 @@ LOG_MODULE_REGISTER(modbus_rtu_client_app, LOG_LEVEL_INF);
 #define MODBUS_ENCODER_STACK_SIZE 2048
 #define MODBUS_ENCODER_PRIORITY 6
 
-#define MODBUS_ENCODER_UART7_NODE DT_ALIAS(modbus_encoder_uart7)
-#define MODBUS_ENCODER_UART8_NODE DT_ALIAS(modbus_encoder_uart8)
-#define MODBUS_ENCODER_UART4_NODE DT_ALIAS(modbus_encoder_uart4)
+#define MODBUS_SLEWING_ENCODER_NODE DT_ALIAS(modbus_slewing_encoder)
+#define MODBUS_LUFFING_ENCODER_NODE DT_ALIAS(modbus_luffing_encoder)
+#define MODBUS_HOIST_ENCODER_NODE DT_ALIAS(modbus_hook_encoder)
 
-BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_ENCODER_UART7_NODE, okay),
-	     "Missing modbus-encoder-uart7 alias");
-BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_ENCODER_UART8_NODE, okay),
-	     "Missing modbus-encoder-uart8 alias");
-BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_ENCODER_UART4_NODE, okay),
-	     "Missing modbus-encoder-uart4 alias");
+#if defined(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD)
+BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_SLEWING_ENCODER_NODE, okay),
+	     "Missing modbus-slewing-encoder alias");
+#endif
+
+#if defined(CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD)
+BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_LUFFING_ENCODER_NODE, okay),
+	     "Missing modbus-luffing-encoder alias");
+#endif
+
+#if defined(CONFIG_CRANER_ENABLE_READ_HOIST_ENCODER_THREAD)
+BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_HOIST_ENCODER_NODE, okay),
+	     "Missing modbus-hook-encoder alias");
+#endif
 
 #define MODBUS_ENCODER_UNIT_ID 1
 #define MODBUS_ENCODER_BAUDRATE 9600
@@ -73,9 +81,10 @@ static const struct modbus_iface_param modbus_encoder_param = {
 	},
 };
 
-static struct modbus_encoder_client encoder_uart7 = {
-	.name = "SWING encoder_uart7 PE8_TX/PE7_RX",
-	.iface_name = DEVICE_DT_NAME(MODBUS_ENCODER_UART7_NODE),
+#if defined(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD)
+static struct modbus_encoder_client slewing_encoder = {
+	.name = "slewing encoder",
+	.iface_name = DEVICE_DT_NAME(MODBUS_SLEWING_ENCODER_NODE),
 	.unit_id = MODBUS_ENCODER_UNIT_ID,
 	.start_addr = MODBUS_ENCODER_START_ADDR,
 	.register_count = MODBUS_ENCODER_REGISTER_COUNT,
@@ -87,10 +96,12 @@ static struct modbus_encoder_client encoder_uart7 = {
 	.single_value_name = "REG_SLEWING_SINAGLE_VAL",
 	.iface = -1,
 };
+#endif
 
-static struct modbus_encoder_client encoder_uart8 = {
-	.name = "LUFFING encoder_uart8 PE1_TX/PE0_RX",
-	.iface_name = DEVICE_DT_NAME(MODBUS_ENCODER_UART8_NODE),
+#if defined(CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD)
+static struct modbus_encoder_client luffing_encoder = {
+	.name = "luffing encoder",
+	.iface_name = DEVICE_DT_NAME(MODBUS_LUFFING_ENCODER_NODE),
 	.unit_id = MODBUS_ENCODER_UNIT_ID,
 	.start_addr = MODBUS_ENCODER_START_ADDR,
 	.register_count = MODBUS_ENCODER_REGISTER_COUNT,
@@ -102,21 +113,24 @@ static struct modbus_encoder_client encoder_uart8 = {
 	.single_value_name = "REG_LUFFING_SINAGLE_VAL",
 	.iface = -1,
 };
+#endif
 
-static struct modbus_encoder_client encoder_uart4 = {
-	.name = "HOOK encoder_uart4 PD1_TX/PD0_RX",
-	.iface_name = DEVICE_DT_NAME(MODBUS_ENCODER_UART4_NODE),
+#if defined(CONFIG_CRANER_ENABLE_READ_HOIST_ENCODER_THREAD)
+static struct modbus_encoder_client hook_encoder = {
+	.name = "hoisting encoder",
+	.iface_name = DEVICE_DT_NAME(MODBUS_HOIST_ENCODER_NODE),
 	.unit_id = MODBUS_ENCODER_UNIT_ID,
 	.start_addr = MODBUS_ENCODER_START_ADDR,
 	.register_count = MODBUS_ENCODER_REGISTER_COUNT,
-	.timestamp_high_name = "REG_HOOK_TIMESTAMP_H",
-	.timestamp_low_name = "REG_HOOK_TIMESTAMP_L",
-	.error_code_name = "REG_HOOK_ERROR_CODE",
-	.online_code_name = "REG_HOOK_ONLINE_CODE",
-	.turn_count_name = "REG_HOOK_TRUN_CNT",
-	.single_value_name = "REG_HOOK_SINAGLE_VAL",
+	.timestamp_high_name = "REG_HOIST_TIMESTAMP_H",
+	.timestamp_low_name = "REG_HOIST_TIMESTAMP_L",
+	.error_code_name = "REG_HOIST_ERROR_CODE",
+	.online_code_name = "REG_HOIST_ONLINE_CODE",
+	.turn_count_name = "REG_HOIST_TRUN_CNT",
+	.single_value_name = "REG_HOIST_SINAGLE_VAL",
 	.iface = -1,
 };
+#endif
 
 static int modbus_encoder_client_init(struct modbus_encoder_client *encoder)
 {
@@ -274,9 +288,15 @@ static int cmd_show_encoder_stats(const struct shell *shell, size_t argc,
 	ARG_UNUSED(argv);
 
 	shell_print(shell, "Modbus RTU stats; avg/max use successful intervals only:");
-	shell_print_encoder_stats(shell, &encoder_uart7);
-	shell_print_encoder_stats(shell, &encoder_uart8);
-	shell_print_encoder_stats(shell, &encoder_uart4);
+#if defined(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD)
+	shell_print_encoder_stats(shell, &slewing_encoder);
+#endif
+#if defined(CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD)
+	shell_print_encoder_stats(shell, &luffing_encoder);
+#endif
+#if defined(CONFIG_CRANER_ENABLE_READ_HOIST_ENCODER_THREAD)
+	shell_print_encoder_stats(shell, &hook_encoder);
+#endif
 
 	return 0;
 }
@@ -291,9 +311,15 @@ static int cmd_clear_encoder_stats(const struct shell *shell, size_t argc,
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	reset_encoder_stats(&encoder_uart7);
-	reset_encoder_stats(&encoder_uart8);
-	reset_encoder_stats(&encoder_uart4);
+#if defined(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD)
+	reset_encoder_stats(&slewing_encoder);
+#endif
+#if defined(CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD)
+	reset_encoder_stats(&luffing_encoder);
+#endif
+#if defined(CONFIG_CRANER_ENABLE_READ_HOIST_ENCODER_THREAD)
+	reset_encoder_stats(&hook_encoder);
+#endif
 
 	shell_print(shell, "Modbus RTU encoder statistics cleared.");
 
@@ -369,14 +395,20 @@ static void modbus_encoder_thread(void *p1, void *p2, void *p3)
 	}
 }
 
-K_THREAD_DEFINE(modbus_encoder_uart7_tid, MODBUS_ENCODER_STACK_SIZE,
-		modbus_encoder_thread, &encoder_uart7, NULL, NULL,
+#if defined(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD)
+K_THREAD_DEFINE(slewing_encoder_tid, MODBUS_ENCODER_STACK_SIZE,
+		modbus_encoder_thread, &slewing_encoder, NULL, NULL,
 		MODBUS_ENCODER_PRIORITY, 0, 0);
+#endif
 
-K_THREAD_DEFINE(modbus_encoder_uart8_tid, MODBUS_ENCODER_STACK_SIZE,
-		modbus_encoder_thread, &encoder_uart8, NULL, NULL,
+#if defined(CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD)
+K_THREAD_DEFINE(luffing_encoder_tid, MODBUS_ENCODER_STACK_SIZE,
+		modbus_encoder_thread, &luffing_encoder, NULL, NULL,
 		MODBUS_ENCODER_PRIORITY, 0, 0);
+#endif
 
-K_THREAD_DEFINE(modbus_encoder_uart4_tid, MODBUS_ENCODER_STACK_SIZE,
-		modbus_encoder_thread, &encoder_uart4, NULL, NULL,
+#if defined(CONFIG_CRANER_ENABLE_READ_HOIST_ENCODER_THREAD)
+K_THREAD_DEFINE(hook_encoder_tid, MODBUS_ENCODER_STACK_SIZE,
+		modbus_encoder_thread, &hook_encoder, NULL, NULL,
 		MODBUS_ENCODER_PRIORITY, 0, 0);
+#endif

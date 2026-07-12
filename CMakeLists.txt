@@ -5,15 +5,38 @@ list(APPEND BOARD_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(craner_encoder_hub)
 
+target_include_directories(app PRIVATE include)
+
 target_sources(app PRIVATE
 	src/main.c
-	src/log_app_sensor.c
-	src/log_app_comm.c
 	src/power_control_app.c
-	src/heartbeat_led_app.c
 	src/shell_app.c
 	src/modbus_register_map.c
 	src/modbus_register_service.c
-	src/modbus_rtu_client_app.c
+)
+
+target_sources_ifdef(CONFIG_CRANER_ENABLE_LOG_SENSOR_THREAD app PRIVATE
+	src/log_app_sensor.c
+)
+
+target_sources_ifdef(CONFIG_CRANER_ENABLE_LOG_COMM_THREAD app PRIVATE
+	src/log_app_comm.c
+)
+
+target_sources_ifdef(CONFIG_CRANER_ENABLE_HEARTBEAT_LED_THREAD app PRIVATE
+	src/heartbeat_led_app.c
+)
+
+if(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD OR
+   CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD OR
+   CONFIG_CRANER_ENABLE_READ_HOIST_ENCODER_THREAD)
+	target_sources(app PRIVATE src/modbus_rtu_client_app.c)
+endif()
+
+target_sources_ifdef(CONFIG_CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD app PRIVATE
 	src/modbus_tcp_server_app.c
+)
+
+target_sources_ifdef(CONFIG_CRANER_ENABLE_OTA_CONTROL app PRIVATE
+	src/ota_control_app.c
 )
