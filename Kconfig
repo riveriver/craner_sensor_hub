@@ -2,12 +2,22 @@ source "Kconfig.zephyr"
 
 menu "Craner Encoder Hub application"
 
-config CRANER_ENABLE_HEARTBEAT_LED_THREAD
-	bool "Enable heartbeat LED thread"
+config CRANER_ENABLE_SYSTEM_HEALTH_THREAD
+	bool "Enable system health monitor thread"
 	default y
-	depends on GPIO
+	depends on GPIO && WATCHDOG
 	help
-	  Enable the PD10 heartbeat LED thread.
+	  Enable the system health monitor thread. It drives the status LED,
+	  checks monitored business events, and feeds the hardware watchdog
+	  while the system remains healthy enough to keep running.
+
+config CRANER_SYSTEM_HEALTH_CHECK_INTERVAL_MS
+	int "System health check interval in milliseconds"
+	default 100
+	range 10 10000
+	depends on CRANER_ENABLE_SYSTEM_HEALTH_THREAD
+	help
+	  Period used by the system health monitor thread.
 
 config CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD
 	bool "Enable Modbus TCP server thread"
@@ -44,6 +54,14 @@ config CRANER_ENABLE_OTA_CONTROL
 	help
 	  Enable shell commands that drive MCUboot's standard swap-based OTA
 	  state machine.
+
+config CRANER_SYSTEM_HEALTH_WDT_TIMEOUT_MS
+	int "System health watchdog timeout in milliseconds"
+	default 8000
+	range 1000 60000
+	depends on CRANER_ENABLE_SYSTEM_HEALTH_THREAD
+	help
+	  Maximum time allowed between hardware watchdog feeds.
 
 config CRANER_OTA_TEST_TIMEOUT_S
 	int "OTA test image confirmation timeout in seconds"

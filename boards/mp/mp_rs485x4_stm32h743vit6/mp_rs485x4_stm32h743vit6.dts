@@ -27,6 +27,7 @@
 		modbus-luffing-encoder = &modbus_luffing_encoder;
 		modbus-hook-encoder = &modbus_hook_encoder;
 		heartbeat-led = &heartbeat_led;
+		watchdog0 = &iwdg;
 	};
 
 	power_control {
@@ -126,6 +127,10 @@
 };
 
 &rng {
+	status = "okay";
+};
+
+&iwdg {
 	status = "okay";
 };
 

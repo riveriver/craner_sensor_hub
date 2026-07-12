@@ -6,6 +6,7 @@
 #include <zephyr/sys/util.h>
 
 #include "modbus_register_service.h"
+#include "system_health_app.h"
 
 LOG_MODULE_REGISTER(modbus_rtu_client_app, LOG_LEVEL_INF);
 
@@ -65,6 +66,7 @@ struct modbus_encoder_client {
 	const char *offline_status_name;
 	const char *turn_count_name;
 	const char *single_value_name;
+	enum system_health_event health_event;
 	int iface;
 	struct modbus_encoder_stats stats;
 };
@@ -94,6 +96,7 @@ static struct modbus_encoder_client slewing_encoder = {
 	.offline_status_name = "REG_SLEWING_OFFLINE_STATUS",
 	.turn_count_name = "REG_SLEWING_TRUN_CNT",
 	.single_value_name = "REG_SLEWING_SINAGLE_VAL",
+	.health_event = SYSTEM_HEALTH_READ_SLEWING_ENCODER,
 	.iface = -1,
 };
 #endif
@@ -111,6 +114,7 @@ static struct modbus_encoder_client luffing_encoder = {
 	.offline_status_name = "REG_LUFFING_OFFLINE_STATUS",
 	.turn_count_name = "REG_LUFFING_TRUN_CNT",
 	.single_value_name = "REG_LUFFING_SINAGLE_VAL",
+	.health_event = SYSTEM_HEALTH_READ_LUFFING_ENCODER,
 	.iface = -1,
 };
 #endif
@@ -128,6 +132,7 @@ static struct modbus_encoder_client hook_encoder = {
 	.offline_status_name = "REG_HOISTING_OFFLINE_STATUS",
 	.turn_count_name = "REG_HOISTING_TRUN_CNT",
 	.single_value_name = "REG_HOISTING_SINAGLE_VAL",
+	.health_event = SYSTEM_HEALTH_READ_HOISTING_ENCODER,
 	.iface = -1,
 };
 #endif
@@ -365,6 +370,8 @@ static void modbus_encoder_thread(void *p1, void *p2, void *p3)
 
 		if (err == 0) {
 			int write_err;
+
+			system_health_update_event(encoder->health_event);
 
 			write_err = modbus_encoder_record_registers(encoder, err, regs);
 			if (write_err != 0) {

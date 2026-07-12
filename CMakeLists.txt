@@ -23,8 +23,9 @@ target_sources_ifdef(CONFIG_CRANER_ENABLE_LOG_COMM_THREAD app PRIVATE
 	src/log_app_comm.c
 )
 
-target_sources_ifdef(CONFIG_CRANER_ENABLE_HEARTBEAT_LED_THREAD app PRIVATE
-	src/heartbeat_led_app.c
+target_sources_ifdef(CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD app PRIVATE
+	src/system_health_app.c
+	src/system_health_event_table.c
 )
 
 if(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD OR

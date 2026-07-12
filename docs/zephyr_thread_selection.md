@@ -8,7 +8,7 @@
 
 | Kconfig | 线程功能 | 默认值 |
 | --- | --- | --- |
-| `CONFIG_CRANER_ENABLE_HEARTBEAT_LED_THREAD` | PD10 心跳灯线程 | `y` |
+| `CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD` | 系统健康检测、状态灯和 IWDG 喂狗线程 | `y` |
 | `CONFIG_CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD` | Modbus TCP server 线程 | `y` |
 | `CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD` | 回转编码器 RTU client 线程 | `y` |
 | `CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD` | 变幅编码器 RTU client 线程 | `y` |
@@ -21,7 +21,7 @@
 默认配置在项目根目录 `prj.conf`：
 
 ```conf
-CONFIG_CRANER_ENABLE_HEARTBEAT_LED_THREAD=y
+CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD=y
 CONFIG_CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD=y
 CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD=y
 CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD=y
@@ -30,10 +30,10 @@ CONFIG_CRANER_ENABLE_LOG_SENSOR_THREAD=n
 CONFIG_CRANER_ENABLE_LOG_COMM_THREAD=n
 ```
 
-例如只想保留心跳灯和 Modbus TCP server，关闭三路 RTU 编码器线程：
+例如只想保留系统健康检测和 Modbus TCP server，关闭三路 RTU 编码器线程：
 
 ```conf
-CONFIG_CRANER_ENABLE_HEARTBEAT_LED_THREAD=y
+CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD=y
 CONFIG_CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD=y
 CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD=n
 CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD=n
@@ -80,8 +80,9 @@ config CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD
 `CMakeLists.txt` 根据 Kconfig 决定是否编译对应源文件：
 
 ```cmake
-target_sources_ifdef(CONFIG_CRANER_ENABLE_HEARTBEAT_LED_THREAD app PRIVATE
-	src/heartbeat_led_app.c
+target_sources_ifdef(CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD app PRIVATE
+	src/system_health_app.c
+	src/system_health_event_table.c
 )
 
 target_sources_ifdef(CONFIG_CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD app PRIVATE
@@ -101,7 +102,7 @@ endif()
 
 ## 业务代码：线程如何被关闭
 
-对于一个源文件对应一个线程的模块，例如心跳灯、Modbus TCP server，关闭 Kconfig 后源文件不会参与编译，线程自然不会存在。
+对于一个源文件对应一个线程的模块，例如系统健康检测、Modbus TCP server，关闭 Kconfig 后源文件不会参与编译，线程自然不会存在。
 
 对于三路 RTU 编码器，因为它们共用同一个源文件，代码内部还会按每一路开关分别保护：
 

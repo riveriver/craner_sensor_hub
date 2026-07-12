@@ -15,7 +15,7 @@
 | Modbus RTU 编码器串口 | UART7 PE8 TX / PE7 RX，UART8 PE1 TX / PE0 RX，UART4 PD1 TX / PD0 RX，9600 8E1 |
 | Ethernet | RMII |
 | 电源控制 | PE6 `POWER_3V3_AND_CCTV`，PC13 `POWER_5V`，PB3 `POWER_NET_BRIGDE`，高电平导通 |
-| 心跳灯 | PD10，高电平亮，1s 亮 / 1s 灭 |
+| 状态灯 | PD10，高电平亮，正常 500 ms 亮 / 500 ms 灭，异常快闪若干次 + 长停 |
 | 静态 IP | `192.168.18.32/24` |
 
 板卡目录：
@@ -68,7 +68,7 @@ ping 192.168.18.32
 | Ethernet PHY | RMII PHY 硬件正确连接 |
 | RS-485 | UART7 需要外接 RS-485 收发器 |
 | 电源控制 | PE6、PC13、PB3 外部电源开关为高电平使能 |
-| 心跳灯 | PD10 外接 LED，高电平点亮 |
+| 状态灯 | PD10 外接 LED，高电平点亮 |
 | ST-LINK | 用于烧录和调试 |
 
 ## 4. 设备树：硬件描述
@@ -121,7 +121,7 @@ power_control {
 
 应用启动时会通过 `src/power_control_app.c` 把这 3 个 GPIO 配置为 active 状态。由于这里使用 `GPIO_ACTIVE_HIGH`，所以 active 就是输出高电平。
 
-心跳灯 GPIO：
+状态灯 GPIO：
 
 ```dts
 aliases {
@@ -138,7 +138,7 @@ leds {
 };
 ```
 
-应用启动时会通过 `src/heartbeat_led_app.c` 创建心跳线程，让 PD10 亮 1 秒、灭 1 秒循环闪烁。
+应用启动时会通过 `src/system_health_app.c` 创建系统健康检测线程。PD10 被作为状态灯使用：正常状态 500 ms 亮 / 500 ms 灭，异常状态按优先级快闪若干次后长停。
 
 Console 和 Shell 使用 USART1：
 
