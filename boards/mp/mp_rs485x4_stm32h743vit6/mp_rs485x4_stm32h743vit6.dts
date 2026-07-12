@@ -17,6 +17,44 @@
 		zephyr,console = &usart1;
 		zephyr,shell-uart = &usart1;
 	};
+
+	aliases {
+		power-3v3-and-cctv = &power_3v3_and_cctv;
+		power-5v = &power_5v;
+		power-net-brigde = &power_net_brigde;
+		modbus-encoder-uart7 = &modbus_encoder_uart7;
+		modbus-encoder-uart8 = &modbus_encoder_uart8;
+		modbus-encoder-uart4 = &modbus_encoder_uart4;
+		heartbeat-led = &heartbeat_led;
+	};
+
+	power_control {
+		compatible = "gpio-leds";
+
+		power_3v3_and_cctv: power_3v3_and_cctv {
+			gpios = <&gpioe 6 GPIO_ACTIVE_HIGH>;
+			label = "POWER_3V3_AND_CCTV";
+		};
+
+		power_5v: power_5v {
+			gpios = <&gpioc 13 GPIO_ACTIVE_HIGH>;
+			label = "POWER_5V";
+		};
+
+		power_net_brigde: power_net_brigde {
+			gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>;
+			label = "POWER_NET_BRIGDE";
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		heartbeat_led: heartbeat_led {
+			gpios = <&gpiod 10 GPIO_ACTIVE_HIGH>;
+			label = "HEARTBEAT_LED";
+		};
+	};
 };
 
 &clk_hse {
