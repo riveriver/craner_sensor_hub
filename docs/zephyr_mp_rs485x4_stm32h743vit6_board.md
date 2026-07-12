@@ -12,8 +12,10 @@
 | MCU | STM32H743VIT6 |
 | PCB 硬件版本 | `1.2.0` |
 | 调试串口 | USART1，PA9 TX / PA10 RX |
-| Modbus RTU 串口 | UART7，PE8 TX / PE7 RX |
+| Modbus RTU 编码器串口 | UART7 PE8 TX / PE7 RX，UART8 PE1 TX / PE0 RX，UART4 PD1 TX / PD0 RX，9600 8E1 |
 | Ethernet | RMII |
+| 电源控制 | PE6 `POWER_3V3_AND_CCTV`，PC13 `POWER_5V`，PB3 `POWER_NET_BRIGDE`，高电平导通 |
+| 心跳灯 | PD10，高电平亮，1s 亮 / 1s 灭 |
 | 静态 IP | `192.168.18.32/24` |
 
 板卡目录：
@@ -65,6 +67,8 @@ ping 192.168.18.32
 | 调试串口 | USART1 PA9/PA10 接 USB-TTL |
 | Ethernet PHY | RMII PHY 硬件正确连接 |
 | RS-485 | UART7 需要外接 RS-485 收发器 |
+| 电源控制 | PE6、PC13、PB3 外部电源开关为高电平使能 |
+| 心跳灯 | PD10 外接 LED，高电平点亮 |
 | ST-LINK | 用于烧录和调试 |
 
 ## 4. 设备树：硬件描述
@@ -86,6 +90,56 @@ boards/mp/mp_rs485x4_stm32h743vit6/mp_rs485x4_stm32h743vit6.dts
 
 `model` 是人类可读名称，`compatible` 是设备树匹配字符串。
 
+电源控制 GPIO：
+
+```dts
+aliases {
+	power-3v3-and-cctv = &power_3v3_and_cctv;
+	power-5v = &power_5v;
+	power-net-brigde = &power_net_brigde;
+};
+
+power_control {
+	compatible = "gpio-leds";
+
+	power_3v3_and_cctv: power_3v3_and_cctv {
+		gpios = <&gpioe 6 GPIO_ACTIVE_HIGH>;
+		label = "POWER_3V3_AND_CCTV";
+	};
+
+	power_5v: power_5v {
+		gpios = <&gpioc 13 GPIO_ACTIVE_HIGH>;
+		label = "POWER_5V";
+	};
+
+	power_net_brigde: power_net_brigde {
+		gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>;
+		label = "POWER_NET_BRIGDE";
+	};
+};
+```
+
+应用启动时会通过 `src/power_control_app.c` 把这 3 个 GPIO 配置为 active 状态。由于这里使用 `GPIO_ACTIVE_HIGH`，所以 active 就是输出高电平。
+
+心跳灯 GPIO：
+
+```dts
+aliases {
+	heartbeat-led = &heartbeat_led;
+};
+
+leds {
+	compatible = "gpio-leds";
+
+	heartbeat_led: heartbeat_led {
+		gpios = <&gpiod 10 GPIO_ACTIVE_HIGH>;
+		label = "HEARTBEAT_LED";
+	};
+};
+```
+
+应用启动时会通过 `src/heartbeat_led_app.c` 创建心跳线程，让 PD10 亮 1 秒、灭 1 秒循环闪烁。
+
 Console 和 Shell 使用 USART1：
 
 ```dts
@@ -104,16 +158,46 @@ chosen {
 };
 ```
 
-Modbus RTU 使用 UART7：
+Modbus RTU 使用 3 路 UART 连接编码器：
 
 ```dts
+aliases {
+	modbus-encoder-uart7 = &modbus_encoder_uart7;
+	modbus-encoder-uart8 = &modbus_encoder_uart8;
+	modbus-encoder-uart4 = &modbus_encoder_uart4;
+};
+
 &uart7 {
 	pinctrl-0 = <&uart7_tx_pe8 &uart7_rx_pe7>;
 	pinctrl-names = "default";
-	current-speed = <115200>;
+	current-speed = <9600>;
 	status = "okay";
 
-	modbus0 {
+	modbus_encoder_uart7: modbus-encoder-uart7 {
+		compatible = "zephyr,modbus-serial";
+		status = "okay";
+	};
+};
+
+&uart8 {
+	pinctrl-0 = <&uart8_tx_pe1 &uart8_rx_pe0>;
+	pinctrl-names = "default";
+	current-speed = <9600>;
+	status = "okay";
+
+	modbus_encoder_uart8: modbus-encoder-uart8 {
+		compatible = "zephyr,modbus-serial";
+		status = "okay";
+	};
+};
+
+&uart4 {
+	pinctrl-0 = <&uart4_tx_pd1 &uart4_rx_pd0>;
+	pinctrl-names = "default";
+	current-speed = <9600>;
+	status = "okay";
+
+	modbus_encoder_uart4: modbus-encoder-uart4 {
 		compatible = "zephyr,modbus-serial";
 		status = "okay";
 	};
@@ -220,7 +304,7 @@ target_sources(app PRIVATE
 | 需求 | 修改位置 |
 | --- | --- |
 | 改调试串口 | DTS 的 `chosen` 和对应 UART 节点 |
-| 增加 RS-485 方向控制 | `modbus0` 节点添加 `de-gpios` / `re-gpios` |
+| 增加 RS-485 方向控制 | 对应 `modbus-encoder-*` 节点添加 `de-gpios` / `re-gpios` |
 | 改 PHY 地址 | `ethernet-phy@0` 和 `reg` |
 | 改 IP | `prj.conf` 的 `CONFIG_NET_CONFIG_MY_IPV4_*` |
 | 新增外设 | 在 DTS 启用外设节点，并在 `prj.conf` 启用驱动 |

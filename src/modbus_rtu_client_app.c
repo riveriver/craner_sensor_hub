@@ -1,79 +1,362 @@
 #include <zephyr/kernel.h>
-#include <zephyr/modbus/modbus.h>
-#include <zephyr/sys/util.h>
+#include <zephyr/device.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/modbus/modbus.h>
+#include <zephyr/shell/shell.h>
+#include <zephyr/sys/util.h>
+
+#include "modbus_register_service.h"
 
 LOG_MODULE_REGISTER(modbus_rtu_client_app, LOG_LEVEL_INF);
 
-#define MODBUS_CLIENT_STACK_SIZE 2048
-#define MODBUS_CLIENT_PRIORITY 6
+#define MODBUS_ENCODER_STACK_SIZE 2048
+#define MODBUS_ENCODER_PRIORITY 6
 
-#define MODBUS_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_modbus_serial)
+#define MODBUS_ENCODER_UART7_NODE DT_ALIAS(modbus_encoder_uart7)
+#define MODBUS_ENCODER_UART8_NODE DT_ALIAS(modbus_encoder_uart8)
+#define MODBUS_ENCODER_UART4_NODE DT_ALIAS(modbus_encoder_uart4)
 
-#define MODBUS_CLIENT_UNIT_ID 1
-#define MODBUS_CLIENT_BAUDRATE 115200
-#define MODBUS_CLIENT_RX_TIMEOUT_US 20000
-#define MODBUS_CLIENT_POLL_PERIOD_MS 40
-#define MODBUS_CLIENT_START_ADDR 0x0002
-#define MODBUS_CLIENT_REGISTER_COUNT 2
+BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_ENCODER_UART7_NODE, okay),
+	     "Missing modbus-encoder-uart7 alias");
+BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_ENCODER_UART8_NODE, okay),
+	     "Missing modbus-encoder-uart8 alias");
+BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_ENCODER_UART4_NODE, okay),
+	     "Missing modbus-encoder-uart4 alias");
 
-static int modbus_client_iface = -1;
+#define MODBUS_ENCODER_UNIT_ID 1
+#define MODBUS_ENCODER_BAUDRATE 9600
+#define MODBUS_ENCODER_RX_TIMEOUT_US 200000
+#define MODBUS_ENCODER_POLL_PERIOD_MS 25
+#define MODBUS_ENCODER_START_ADDR 0x0002
+#define MODBUS_ENCODER_REGISTER_COUNT 2
+#define MODBUS_ENCODER_MAX_REGISTER_COUNT 2
 
-static const struct modbus_iface_param modbus_client_param = {
+BUILD_ASSERT(MODBUS_ENCODER_REGISTER_COUNT <= MODBUS_ENCODER_MAX_REGISTER_COUNT,
+	     "Increase MODBUS_ENCODER_MAX_REGISTER_COUNT");
+
+struct modbus_encoder_stats {
+	uint64_t success_interval_sum_ms;
+	uint32_t success_interval_count;
+	uint32_t max_success_interval_ms;
+	uint32_t last_success_ms;
+	uint32_t success_count;
+	uint32_t failure_count;
+	int last_error;
+	bool has_last_success;
+};
+
+struct modbus_encoder_client {
+	const char *name;
+	const char *iface_name;
+	uint8_t unit_id;
+	uint16_t start_addr;
+	uint16_t register_count;
+	const char *timestamp_high_name;
+	const char *timestamp_low_name;
+	const char *error_code_name;
+	const char *online_code_name;
+	const char *turn_count_name;
+	const char *single_value_name;
+	int iface;
+	struct modbus_encoder_stats stats;
+};
+
+static K_MUTEX_DEFINE(modbus_encoder_stats_lock);
+
+static const struct modbus_iface_param modbus_encoder_param = {
 	.mode = MODBUS_MODE_RTU,
-	.rx_timeout = MODBUS_CLIENT_RX_TIMEOUT_US,
+	.rx_timeout = MODBUS_ENCODER_RX_TIMEOUT_US,
 	.serial = {
-		.baud = MODBUS_CLIENT_BAUDRATE,
-		.parity = UART_CFG_PARITY_NONE,
+		.baud = MODBUS_ENCODER_BAUDRATE,
+		.parity = UART_CFG_PARITY_EVEN,
 		.stop_bits = UART_CFG_STOP_BITS_1,
 	},
 };
 
-static int modbus_rtu_client_init(void)
-{
-	const char iface_name[] = DEVICE_DT_NAME(MODBUS_NODE);
+static struct modbus_encoder_client encoder_uart7 = {
+	.name = "SWING encoder_uart7 PE8_TX/PE7_RX",
+	.iface_name = DEVICE_DT_NAME(MODBUS_ENCODER_UART7_NODE),
+	.unit_id = MODBUS_ENCODER_UNIT_ID,
+	.start_addr = MODBUS_ENCODER_START_ADDR,
+	.register_count = MODBUS_ENCODER_REGISTER_COUNT,
+	.timestamp_high_name = "REG_SLEWING_TIMESTAMP_H",
+	.timestamp_low_name = "REG_SLEWING_TIMESTAMP_L",
+	.error_code_name = "REG_SLEWING_ERROR_CODE",
+	.online_code_name = "REG_SLEWING_ONLINE_CODE",
+	.turn_count_name = "REG_SLEWING_TRUN_CNT",
+	.single_value_name = "REG_SLEWING_SINAGLE_VAL",
+	.iface = -1,
+};
 
-	modbus_client_iface = modbus_iface_get_by_name(iface_name);
-	if (modbus_client_iface < 0) {
-		LOG_ERR("Modbus interface %s not found", iface_name);
-		return modbus_client_iface;
+static struct modbus_encoder_client encoder_uart8 = {
+	.name = "LUFFING encoder_uart8 PE1_TX/PE0_RX",
+	.iface_name = DEVICE_DT_NAME(MODBUS_ENCODER_UART8_NODE),
+	.unit_id = MODBUS_ENCODER_UNIT_ID,
+	.start_addr = MODBUS_ENCODER_START_ADDR,
+	.register_count = MODBUS_ENCODER_REGISTER_COUNT,
+	.timestamp_high_name = "REG_LUFFING_TIMESTAMP_H",
+	.timestamp_low_name = "REG_LUFFING_TIMESTAMP_L",
+	.error_code_name = "REG_LUFFING_ERROR_CODE",
+	.online_code_name = "REG_LUFFING_ONLINE_CODE",
+	.turn_count_name = "REG_LUFFING_TRUN_CNT",
+	.single_value_name = "REG_LUFFING_SINAGLE_VAL",
+	.iface = -1,
+};
+
+static struct modbus_encoder_client encoder_uart4 = {
+	.name = "HOOK encoder_uart4 PD1_TX/PD0_RX",
+	.iface_name = DEVICE_DT_NAME(MODBUS_ENCODER_UART4_NODE),
+	.unit_id = MODBUS_ENCODER_UNIT_ID,
+	.start_addr = MODBUS_ENCODER_START_ADDR,
+	.register_count = MODBUS_ENCODER_REGISTER_COUNT,
+	.timestamp_high_name = "REG_HOOK_TIMESTAMP_H",
+	.timestamp_low_name = "REG_HOOK_TIMESTAMP_L",
+	.error_code_name = "REG_HOOK_ERROR_CODE",
+	.online_code_name = "REG_HOOK_ONLINE_CODE",
+	.turn_count_name = "REG_HOOK_TRUN_CNT",
+	.single_value_name = "REG_HOOK_SINAGLE_VAL",
+	.iface = -1,
+};
+
+static int modbus_encoder_client_init(struct modbus_encoder_client *encoder)
+{
+	encoder->iface = modbus_iface_get_by_name(encoder->iface_name);
+	if (encoder->iface < 0) {
+		LOG_ERR("%s interface %s not found", encoder->name, encoder->iface_name);
+		return encoder->iface;
 	}
 
-	return modbus_init_client(modbus_client_iface, modbus_client_param);
+	return modbus_init_client(encoder->iface, modbus_encoder_param);
 }
 
-static void modbus_rtu_client_thread(void)
+static uint16_t modbus_encoder_error_code(int err)
 {
-	uint16_t regs[MODBUS_CLIENT_REGISTER_COUNT];
-	int64_t next_poll_time;
-	int err;
+	if (err < 0) {
+		return (uint16_t)(-err);
+	}
 
-	err = modbus_rtu_client_init();
-	if (err != 0) {
-		LOG_ERR("Modbus RTU client init failed: %d", err);
+	return (uint16_t)err;
+}
+
+static int modbus_encoder_record_registers(struct modbus_encoder_client *encoder,
+					   int comm_err, const uint16_t *regs)
+{
+	uint16_t online_code = comm_err == 0 ? 1U : 0U;
+	uint16_t error_code = modbus_encoder_error_code(comm_err);
+	const uint16_t failure_values[] = {
+		error_code,
+		online_code,
+	};
+	uint32_t timestamp_ms;
+
+	if (comm_err != 0) {
+		return modbus_register_service_write_inputs_by_name(
+			encoder->error_code_name, failure_values,
+			ARRAY_SIZE(failure_values));
+	}
+
+	if (regs == NULL) {
+		return -EINVAL;
+	}
+
+	timestamp_ms = k_uptime_get_32();
+
+	const uint16_t success_values[] = {
+		(uint16_t)(timestamp_ms >> 16),
+		(uint16_t)timestamp_ms,
+		error_code,
+		online_code,
+		regs[0],
+		regs[1],
+	};
+
+	return modbus_register_service_write_inputs_by_name(
+		encoder->timestamp_high_name, success_values,
+		ARRAY_SIZE(success_values));
+}
+
+static void modbus_encoder_record_attempt(struct modbus_encoder_client *encoder,
+					  int err)
+{
+	struct modbus_encoder_stats *stats = &encoder->stats;
+	uint32_t now_ms = k_uptime_get_32();
+	uint32_t interval_ms;
+
+	k_mutex_lock(&modbus_encoder_stats_lock, K_FOREVER);
+
+	if (err == 0) {
+		stats->success_count++;
+	} else {
+		stats->failure_count++;
+		stats->last_error = err;
+		k_mutex_unlock(&modbus_encoder_stats_lock);
 		return;
 	}
 
-	LOG_INF("Modbus RTU client on USART6 PC6/PC7, unit=%u, addr=0x%04x, qty=%u, %u Hz",
-		MODBUS_CLIENT_UNIT_ID, MODBUS_CLIENT_START_ADDR,
-		MODBUS_CLIENT_REGISTER_COUNT, 1000 / MODBUS_CLIENT_POLL_PERIOD_MS);
+	stats->last_error = 0;
+
+	if (!stats->has_last_success) {
+		stats->last_success_ms = now_ms;
+		stats->has_last_success = true;
+		k_mutex_unlock(&modbus_encoder_stats_lock);
+		return;
+	}
+
+	interval_ms = now_ms - stats->last_success_ms;
+	stats->last_success_ms = now_ms;
+
+	stats->success_interval_count++;
+	stats->success_interval_sum_ms += interval_ms;
+	if (interval_ms > stats->max_success_interval_ms) {
+		stats->max_success_interval_ms = interval_ms;
+	}
+
+	LOG_DBG("%s RTU success interval=%u ms", encoder->name, interval_ms);
+
+	k_mutex_unlock(&modbus_encoder_stats_lock);
+}
+
+static void shell_print_encoder_stats(const struct shell *shell,
+				      struct modbus_encoder_client *encoder)
+{
+	uint64_t success_interval_sum_ms;
+	uint32_t success_interval_count;
+	uint32_t max_success_interval_ms;
+	uint32_t success_count;
+	uint32_t failure_count;
+	int last_error;
+	bool has_last_success;
+	uint32_t avg_ms = 0;
+	uint32_t total_count;
+	uint32_t success_rate_x100 = 0;
+
+	k_mutex_lock(&modbus_encoder_stats_lock, K_FOREVER);
+	success_interval_sum_ms = encoder->stats.success_interval_sum_ms;
+	success_interval_count = encoder->stats.success_interval_count;
+	max_success_interval_ms = encoder->stats.max_success_interval_ms;
+	success_count = encoder->stats.success_count;
+	failure_count = encoder->stats.failure_count;
+	last_error = encoder->stats.last_error;
+	has_last_success = encoder->stats.has_last_success;
+	k_mutex_unlock(&modbus_encoder_stats_lock);
+
+	total_count = success_count + failure_count;
+	if (success_interval_count > 0) {
+		avg_ms = (uint32_t)(success_interval_sum_ms /
+				    success_interval_count);
+	}
+
+	if (total_count > 0) {
+		success_rate_x100 = (uint32_t)(((uint64_t)success_count * 10000U) /
+					       total_count);
+	}
+
+	shell_print(shell,
+		    "%s: total=%u success=%u failure=%u success_rate=%u.%02u%% success_intervals=%u avg=%u ms max=%u ms last_error=%d%s",
+		    encoder->name, total_count, success_count, failure_count,
+		    success_rate_x100 / 100U, success_rate_x100 % 100U,
+		    success_interval_count, avg_ms, max_success_interval_ms,
+		    last_error,
+		    has_last_success ? "" : " waiting_first_success");
+}
+
+static void reset_encoder_stats(struct modbus_encoder_client *encoder)
+{
+	k_mutex_lock(&modbus_encoder_stats_lock, K_FOREVER);
+	encoder->stats = (struct modbus_encoder_stats){ 0 };
+	k_mutex_unlock(&modbus_encoder_stats_lock);
+}
+
+static int cmd_show_encoder_stats(const struct shell *shell, size_t argc,
+				  char **argv)
+{
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	shell_print(shell, "Modbus RTU stats; avg/max use successful intervals only:");
+	shell_print_encoder_stats(shell, &encoder_uart7);
+	shell_print_encoder_stats(shell, &encoder_uart8);
+	shell_print_encoder_stats(shell, &encoder_uart4);
+
+	return 0;
+}
+
+SHELL_CMD_REGISTER(show_encoder_stats, NULL,
+		   "Show Modbus RTU encoder interval statistics.",
+		   cmd_show_encoder_stats);
+
+static int cmd_clear_encoder_stats(const struct shell *shell, size_t argc,
+				   char **argv)
+{
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	reset_encoder_stats(&encoder_uart7);
+	reset_encoder_stats(&encoder_uart8);
+	reset_encoder_stats(&encoder_uart4);
+
+	shell_print(shell, "Modbus RTU encoder statistics cleared.");
+
+	return 0;
+}
+
+SHELL_CMD_REGISTER(clear_encoder_stats, NULL,
+		   "Clear Modbus RTU encoder statistics.",
+		   cmd_clear_encoder_stats);
+
+static void modbus_encoder_thread(void *p1, void *p2, void *p3)
+{
+	struct modbus_encoder_client *encoder = p1;
+	uint16_t regs[MODBUS_ENCODER_MAX_REGISTER_COUNT];
+	int64_t next_poll_time;
+	int err;
+
+	ARG_UNUSED(p2);
+	ARG_UNUSED(p3);
+
+	err = modbus_encoder_client_init(encoder);
+	if (err != 0) {
+		LOG_ERR("%s Modbus RTU client init failed: %d", encoder->name, err);
+		return;
+	}
+
+	LOG_INF("%s Modbus RTU client started, iface=%s, 9600 8E1, rx_timeout=%u us, unit=%u, addr=0x%04x, qty=%u",
+		encoder->name, encoder->iface_name, MODBUS_ENCODER_RX_TIMEOUT_US,
+		encoder->unit_id, encoder->start_addr,
+		(unsigned int)encoder->register_count);
 
 	next_poll_time = k_uptime_get();
 
 	while (1) {
-		next_poll_time += MODBUS_CLIENT_POLL_PERIOD_MS;
+		next_poll_time += MODBUS_ENCODER_POLL_PERIOD_MS;
 
-		err = modbus_read_holding_regs(modbus_client_iface,
-					       MODBUS_CLIENT_UNIT_ID,
-					       MODBUS_CLIENT_START_ADDR,
+		err = modbus_read_holding_regs(encoder->iface,
+					       encoder->unit_id,
+					       encoder->start_addr,
 					       regs,
-					       ARRAY_SIZE(regs));
+					       encoder->register_count);
+		modbus_encoder_record_attempt(encoder, err);
+
 		if (err == 0) {
-			LOG_INF("FC03 addr=0x%04x qty=%u value[0]=0x%04x value[1]=0x%04x",
-				MODBUS_CLIENT_START_ADDR, ARRAY_SIZE(regs), regs[0], regs[1]);
+			int write_err;
+
+			write_err = modbus_encoder_record_registers(encoder, err, regs);
+			if (write_err != 0) {
+				LOG_WRN("%s failed to update input registers: %d",
+					encoder->name, write_err);
+			}
 		} else {
-			LOG_WRN("FC03 addr=0x%04x qty=%u failed: %d",
-				MODBUS_CLIENT_START_ADDR, ARRAY_SIZE(regs), err);
+			int write_err;
+
+			write_err = modbus_encoder_record_registers(encoder, err, NULL);
+			if (write_err != 0) {
+				LOG_WRN("%s failed to update failure registers: %d",
+					encoder->name, write_err);
+			}
+
+			LOG_WRN("%s FC03 addr=0x%04x qty=%u failed: %d",
+				encoder->name, encoder->start_addr,
+				(unsigned int)encoder->register_count, err);
 		}
 
 		int64_t sleep_ms = next_poll_time - k_uptime_get();
@@ -86,6 +369,14 @@ static void modbus_rtu_client_thread(void)
 	}
 }
 
-// K_THREAD_DEFINE(modbus_rtu_client_tid, MODBUS_CLIENT_STACK_SIZE,
-// 		modbus_rtu_client_thread, NULL, NULL, NULL,
-// 		MODBUS_CLIENT_PRIORITY, 0, 0);
+K_THREAD_DEFINE(modbus_encoder_uart7_tid, MODBUS_ENCODER_STACK_SIZE,
+		modbus_encoder_thread, &encoder_uart7, NULL, NULL,
+		MODBUS_ENCODER_PRIORITY, 0, 0);
+
+K_THREAD_DEFINE(modbus_encoder_uart8_tid, MODBUS_ENCODER_STACK_SIZE,
+		modbus_encoder_thread, &encoder_uart8, NULL, NULL,
+		MODBUS_ENCODER_PRIORITY, 0, 0);
+
+K_THREAD_DEFINE(modbus_encoder_uart4_tid, MODBUS_ENCODER_STACK_SIZE,
+		modbus_encoder_thread, &encoder_uart4, NULL, NULL,
+		MODBUS_ENCODER_PRIORITY, 0, 0);

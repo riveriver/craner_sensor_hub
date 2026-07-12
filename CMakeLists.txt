@@ -12,5 +12,8 @@ target_sources(app PRIVATE
 	src/power_control_app.c
 	src/heartbeat_led_app.c
 	src/shell_app.c
+	src/modbus_register_map.c
+	src/modbus_register_service.c
 	src/modbus_rtu_client_app.c
+	src/modbus_tcp_server_app.c
 )
