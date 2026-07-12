@@ -1,4 +1,4 @@
-﻿# Zephyr Modbus Register 管理示例
+# Zephyr Modbus Register 管理示例
 
 ## 1. 示例实现了什么
 
@@ -26,21 +26,21 @@
 | `0x0000` | `REG_SLEWING_TIMESTAMP_H` | 回转上一次成功更新时间戳高 16 位 |
 | `0x0001` | `REG_SLEWING_TIMESTAMP_L` | 回转上一次成功更新时间戳低 16 位 |
 | `0x0002` | `REG_SLEWING_ERROR_CODE` | 回转最近一次通信错误码，成功为 `0` |
-| `0x0003` | `REG_SLEWING_ONLINE_CODE` | 回转在线码，成功为 `1`，失败为 `0` |
+| `0x0003` | `REG_SLEWING_OFFLINE_STATUS` | 回转离线状态，成功为 `0`，失败为 `1` |
 | `0x0004` | `REG_SLEWING_TRUN_CNT` | 回转圈数 |
 | `0x0005` | `REG_SLEWING_SINAGLE_VAL` | 回转单圈值 |
 | `0x0006` | `REG_LUFFING_TIMESTAMP_H` | 变幅上一次成功更新时间戳高 16 位 |
 | `0x0007` | `REG_LUFFING_TIMESTAMP_L` | 变幅上一次成功更新时间戳低 16 位 |
 | `0x0008` | `REG_LUFFING_ERROR_CODE` | 变幅最近一次通信错误码，成功为 `0` |
-| `0x0009` | `REG_LUFFING_ONLINE_CODE` | 变幅在线码，成功为 `1`，失败为 `0` |
+| `0x0009` | `REG_LUFFING_OFFLINE_STATUS` | 变幅离线状态，成功为 `0`，失败为 `1` |
 | `0x000A` | `REG_LUFFING_TRUN_CNT` | 变幅圈数 |
 | `0x000B` | `REG_LUFFING_SINAGLE_VAL` | 变幅单圈值 |
-| `0x000C` | `REG_HOIST_TIMESTAMP_H` | 吊钩上一次成功更新时间戳高 16 位 |
-| `0x000D` | `REG_HOIST_TIMESTAMP_L` | 吊钩上一次成功更新时间戳低 16 位 |
-| `0x000E` | `REG_HOIST_ERROR_CODE` | 吊钩最近一次通信错误码，成功为 `0` |
-| `0x000F` | `REG_HOIST_ONLINE_CODE` | 吊钩在线码，成功为 `1`，失败为 `0` |
-| `0x0010` | `REG_HOIST_TRUN_CNT` | 吊钩圈数 |
-| `0x0011` | `REG_HOIST_SINAGLE_VAL` | 吊钩单圈值 |
+| `0x000C` | `REG_HOISTING_TIMESTAMP_H` | 吊钩上一次成功更新时间戳高 16 位 |
+| `0x000D` | `REG_HOISTING_TIMESTAMP_L` | 吊钩上一次成功更新时间戳低 16 位 |
+| `0x000E` | `REG_HOISTING_ERROR_CODE` | 吊钩最近一次通信错误码，成功为 `0` |
+| `0x000F` | `REG_HOISTING_OFFLINE_STATUS` | 吊钩离线状态，成功为 `0`，失败为 `1` |
+| `0x0010` | `REG_HOISTING_TRUN_CNT` | 吊钩圈数 |
+| `0x0011` | `REG_HOISTING_SINAGLE_VAL` | 吊钩单圈值 |
 
 其他寄存器：
 
@@ -90,11 +90,11 @@ PC 侧使用 Modbus TCP client 连接：
 REG_SLEWING_TRUN_CNT = 0x1234
 REG_SLEWING_SINAGLE_VAL = 0x5678
 REG_SLEWING_ERROR_CODE = 0
-REG_SLEWING_ONLINE_CODE = 1
+REG_SLEWING_OFFLINE_STATUS = 0
 REG_SLEWING_TIMESTAMP_H/L = k_uptime_get_32()
 ```
 
-如果通信失败，只写入错误码并把 `ONLINE_CODE` 置为 `0`。时间戳、圈数和单圈值保持上一次成功读取的值。
+如果通信失败，只写入错误码并把 `OFFLINE_STATUS` 置为 `1`。时间戳、圈数和单圈值保持上一次成功读取的值。
 
 ## 3. 前置条件
 
@@ -237,7 +237,7 @@ const uint16_t values[] = {
 	timestamp_h,
 	timestamp_l,
 	error_code,
-	online_code,
+	offline_status,
 	turn_count,
 	single_value,
 };
@@ -246,7 +246,7 @@ modbus_register_service_write_inputs_by_name(
 	encoder->timestamp_high_name, values, ARRAY_SIZE(values));
 ```
 
-这表示 input register 是内部数据出口：RTU 采集线程负责更新在线码、错误码、时间戳、圈数和单圈值；TCP client 负责通过 FC04 读取。
+这表示 input register 是内部数据出口：RTU 采集线程负责更新离线状态、错误码、时间戳、圈数和单圈值；TCP client 负责通过 FC04 读取。
 
 ## 7. 如何扩展
 
@@ -264,7 +264,7 @@ modbus_register_service_write_inputs_by_name(
 
 | 现象 | 检查 |
 | --- | --- |
-| FC04 读 input 一直是 0 | RTU 线程是否启动，编码器是否通信成功，`ONLINE_CODE` 和 `ERROR_CODE` 是多少 |
+| FC04 读 input 一直是 0 | RTU 线程是否启动，编码器是否通信成功，`OFFLINE_STATUS` 和 `ERROR_CODE` 是多少 |
 | 写 input register 失败 | 外部 client 不能写 input，只能内部业务写 |
 | 按名字写入返回 `-ENOTSUP` | `modbus_register_map.c` 中是否存在完全一致的 `name` 字符串 |
 | 写 coil/holding 后重启没有恢复 | 当前未实现持久化，这是预期行为 |

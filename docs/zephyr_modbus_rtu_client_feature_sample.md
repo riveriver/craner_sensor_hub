@@ -1,4 +1,4 @@
-﻿# Zephyr Modbus RTU Client 示例：三路编码器采集
+# Zephyr Modbus RTU Client 示例：三路编码器采集
 
 ## 1. 示例实现了什么
 
@@ -22,7 +22,7 @@
 | --- | --- | --- | --- | --- |
 | 回转 SWING/SLEWING | UART7 | PE8 | PE7 | `modbus-slewing-encoder` |
 | 变幅 LUFFING | UART8 | PE1 | PE0 | `modbus-luffing-encoder` |
-| 吊钩 HOIST | UART4 | PD1 | PD0 | `modbus-hook-encoder` |
+| 吊钩 HOISTING | UART4 | PD1 | PD0 | `modbus-hook-encoder` |
 
 每个编码器读取远端 Holding Register：
 
@@ -37,7 +37,7 @@
 | --- | --- | --- |
 | `*_TIMESTAMP_H/L` | 写入当前 `k_uptime_get_32()` | 保持上一次成功读取时间 |
 | `*_ERROR_CODE` | `0` | 正数错误码，例如 timeout `116` |
-| `*_ONLINE_CODE` | `1` | `0` |
+| `*_OFFLINE_STATUS` | `0` | `1` |
 | `*_TRUN_CNT` | 远端 `0x0002` 的值 | 保持上一次成功读取值 |
 | `*_SINAGLE_VAL` | 远端 `0x0003` 的值 | 保持上一次成功读取值 |
 
@@ -77,7 +77,7 @@ K_THREAD_DEFINE(hook_encoder_tid, MODBUS_ENCODER_STACK_SIZE,
 | Parity | Even |
 | Stop bits | `1` |
 
-读取成功时不会再用 `LOG_INF` 周期打印 `single/turn_cnt` 数据，避免 3 路编码器刷屏。成功数据会写入 input register，失败时只更新错误码和在线码，供 Modbus TCP client 用 FC04 判断当前通信状态。
+读取成功时不会再用 `LOG_INF` 周期打印 `single/turn_cnt` 数据，避免 3 路编码器刷屏。成功数据会写入 input register，失败时只更新错误码和离线状态，供 Modbus TCP client 用 FC04 判断当前通信状态。
 
 读取失败时日志类似：
 
@@ -103,7 +103,7 @@ clear_encoder_stats
 Modbus RTU stats; avg/max use successful intervals only:
 SLEWING encoder: total=42 success=40 failure=2 success_rate=95.23% success_intervals=39 avg=3000 ms max=3001 ms last_error=0
 LUFFING encoder: total=42 success=42 failure=0 success_rate=100.00% success_intervals=41 avg=3000 ms max=3001 ms last_error=0
-HOIST encoder: total=42 success=38 failure=4 success_rate=90.47% success_intervals=37 avg=3158 ms max=6000 ms last_error=-116
+HOISTING encoder: total=42 success=38 failure=4 success_rate=90.47% success_intervals=37 avg=3158 ms max=6000 ms last_error=-116
 ```
 
 如果需要看每次成功通信间隔的 DBG 日志，可以在 shell 中调高日志级别：
@@ -202,7 +202,7 @@ UART4 编码器：
 ```c
 #define MODBUS_SLEWING_ENCODER_NODE DT_ALIAS(modbus_slewing_encoder)
 #define MODBUS_LUFFING_ENCODER_NODE DT_ALIAS(modbus_luffing_encoder)
-#define MODBUS_HOIST_ENCODER_NODE DT_ALIAS(modbus_hook_encoder)
+#define MODBUS_HOISTING_ENCODER_NODE DT_ALIAS(modbus_hook_encoder)
 ```
 
 ## 5. Kconfig/prj.conf：软件配置
@@ -257,7 +257,7 @@ static struct modbus_encoder_client slewing_encoder = {
 	.timestamp_high_name = "REG_SLEWING_TIMESTAMP_H",
 	.timestamp_low_name = "REG_SLEWING_TIMESTAMP_L",
 	.error_code_name = "REG_SLEWING_ERROR_CODE",
-	.online_code_name = "REG_SLEWING_ONLINE_CODE",
+	.offline_status_name = "REG_SLEWING_OFFLINE_STATUS",
 	.turn_count_name = "REG_SLEWING_TRUN_CNT",
 	.single_value_name = "REG_SLEWING_SINAGLE_VAL",
 	.iface = -1,
@@ -292,7 +292,7 @@ modbus_encoder_record_attempt(encoder, err);
 ```c
 const uint16_t values[] = {
 	error_code,
-	online_code,
+	offline_status,
 	regs[0],
 	regs[1],
 };

@@ -30,7 +30,7 @@ config CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD
 	help
 	  Enable the Modbus RTU client thread for the luffing encoder.
 
-config CRANER_ENABLE_READ_HOIST_ENCODER_THREAD
+config CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD
 	bool "Enable hook encoder Modbus RTU thread"
 	default y
 	depends on MODBUS

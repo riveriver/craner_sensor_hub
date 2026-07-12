@@ -14,7 +14,7 @@ LOG_MODULE_REGISTER(modbus_rtu_client_app, LOG_LEVEL_INF);
 
 #define MODBUS_SLEWING_ENCODER_NODE DT_ALIAS(modbus_slewing_encoder)
 #define MODBUS_LUFFING_ENCODER_NODE DT_ALIAS(modbus_luffing_encoder)
-#define MODBUS_HOIST_ENCODER_NODE DT_ALIAS(modbus_hook_encoder)
+#define MODBUS_HOISTING_ENCODER_NODE DT_ALIAS(modbus_hook_encoder)
 
 #if defined(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD)
 BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_SLEWING_ENCODER_NODE, okay),
@@ -26,8 +26,8 @@ BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_LUFFING_ENCODER_NODE, okay),
 	     "Missing modbus-luffing-encoder alias");
 #endif
 
-#if defined(CONFIG_CRANER_ENABLE_READ_HOIST_ENCODER_THREAD)
-BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_HOIST_ENCODER_NODE, okay),
+#if defined(CONFIG_CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD)
+BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_HOISTING_ENCODER_NODE, okay),
 	     "Missing modbus-hook-encoder alias");
 #endif
 
@@ -62,7 +62,7 @@ struct modbus_encoder_client {
 	const char *timestamp_high_name;
 	const char *timestamp_low_name;
 	const char *error_code_name;
-	const char *online_code_name;
+	const char *offline_status_name;
 	const char *turn_count_name;
 	const char *single_value_name;
 	int iface;
@@ -91,7 +91,7 @@ static struct modbus_encoder_client slewing_encoder = {
 	.timestamp_high_name = "REG_SLEWING_TIMESTAMP_H",
 	.timestamp_low_name = "REG_SLEWING_TIMESTAMP_L",
 	.error_code_name = "REG_SLEWING_ERROR_CODE",
-	.online_code_name = "REG_SLEWING_ONLINE_CODE",
+	.offline_status_name = "REG_SLEWING_OFFLINE_STATUS",
 	.turn_count_name = "REG_SLEWING_TRUN_CNT",
 	.single_value_name = "REG_SLEWING_SINAGLE_VAL",
 	.iface = -1,
@@ -108,26 +108,26 @@ static struct modbus_encoder_client luffing_encoder = {
 	.timestamp_high_name = "REG_LUFFING_TIMESTAMP_H",
 	.timestamp_low_name = "REG_LUFFING_TIMESTAMP_L",
 	.error_code_name = "REG_LUFFING_ERROR_CODE",
-	.online_code_name = "REG_LUFFING_ONLINE_CODE",
+	.offline_status_name = "REG_LUFFING_OFFLINE_STATUS",
 	.turn_count_name = "REG_LUFFING_TRUN_CNT",
 	.single_value_name = "REG_LUFFING_SINAGLE_VAL",
 	.iface = -1,
 };
 #endif
 
-#if defined(CONFIG_CRANER_ENABLE_READ_HOIST_ENCODER_THREAD)
+#if defined(CONFIG_CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD)
 static struct modbus_encoder_client hook_encoder = {
 	.name = "hoisting encoder",
-	.iface_name = DEVICE_DT_NAME(MODBUS_HOIST_ENCODER_NODE),
+	.iface_name = DEVICE_DT_NAME(MODBUS_HOISTING_ENCODER_NODE),
 	.unit_id = MODBUS_ENCODER_UNIT_ID,
 	.start_addr = MODBUS_ENCODER_START_ADDR,
 	.register_count = MODBUS_ENCODER_REGISTER_COUNT,
-	.timestamp_high_name = "REG_HOIST_TIMESTAMP_H",
-	.timestamp_low_name = "REG_HOIST_TIMESTAMP_L",
-	.error_code_name = "REG_HOIST_ERROR_CODE",
-	.online_code_name = "REG_HOIST_ONLINE_CODE",
-	.turn_count_name = "REG_HOIST_TRUN_CNT",
-	.single_value_name = "REG_HOIST_SINAGLE_VAL",
+	.timestamp_high_name = "REG_HOISTING_TIMESTAMP_H",
+	.timestamp_low_name = "REG_HOISTING_TIMESTAMP_L",
+	.error_code_name = "REG_HOISTING_ERROR_CODE",
+	.offline_status_name = "REG_HOISTING_OFFLINE_STATUS",
+	.turn_count_name = "REG_HOISTING_TRUN_CNT",
+	.single_value_name = "REG_HOISTING_SINAGLE_VAL",
 	.iface = -1,
 };
 #endif
@@ -155,11 +155,11 @@ static uint16_t modbus_encoder_error_code(int err)
 static int modbus_encoder_record_registers(struct modbus_encoder_client *encoder,
 					   int comm_err, const uint16_t *regs)
 {
-	uint16_t online_code = comm_err == 0 ? 1U : 0U;
+	uint16_t offline_status = comm_err == 0 ? 0U : 1U;
 	uint16_t error_code = modbus_encoder_error_code(comm_err);
 	const uint16_t failure_values[] = {
 		error_code,
-		online_code,
+		offline_status,
 	};
 	uint32_t timestamp_ms;
 
@@ -179,7 +179,7 @@ static int modbus_encoder_record_registers(struct modbus_encoder_client *encoder
 		(uint16_t)(timestamp_ms >> 16),
 		(uint16_t)timestamp_ms,
 		error_code,
-		online_code,
+		offline_status,
 		regs[0],
 		regs[1],
 	};
@@ -294,7 +294,7 @@ static int cmd_show_encoder_stats(const struct shell *shell, size_t argc,
 #if defined(CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD)
 	shell_print_encoder_stats(shell, &luffing_encoder);
 #endif
-#if defined(CONFIG_CRANER_ENABLE_READ_HOIST_ENCODER_THREAD)
+#if defined(CONFIG_CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD)
 	shell_print_encoder_stats(shell, &hook_encoder);
 #endif
 
@@ -317,7 +317,7 @@ static int cmd_clear_encoder_stats(const struct shell *shell, size_t argc,
 #if defined(CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD)
 	reset_encoder_stats(&luffing_encoder);
 #endif
-#if defined(CONFIG_CRANER_ENABLE_READ_HOIST_ENCODER_THREAD)
+#if defined(CONFIG_CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD)
 	reset_encoder_stats(&hook_encoder);
 #endif
 
@@ -407,7 +407,7 @@ K_THREAD_DEFINE(luffing_encoder_tid, MODBUS_ENCODER_STACK_SIZE,
 		MODBUS_ENCODER_PRIORITY, 0, 0);
 #endif
 
-#if defined(CONFIG_CRANER_ENABLE_READ_HOIST_ENCODER_THREAD)
+#if defined(CONFIG_CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD)
 K_THREAD_DEFINE(hook_encoder_tid, MODBUS_ENCODER_STACK_SIZE,
 		modbus_encoder_thread, &hook_encoder, NULL, NULL,
 		MODBUS_ENCODER_PRIORITY, 0, 0);
