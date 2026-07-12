@@ -14,6 +14,7 @@
 	chosen {
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
 		zephyr,console = &usart1;
 		zephyr,shell-uart = &usart1;
 	};
@@ -53,6 +54,39 @@
 		heartbeat_led: heartbeat_led {
 			gpios = <&gpiod 10 GPIO_ACTIVE_HIGH>;
 			label = "HEARTBEAT_LED";
+		};
+	};
+};
+
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		boot_partition: partition@0 {
+			label = "mcuboot";
+			reg = <0x00000000 0x00020000>;
+		};
+
+		slot0_partition: partition@20000 {
+			label = "image-0";
+			reg = <0x00020000 0x000c0000>;
+		};
+
+		slot1_partition: partition@e0000 {
+			label = "image-1";
+			reg = <0x000e0000 0x000c0000>;
+		};
+
+		scratch_partition: partition@1a0000 {
+			label = "image-scratch";
+			reg = <0x001a0000 0x00020000>;
+		};
+
+		app_storage_partition: partition@1c0000 {
+			label = "app-storage";
+			reg = <0x001c0000 0x00040000>;
 		};
 	};
 };
