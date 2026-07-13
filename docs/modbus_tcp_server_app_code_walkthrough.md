@@ -56,20 +56,13 @@ send() 发回 PC
 下面这组是 POSIX 风格 socket：
 
 ```c
-#include <zephyr/posix/netinet/in.h>
-#include <zephyr/posix/sys/socket.h>
-#include <zephyr/posix/arpa/inet.h>
-#include <zephyr/posix/unistd.h>
-#include <zephyr/posix/poll.h>
-#include <zephyr/posix/netdb.h>
 
 #include <zephyr/net/socket.h>
 ```
 
-当前实现按 Zephyr 官方 sample 写法使用 `socket()`、`bind()`、`listen()`、`accept()`、`recv()`、`send()`、`close()`，所以 `prj.conf` 需要：
+当前实现按 Zephyr 官方 sample 写法使用 `zsock_socket()`、`zsock_bind()`、`zsock_listen()`、`zsock_accept()`、`zsock_recv()`、`zsock_send()`、`zsock_close()`，所以 `prj.conf` 需要：
 
 ```conf
-CONFIG_POSIX_API=y
 CONFIG_NET_SOCKETS=y
 CONFIG_NET_TCP=y
 ```
@@ -405,16 +398,16 @@ modbus_raw_put_header(adu, header);
 再发 header：
 
 ```c
-send(client, header, sizeof(header), 0)
+zsock_send(client, header, sizeof(header), 0)
 ```
 
 再发 data：
 
 ```c
-send(client, adu->data, adu->length, 0)
+zsock_send(client, adu->data, adu->length, 0)
 ```
 
-这里的 `client` 是 `accept()` 返回的 socket，代表当前连进来的 PC client。
+这里的 `client` 是 `zsock_accept()` 返回的 socket，代表当前连进来的 PC client。
 
 ## 14. modbus_tcp_connection：处理一次 Modbus 请求
 
@@ -427,7 +420,7 @@ static int modbus_tcp_connection(int client)
 第一步：读取 MBAP header：
 
 ```c
-rc = recv(client, header, sizeof(header), MSG_WAITALL);
+rc = zsock_recv(client, header, sizeof(header), ZSOCK_MSG_WAITALL);
 ```
 
 `MSG_WAITALL` 表示尽量等到指定字节数都收齐。Modbus TCP header 长度固定，所以这里适合用它。
@@ -442,7 +435,7 @@ data_len = tmp_adu.length;
 第三步：读取 PDU data：
 
 ```c
-rc = recv(client, tmp_adu.data, data_len, MSG_WAITALL);
+rc = zsock_recv(client, tmp_adu.data, data_len, ZSOCK_MSG_WAITALL);
 ```
 
 第四步：交给 Zephyr Modbus core：
@@ -519,18 +512,18 @@ bind_addr.sin_port = htons(MODBUS_TCP_PORT);
 第四步：绑定和监听：
 
 ```c
-bind(serv, (struct sockaddr *)&bind_addr, sizeof(bind_addr));
-listen(serv, 5);
+zsock_bind(serv, (struct sockaddr *)&bind_addr, sizeof(bind_addr));
+zsock_listen(serv, 5);
 ```
 
 第五步：循环接受 client：
 
 ```c
-client = accept(serv, (struct sockaddr *)&client_addr,
+client = zsock_accept(serv, (struct sockaddr *)&client_addr,
 		&client_addr_len);
 ```
 
-`accept()` 会阻塞等待 PC 连接。连接成功后返回新的 `client` socket。
+`zsock_accept()` 会阻塞等待 PC 连接。连接成功后返回新的 `client` socket。
 
 第六步：在同一个连接里反复处理请求：
 
@@ -543,7 +536,7 @@ do {
 只要 `modbus_tcp_connection()` 返回 0，就继续处理下一条请求。返回错误说明连接断开或收发失败，于是关闭 client：
 
 ```c
-close(client);
+zsock_close(client);
 ```
 
 ## 16. K_THREAD_DEFINE：让 server 自动运行
