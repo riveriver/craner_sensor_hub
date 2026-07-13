@@ -1,5 +1,6 @@
 param(
     [string]$Board = "craner_general_stm32h743vit6",
+    [string]$ExtraConf = "",
     [switch]$SkipOtaImages
 )
 
@@ -18,6 +19,21 @@ $westArgs = @(
     "--",
     "-DBOARD_ROOT=$PSScriptRoot"
 )
+
+if (-not [string]::IsNullOrWhiteSpace($ExtraConf)) {
+    $extraConfPath = if ([System.IO.Path]::IsPathRooted($ExtraConf)) {
+        $ExtraConf
+    } else {
+        Join-Path $PSScriptRoot $ExtraConf
+    }
+
+    if (-not (Test-Path $extraConfPath)) {
+        Write-Error "Extra config file not found: $extraConfPath"
+        exit 1
+    }
+
+    $westArgs += "-DEXTRA_CONF_FILE=$extraConfPath"
+}
 
 & python -m west @westArgs
 if ($LASTEXITCODE -ne 0) {
