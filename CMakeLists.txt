@@ -34,10 +34,6 @@ if(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD OR
 	target_sources(app PRIVATE src/modbus_rtu_client_app.c)
 endif()
 
-target_sources_ifdef(CONFIG_CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD app PRIVATE
-	src/modbus_tcp_server_app.c
-)
-
 target_sources_ifdef(CONFIG_CRANER_ENABLE_OTA_CONTROL app PRIVATE
 	src/ota_control_app.c
 )

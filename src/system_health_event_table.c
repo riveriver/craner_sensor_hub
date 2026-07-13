@@ -8,7 +8,9 @@ LOG_MODULE_DECLARE(system_health_app);
 static void system_health_log_offline_event(
 	const struct system_health_event_obj *event_obj)
 {
-	LOG_ERR("System health event offline: event=%d", event_obj->event);
+	LOG_ERR_RATELIMIT_RATE(60000,
+			       "System health event offline: event=%d",
+			       event_obj->event);
 }
 
 const struct system_health_event_obj system_health_event_table[] = {
@@ -16,13 +18,6 @@ const struct system_health_event_obj system_health_event_table[] = {
 		.event = SYSTEM_HEALTH_ETHERNET,
 		.enable = false,
 		.priority = 1,
-		.offline_timeout_ms = 3000,
-		.offline_first_func = system_health_log_offline_event,
-	},
-	{
-		.event = SYSTEM_HEALTH_MODBUS_TCP,
-		.enable = false,
-		.priority = 2,
 		.offline_timeout_ms = 3000,
 		.offline_first_func = system_health_log_offline_event,
 	},

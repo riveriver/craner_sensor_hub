@@ -19,13 +19,6 @@ config CRANER_SYSTEM_HEALTH_CHECK_INTERVAL_MS
 	help
 	  Period used by the system health monitor thread.
 
-config CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD
-	bool "Enable Modbus TCP server thread"
-	default y
-	depends on MODBUS && NET_TCP && NET_SOCKETS
-	help
-	  Enable the Modbus TCP server thread on TCP port 502.
-
 config CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD
 	bool "Enable slewing encoder Modbus RTU thread"
 	default y
