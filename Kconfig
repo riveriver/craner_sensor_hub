@@ -22,7 +22,7 @@ config CRANER_SYSTEM_HEALTH_CHECK_INTERVAL_MS
 config CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD
 	bool "Enable Modbus TCP server thread"
 	default y
-	depends on MODBUS && NET_TCP && NET_SOCKETS && POSIX_API
+	depends on MODBUS && NET_TCP && NET_SOCKETS
 	help
 	  Enable the Modbus TCP server thread on TCP port 502.
 
@@ -57,7 +57,7 @@ config CRANER_ENABLE_OTA_CONTROL
 
 config CRANER_SYSTEM_HEALTH_WDT_TIMEOUT_MS
 	int "System health watchdog timeout in milliseconds"
-	default 8000
+	default 30000
 	range 1000 60000
 	depends on CRANER_ENABLE_SYSTEM_HEALTH_THREAD
 	help

@@ -13,13 +13,6 @@
 #include <zephyr/sys/util.h>
 #include <zephyr/modbus/modbus.h>
 
-#include <zephyr/posix/netinet/in.h>
-#include <zephyr/posix/sys/socket.h>
-#include <zephyr/posix/arpa/inet.h>
-#include <zephyr/posix/unistd.h>
-#include <zephyr/posix/poll.h>
-#include <zephyr/posix/netdb.h>
-
 #include <zephyr/net/socket.h>
 
 #include "modbus_register_service.h"
@@ -204,11 +197,11 @@ static int modbus_tcp_reply(int client, struct modbus_adu *adu)
 	uint8_t header[MODBUS_MBAP_AND_FC_LENGTH];
 
 	modbus_raw_put_header(adu, header);
-	if (send(client, header, sizeof(header), 0) < 0) {
+	if (zsock_send(client, header, sizeof(header), 0) < 0) {
 		return -errno;
 	}
 
-	if (send(client, adu->data, adu->length, 0) < 0) {
+	if (zsock_send(client, adu->data, adu->length, 0) < 0) {
 		return -errno;
 	}
 
@@ -221,7 +214,7 @@ static int modbus_tcp_connection(int client)
 	int rc;
 	int data_len;
 
-	rc = recv(client, header, sizeof(header), MSG_WAITALL);
+	rc = zsock_recv(client, header, sizeof(header), ZSOCK_MSG_WAITALL);
 	if (rc <= 0) {
 		return rc == 0 ? -ENOTCONN : -errno;
 	}
@@ -230,7 +223,7 @@ static int modbus_tcp_connection(int client)
 	modbus_raw_get_header(&tmp_adu, header);
 	data_len = tmp_adu.length;
 
-	rc = recv(client, tmp_adu.data, data_len, MSG_WAITALL);
+	rc = zsock_recv(client, tmp_adu.data, data_len, ZSOCK_MSG_WAITALL);
 	if (rc <= 0) {
 		return rc == 0 ? -ENOTCONN : -errno;
 	}
@@ -260,7 +253,7 @@ static void modbus_tcp_server_thread(void)
 		return;
 	}
 
-	serv = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	serv = zsock_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
 	if (serv < 0) {
 		LOG_ERR("error: socket: %d", errno);
@@ -271,12 +264,12 @@ static void modbus_tcp_server_thread(void)
 	bind_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	bind_addr.sin_port = htons(MODBUS_TCP_PORT);
 
-	if (bind(serv, (struct sockaddr *)&bind_addr, sizeof(bind_addr)) < 0) {
+	if (zsock_bind(serv, (struct sockaddr *)&bind_addr, sizeof(bind_addr)) < 0) {
 		LOG_ERR("error: bind: %d", errno);
 		return;
 	}
 
-	if (listen(serv, 5) < 0) {
+	if (zsock_listen(serv, 5) < 0) {
 		LOG_ERR("error: listen: %d", errno);
 		return;
 	}
@@ -290,23 +283,23 @@ static void modbus_tcp_server_thread(void)
 		int client;
 		int rc;
 
-		client = accept(serv, (struct sockaddr *)&client_addr,
-				&client_addr_len);
+		client = zsock_accept(serv, (struct sockaddr *)&client_addr,
+				      &client_addr_len);
 
 		if (client < 0) {
 			LOG_ERR("error: accept: %d", errno);
 			continue;
 		}
 
-		inet_ntop(client_addr.sin_family, &client_addr.sin_addr,
-			  addr_str, sizeof(addr_str));
+		zsock_inet_ntop(client_addr.sin_family, &client_addr.sin_addr,
+				addr_str, sizeof(addr_str));
 		LOG_INF("Connection #%d from %s", counter++, addr_str);
 
 		do {
 			rc = modbus_tcp_connection(client);
 		} while (!rc);
 
-		close(client);
+		zsock_close(client);
 		LOG_INF("Connection from %s closed, errno %d", addr_str, rc);
 	}
 }

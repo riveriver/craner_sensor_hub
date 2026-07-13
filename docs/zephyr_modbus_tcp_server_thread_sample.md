@@ -70,7 +70,7 @@ PC 侧使用 Modbus TCP client：
 | Ethernet | RMII PHY link 正常 |
 | IP 网段 | PC 和 MCU 在 `192.168.18.0/24` |
 | 防火墙 | PC 工具允许访问 TCP 502 |
-| Kconfig | 启用 Modbus raw、TCP socket、POSIX API |
+| Kconfig | 启用 Modbus raw、TCP socket、Zephyr zsock API |
 | 端口权限 | 设备端监听 502，不需要 PC 本地监听 |
 
 先确认网络可达：
@@ -129,7 +129,6 @@ CONFIG_NETWORKING=y
 CONFIG_NET_IPV4=y
 CONFIG_NET_TCP=y
 CONFIG_NET_SOCKETS=y
-CONFIG_POSIX_API=y
 ```
 
 Modbus raw server：
@@ -151,7 +150,7 @@ CONFIG_NET_CONFIG_MY_IPV4_NETMASK="255.255.255.0"
 CONFIG_NET_CONFIG_MY_IPV4_GW="192.168.18.1"
 ```
 
-`CONFIG_POSIX_API=y` 是为了保持和官方示例一致，使用 `socket()`、`bind()`、`listen()`、`accept()`、`recv()`、`send()`、`close()` 这一套 POSIX 风格接口。
+当前实现使用 Zephyr 原生 `zsock_*` socket API，不需要 `CONFIG_POSIX_API`。
 
 ## 6. 业务/应用代码
 
@@ -174,20 +173,20 @@ modbus_register_user_fc(server_iface, &modbus_cfg_custom);
 TCP server 流程：
 
 ```c
-serv = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-bind(serv, (struct sockaddr *)&bind_addr, sizeof(bind_addr));
-listen(serv, 5);
-client = accept(serv, (struct sockaddr *)&client_addr, &client_addr_len);
+serv = zsock_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+zsock_bind(serv, (struct sockaddr *)&bind_addr, sizeof(bind_addr));
+zsock_listen(serv, 5);
+client = zsock_accept(serv, (struct sockaddr *)&client_addr, &client_addr_len);
 ```
 
 收到 TCP 数据后：
 
-1. `recv()` 读取 MBAP header。
+1. `zsock_recv()` 读取 MBAP header。
 2. `modbus_raw_get_header()` 转成 Zephyr Modbus ADU。
-3. 再 `recv()` 读取 PDU 数据。
+3. 再 `zsock_recv()` 读取 PDU 数据。
 4. `modbus_raw_submit_rx()` 交给 Modbus core。
 5. raw callback 收到响应并释放信号量。
-6. `send()` 把 MBAP header 和响应数据发回 client。
+6. `zsock_send()` 把 MBAP header 和响应数据发回 client。
 
 ## 7. 如何扩展
 
@@ -199,7 +198,7 @@ client = accept(serv, (struct sockaddr *)&client_addr, &client_addr_len);
 | 增加 coil 数量 | `src/modbus_register_map.c` 的 `coil_table[]` |
 | 修改寄存器读写规则 | `src/modbus_register_service.c` |
 | 去掉 custom FC101 | 移除 `MODBUS_CUSTOM_FC_DEFINE` 和注册调用 |
-| 使用 Zephyr 原生 zsock API | 替换 POSIX socket 调用，并可去掉 `CONFIG_POSIX_API` |
+| 使用 Zephyr 原生 zsock API | 当前已使用 `zsock_*`，不需要 `CONFIG_POSIX_API` |
 
 ## 8. 常见问题排查
 
@@ -209,10 +208,10 @@ client = accept(serv, (struct sockaddr *)&client_addr, &client_addr_len);
 | `RAW_0` 找不到 | `CONFIG_MODBUS_RAW_ADU=y` 和 `CONFIG_MODBUS_NUMOF_RAW_ADU=1` |
 | ping 通但连不上 502 | 是否看到 `Started MODBUS TCP server example on port 502` |
 | 读寄存器异常 | 地址是否在 `src/modbus_register_map.c` 定义的范围内，Unit ID 是否为 `1` |
-| 编译 socket 报错 | 检查 `CONFIG_NET_SOCKETS=y` 和 `CONFIG_POSIX_API=y` |
+| 编译 socket 报错 | 检查 `CONFIG_NET_SOCKETS=y` |
 
 生成配置检查：
 
 ```powershell
-Select-String build\mp_rs485x4_stm32h743vit6\zephyr\.config -Pattern "CONFIG_MODBUS_RAW_ADU|CONFIG_NET_TCP|CONFIG_NET_SOCKETS|CONFIG_POSIX_API"
+Select-String build\mp_rs485x4_stm32h743vit6\zephyr\.config -Pattern "CONFIG_MODBUS_RAW_ADU|CONFIG_NET_TCP|CONFIG_NET_SOCKETS"
 ```

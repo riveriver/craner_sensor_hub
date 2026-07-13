@@ -134,4 +134,4 @@ K_THREAD_DEFINE(slewing_encoder_tid, MODBUS_ENCODER_STACK_SIZE,
 | `.config` 里没有 `CONFIG_CRANER_ENABLE_*` | 检查项目根目录是否有 `Kconfig`，且包含 `source "Kconfig.zephyr"` |
 | 某个线程没有启动 | 检查 `.config` 里对应开关是否为 `y` |
 | 关闭 RTU 某一路后仍然 DTS 报错 | 检查源文件里对应 `BUILD_ASSERT` 是否被同一个 Kconfig 包住 |
-| 打开 Modbus TCP 失败 | 检查 `CONFIG_MODBUS`、`CONFIG_NET_TCP`、`CONFIG_NET_SOCKETS`、`CONFIG_POSIX_API` |
+| 打开 Modbus TCP 失败 | 检查 `CONFIG_MODBUS`、`CONFIG_NET_TCP`、`CONFIG_NET_SOCKETS` |
