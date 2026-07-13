@@ -7,6 +7,7 @@
 1. 周期检查业务事件是否按时更新。
 2. 根据当前系统状态控制 PD10 状态灯。
 3. 根据业务健康等级决定是否喂 STM32H743 IWDG 硬件看门狗。
+4. 每隔 6 秒打印一次设备运行时间，便于通过 syslog 确认健康线程和网络日志链路正常。
 
 正常状态下，状态灯亮 500 ms、灭 500 ms。异常状态下，状态灯用“快闪若干次 + 长停”表达不同异常。快闪次数由事件 `priority` 决定，`priority` 越小表示越严重。当存在 `priority = 1` 的离线事件时，健康线程停止喂狗，让 IWDG 复位系统。
 
@@ -32,6 +33,7 @@ CONFIG_CRANER_SYSTEM_HEALTH_WDT_TIMEOUT_MS=30000
 ```text
 <inf> system_health_app: System health watchdog started on iwdg1, timeout=8000 ms
 <inf> system_health_app: System health monitor started, status LED normal=500/500 ms, error blink=150 ms, pause=3000 ms
+<inf> system_health_app: System health alive: uptime_ms=6717
 ```
 
 ## 前置条件

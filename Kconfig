@@ -63,6 +63,30 @@ config CRANER_SYSTEM_HEALTH_WDT_TIMEOUT_MS
 	help
 	  Maximum time allowed between hardware watchdog feeds.
 
+config CRANER_ENABLE_SYSTEM_HEALTH_UDP_SYSLOG_PROBE
+	bool "Enable system health UDP syslog probe"
+	default n
+	depends on CRANER_ENABLE_SYSTEM_HEALTH_THREAD && NET_UDP && NET_SOCKETS
+	help
+	  Send one RFC5424-style UDP syslog probe packet from the system health
+	  thread at the health time report interval. This bypasses Zephyr's
+	  LOG_BACKEND_NET so UDP send errors can be printed on the serial console.
+
+config CRANER_SYSTEM_HEALTH_UDP_SYSLOG_PROBE_SERVER
+	string "System health UDP syslog probe server IPv4 address"
+	default "192.168.18.4"
+	depends on CRANER_ENABLE_SYSTEM_HEALTH_UDP_SYSLOG_PROBE
+	help
+	  IPv4 address of the PC or syslog server that receives UDP probe packets.
+
+config CRANER_SYSTEM_HEALTH_UDP_SYSLOG_PROBE_PORT
+	int "System health UDP syslog probe server UDP port"
+	default 5514
+	range 1 65535
+	depends on CRANER_ENABLE_SYSTEM_HEALTH_UDP_SYSLOG_PROBE
+	help
+	  UDP port of the PC or syslog server that receives UDP probe packets.
+
 config CRANER_OTA_TEST_TIMEOUT_S
 	int "OTA test image confirmation timeout in seconds"
 	default 3600

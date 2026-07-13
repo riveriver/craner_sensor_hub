@@ -7,6 +7,8 @@
 #include <zephyr/drivers/watchdog.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/net/net_if.h>
+#include <zephyr/net/socket.h>
 
 #include "system_health_app.h"
 #include "system_health_event_table.h"
@@ -29,6 +31,7 @@ BUILD_ASSERT(DT_NODE_HAS_STATUS(WATCHDOG_NODE, okay),
 #define STATUS_LED_NORMAL_OFF_MS 500U
 #define STATUS_LED_ERROR_BLINK_MS 150U
 #define STATUS_LED_ERROR_PAUSE_MS 3000U
+#define SYSTEM_HEALTH_TIME_REPORT_INTERVAL_MS 6000U
 
 struct system_health_event_state {
 	bool configured;
@@ -52,6 +55,12 @@ static const struct device *const watchdog = DEVICE_DT_GET(WATCHDOG_NODE);
 static K_MUTEX_DEFINE(system_health_lock);
 static struct system_health_event_state event_states[SYSTEM_HEALTH_EVENT_MAX];
 static int watchdog_channel_id = SYSTEM_HEALTH_NO_WATCHDOG_CHANNEL;
+
+#if defined(CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_UDP_SYSLOG_PROBE)
+static int udp_syslog_probe_socket = -1;
+static struct sockaddr_in udp_syslog_probe_addr;
+static uint32_t udp_syslog_probe_seq;
+#endif
 
 static bool system_health_is_valid_event(enum system_health_event event)
 {
@@ -316,8 +325,103 @@ static void status_led_show_error(uint32_t now_ms, uint8_t priority)
 			2U) == 0U);
 }
 
+#if defined(CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_UDP_SYSLOG_PROBE)
+static int system_health_udp_syslog_probe_init(void)
+{
+	struct net_if *iface;
+	const struct net_linkaddr *link_addr;
+	int err;
+
+	udp_syslog_probe_socket = zsock_socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (udp_syslog_probe_socket < 0) {
+		err = -errno;
+		printk("UDP syslog probe socket create failed: %d\n", err);
+		return err;
+	}
+
+	(void)memset(&udp_syslog_probe_addr, 0, sizeof(udp_syslog_probe_addr));
+	udp_syslog_probe_addr.sin_family = AF_INET;
+	udp_syslog_probe_addr.sin_port =
+		htons(CONFIG_CRANER_SYSTEM_HEALTH_UDP_SYSLOG_PROBE_PORT);
+
+	err = zsock_inet_pton(AF_INET,
+			      CONFIG_CRANER_SYSTEM_HEALTH_UDP_SYSLOG_PROBE_SERVER,
+			      &udp_syslog_probe_addr.sin_addr);
+	if (err != 1) {
+		printk("UDP syslog probe server address parse failed: %s\n",
+		       CONFIG_CRANER_SYSTEM_HEALTH_UDP_SYSLOG_PROBE_SERVER);
+		(void)zsock_close(udp_syslog_probe_socket);
+		udp_syslog_probe_socket = -1;
+		return -EINVAL;
+	}
+
+	iface = net_if_get_default();
+	link_addr = iface != NULL ? net_if_get_link_addr(iface) : NULL;
+
+	if (link_addr != NULL && link_addr->len == 6) {
+		printk("UDP syslog probe iface MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
+		       link_addr->addr[0], link_addr->addr[1], link_addr->addr[2],
+		       link_addr->addr[3], link_addr->addr[4], link_addr->addr[5]);
+	} else {
+		printk("UDP syslog probe iface MAC unavailable\n");
+	}
+
+	printk("UDP syslog probe started: dst=%s:%d\n",
+	       CONFIG_CRANER_SYSTEM_HEALTH_UDP_SYSLOG_PROBE_SERVER,
+	       CONFIG_CRANER_SYSTEM_HEALTH_UDP_SYSLOG_PROBE_PORT);
+
+	return 0;
+}
+
+static void system_health_udp_syslog_probe_send(uint32_t now_ms)
+{
+	char message[160];
+	int len;
+	int ret;
+
+	if (udp_syslog_probe_socket < 0) {
+		return;
+	}
+
+	udp_syslog_probe_seq++;
+	len = snprintk(message, sizeof(message),
+		       "<134>1 - zephyr - - - - system_health_udp_probe: alive seq=%u uptime_ms=%u",
+		       udp_syslog_probe_seq, now_ms);
+
+	ret = zsock_sendto(udp_syslog_probe_socket, message, len, 0,
+			   (const struct sockaddr *)&udp_syslog_probe_addr,
+			   sizeof(udp_syslog_probe_addr));
+	if (ret < 0) {
+		printk("UDP syslog probe send failed: seq=%u err=%d\n",
+		       udp_syslog_probe_seq, -errno);
+		return;
+	}
+
+	printk("UDP syslog probe sent: seq=%u bytes=%d dst=%s:%d uptime_ms=%u\n",
+	       udp_syslog_probe_seq, ret,
+	       CONFIG_CRANER_SYSTEM_HEALTH_UDP_SYSLOG_PROBE_SERVER,
+	       CONFIG_CRANER_SYSTEM_HEALTH_UDP_SYSLOG_PROBE_PORT, now_ms);
+}
+#endif
+
+static void system_health_report_device_time(uint32_t now_ms,
+					     uint32_t *last_report_ms)
+{
+	if ((uint32_t)(now_ms - *last_report_ms) <
+	    SYSTEM_HEALTH_TIME_REPORT_INTERVAL_MS) {
+		return;
+	}
+
+	*last_report_ms = now_ms;
+#if defined(CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_UDP_SYSLOG_PROBE)
+	system_health_udp_syslog_probe_send(now_ms);
+#endif
+	LOG_INF("System health alive: uptime_ms=%u", now_ms);
+}
+
 static void system_health_thread(void *p1, void *p2, void *p3)
 {
+	uint32_t last_time_report_ms;
 	int err;
 
 	ARG_UNUSED(p1);
@@ -342,11 +446,17 @@ static void system_health_thread(void *p1, void *p2, void *p3)
 		return;
 	}
 
+#if defined(CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_UDP_SYSLOG_PROBE)
+	(void)system_health_udp_syslog_probe_init();
+#endif
+
 	LOG_INF("System health monitor started, status LED normal=%d/%d ms, error blink=%d ms, pause=%d ms",
 		STATUS_LED_NORMAL_ON_MS,
 		STATUS_LED_NORMAL_OFF_MS,
 		STATUS_LED_ERROR_BLINK_MS,
 		STATUS_LED_ERROR_PAUSE_MS);
+
+	last_time_report_ms = k_uptime_get_32();
 
 	while (1) {
 		uint32_t now_ms = k_uptime_get_32();
@@ -360,6 +470,7 @@ static void system_health_thread(void *p1, void *p2, void *p3)
 			status_led_show_error(now_ms, priority);
 		}
 
+		system_health_report_device_time(now_ms, &last_time_report_ms);
 		system_health_watchdog_feed(display_event, priority);
 
 		k_sleep(K_MSEC(SYSTEM_HEALTH_CHECK_INTERVAL_MS));
