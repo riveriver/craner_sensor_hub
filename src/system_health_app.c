@@ -379,7 +379,6 @@ static void system_health_thread(void *p1, void *p2, void *p3)
 			status_led_show_error(now_ms, priority);
 		}
 
-		system_health_report_device_time(now_ms, &last_time_report_ms);
 		system_health_watchdog_feed(display_event, priority);
 
 		k_sleep(K_MSEC(SYSTEM_HEALTH_CHECK_INTERVAL_MS));
