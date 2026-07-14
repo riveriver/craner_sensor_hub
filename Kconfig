@@ -57,8 +57,8 @@ config CRANER_ENABLE_OTA_CONTROL
 
 config CRANER_SYSTEM_HEALTH_WDT_TIMEOUT_MS
 	int "System health watchdog timeout in milliseconds"
-	default 8000
-	range 1000 60000
+	default 30000
+	range 1000 30000
 	depends on CRANER_ENABLE_SYSTEM_HEALTH_THREAD
 	help
 	  Maximum time allowed between hardware watchdog feeds.
