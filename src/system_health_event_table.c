@@ -8,7 +8,9 @@ LOG_MODULE_DECLARE(system_health_app);
 static void system_health_log_offline_event(
 	const struct system_health_event_obj *event_obj)
 {
-	LOG_ERR("System health event offline: event=%d", event_obj->event);
+	LOG_ERR_RATELIMIT_RATE(60000,
+			       "System health event offline: event=%d",
+			       event_obj->event);
 }
 
 const struct system_health_event_obj system_health_event_table[] = {

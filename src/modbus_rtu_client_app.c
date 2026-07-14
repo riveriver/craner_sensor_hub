@@ -375,21 +375,21 @@ static void modbus_encoder_thread(void *p1, void *p2, void *p3)
 
 			write_err = modbus_encoder_record_registers(encoder, err, regs);
 			if (write_err != 0) {
-				LOG_WRN("%s failed to update input registers: %d",
-					encoder->name, write_err);
+				LOG_WRN_RATELIMIT("%s failed to update input registers: %d",
+						   encoder->name, write_err);
 			}
 		} else {
 			int write_err;
 
 			write_err = modbus_encoder_record_registers(encoder, err, NULL);
 			if (write_err != 0) {
-				LOG_WRN("%s failed to update failure registers: %d",
-					encoder->name, write_err);
+				LOG_WRN_RATELIMIT("%s failed to update failure registers: %d",
+						   encoder->name, write_err);
 			}
 
-			LOG_WRN("%s FC03 addr=0x%04x qty=%u failed: %d",
-				encoder->name, encoder->start_addr,
-				(unsigned int)encoder->register_count, err);
+			LOG_WRN_RATELIMIT("%s FC03 addr=0x%04x qty=%u failed: %d",
+					  encoder->name, encoder->start_addr,
+					  (unsigned int)encoder->register_count, err);
 		}
 
 		int64_t sleep_ms = next_poll_time - k_uptime_get();

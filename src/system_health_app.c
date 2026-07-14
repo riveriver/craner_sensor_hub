@@ -177,7 +177,7 @@ static void system_health_watchdog_feed(enum system_health_event display_event,
 
 	err = wdt_feed(watchdog, watchdog_channel_id);
 	if (err < 0) {
-		LOG_ERR("Failed to feed watchdog: %d", err);
+		LOG_ERR_RATELIMIT("Failed to feed watchdog: %d", err);
 	}
 }
 
@@ -192,7 +192,8 @@ static void system_health_events_init(void)
 		struct system_health_event_state *state;
 
 		if (!system_health_is_valid_event(event)) {
-			LOG_WRN("Ignoring invalid system health event: %d", event);
+			LOG_WRN_RATELIMIT("Ignoring invalid system health event: %d",
+					  event);
 			continue;
 		}
 
