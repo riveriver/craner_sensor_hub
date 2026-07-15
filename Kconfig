@@ -65,6 +65,15 @@ config CRANER_ENABLE_OTA_CONTROL
 	  Enable shell commands that drive MCUboot's standard swap-based OTA
 	  state machine.
 
+config CRANER_ENABLE_STORAGE_SERVICE
+	bool "Enable persistent storage service skeleton"
+	default y
+	depends on FLASH && FLASH_MAP
+	help
+	  Enable the persistent storage service skeleton. The first
+	  implementation only probes internal flash partitions and exposes
+	  their status through shell diagnostics.
+
 config CRANER_NETWORK_DHCP_RETRY_INITIAL_MS
 	int "Initial DHCP retry delay in milliseconds"
 	default 5000

@@ -47,6 +47,10 @@ target_sources_ifdef(CONFIG_CRANER_ENABLE_OTA_CONTROL app PRIVATE
 	src/ota_control_app.c
 )
 
+target_sources_ifdef(CONFIG_CRANER_ENABLE_STORAGE_SERVICE app PRIVATE
+	src/storage_service.c
+)
+
 target_sources_ifdef(CONFIG_CRANER_ENABLE_MQTT_SERVICE_MANAGER app PRIVATE
 	src/mqtt_service_manager.c
 )

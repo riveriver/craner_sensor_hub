@@ -1,8 +1,12 @@
 #include "network_service.h"
 #include "rtc_time_provider.h"
+#ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
+#include "storage_service.h"
+#endif
 #include "time_service.h"
 
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -90,6 +94,55 @@ static int cmd_net_status(const struct shell *shell, size_t argc, char **argv)
 
 SHELL_CMD_REGISTER(net_status, NULL, "Show managed network status.",
 		   cmd_net_status);
+
+#ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
+static const char *storage_shell_str(const char *value)
+{
+	return value != NULL ? value : "";
+}
+
+static void print_storage_partition(const struct shell *shell,
+				    const char *prefix,
+				    const struct storage_partition_status *status)
+{
+	shell_print(shell, "%s_name: %s", prefix,
+		    storage_shell_str(status->name));
+	shell_print(shell, "%s_available: %s", prefix,
+		    status->available ? "yes" : "no");
+	shell_print(shell, "%s_device_ready: %s", prefix,
+		    status->device_ready ? "yes" : "no");
+	shell_print(shell, "%s_device: %s", prefix,
+		    storage_shell_str(status->device_name));
+	shell_print(shell, "%s_area_id: %u", prefix, status->area_id);
+	shell_print(shell, "%s_offset: 0x%08x", prefix, status->offset);
+	shell_print(shell, "%s_size: %u", prefix, (uint32_t)status->size);
+	shell_print(shell, "%s_last_error: %d", prefix, status->last_error);
+}
+
+static int cmd_storage_status(const struct shell *shell, size_t argc,
+			      char **argv)
+{
+	struct storage_service_status status;
+
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	storage_service_get_status(&status);
+
+	shell_print(shell, "initialized: %s",
+		    status.initialized ? "yes" : "no");
+	shell_print(shell, "internal_flash_ready: %s",
+		    status.internal_flash_ready ? "yes" : "no");
+	shell_print(shell, "last_error: %d", status.last_error);
+	print_storage_partition(shell, "coredump", &status.coredump);
+	print_storage_partition(shell, "app_storage", &status.app_storage);
+
+	return 0;
+}
+
+SHELL_CMD_REGISTER(storage_status, NULL, "Show persistent storage status.",
+		   cmd_storage_status);
+#endif
 
 static int cmd_time_status(const struct shell *shell, size_t argc, char **argv)
 {

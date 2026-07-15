@@ -1,5 +1,8 @@
 #include "device_identity_service.h"
 #include "network_service.h"
+#ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
+#include "storage_service.h"
+#endif
 #include "time_service.h"
 
 #include <zephyr/kernel.h>
@@ -23,6 +26,13 @@ int main(void)
 		printk("Device mDNS name: %s\n", device_identity_mdns_name_get());
 		printk("MQTT client id: %s\n", device_identity_mqtt_client_id_get());
 	}
+
+#ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
+	rc = storage_service_init();
+	if (rc != 0) {
+		printk("Storage service init failed: %d\n", rc);
+	}
+#endif
 
 	rc = network_service_init();
 	if (rc != 0) {
