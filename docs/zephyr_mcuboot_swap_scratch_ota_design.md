@@ -11,11 +11,20 @@
 当前第一版不实现网页上传。网页上传可以作为后续扩展，但底层仍建议复用同一套 `slot1_partition + boot_request_upgrade(BOOT_UPGRADE_TEST) + confirm/revert` 状态机。
 
 ## 2. How to use it
+```
+1. PC 使用 mcumgr image upload 把 app_update_signed.bin 写入 slot1_partition
+2. PC 使用 mcumgr image test <slot1_hash>，或串口 shell 执行 ota test
+3. PC 使用 mcumgr reset，或串口 shell 执行 ota reboot
+4. MCUboot 使用 scratch 交换 slot0 和 slot1
+5. 新固件从 slot0 运行
+6. 用户确认后执行 mcumgr image confirm 或 ota confirm
+7. 若未确认，超时重启后 MCUboot 自动回滚
+```
 
 ### 2.1 编译
 
 ```powershell
-.\build.ps1 -Board mp_rs485x4_stm32h743vit6
+.\build.ps1 -Board craner_general_stm32h743vit6
 ```
 
 编译完成后会生成：
@@ -44,26 +53,28 @@ app_update_signed.bin
 app_initial_confirmed.hex
 ```
 
-`confirmed` 镜像表示初始固件已经被标记为稳定版本，避免第一次启动后被 MCUboot 当成未确认测试镜像。
+note:`confirmed` 镜像表示初始固件已经被标记为稳定版本，避免第一次启动后被 MCUboot 当成未确认测试镜像。
+
+note:`signed` 镜像已被签名
 
 ### 2.2 初次烧录
 
 烧录 MCUboot 和 confirmed 应用：
 
 ```powershell
-.\flash.ps1 -Board mp_rs485x4_stm32h743vit6 -Target All
+.\flash.ps1 -Board craner_general_stm32h743vit6 -Target All
 ```
 
 只烧录 bootloader：
 
 ```powershell
-.\flash.ps1 -Board mp_rs485x4_stm32h743vit6 -Target Bootloader
+.\flash.ps1 -Board craner_general_stm32h743vit6 -Target Bootloader
 ```
 
 只烧录 confirmed 应用：
 
 ```powershell
-.\flash.ps1 -Board mp_rs485x4_stm32h743vit6 -Target App
+.\flash.ps1 -Board craner_general_stm32h743vit6 -Target App
 ```
 
 ### 2.3 Shell 验证 OTA 状态
@@ -106,7 +117,7 @@ mcumgr --conntype udp --connstring 192.168.18.32:1337 image list
 上传新固件：
 
 ```powershell
-mcumgr --conntype udp --connstring 192.168.18.32:1337 image upload build\mp_rs485x4_stm32h743vit6\ota_images\app_update_signed.bin
+mcumgr --conntype udp --connstring 192.168.18.32:1337 image upload build\craner_general_stm32h743vit6\ota_images\app_update_signed.bin
 ```
 
 上传完成后再次查看 image 列表，记录 `slot=1` 那个镜像的 `hash`：
@@ -190,10 +201,10 @@ mcumgr version
 
 ```powershell
 mcumgr --conntype udp --connstring 192.168.18.32:1337 image list
-mcumgr --conntype udp --connstring 192.168.18.32:1337 image upload build\mp_rs485x4_stm32h743vit6\ota_images\app_update_signed.bin
+mcumgr --conntype udp --connstring 192.168.18.32:1337 image upload build\craner_general_stm32h743vit6\ota_images\app_update_signed.bin
 mcumgr --conntype udp --connstring 192.168.18.32:1337 image test <slot1_hash>
 mcumgr --conntype udp --connstring 192.168.18.32:1337 reset
-mcumgr --conntype udp --connstring 192.168.18.32:1337 image confirm
+mcumgr --conntype udp --connstring 192.168.18.32:1337 image confirm <slot1_hash>
 ```
 
 也可以上传完成后在串口 shell 中执行：
@@ -319,26 +330,7 @@ boot_is_img_confirmed();
 7. 若未确认，超时重启后 MCUboot 自动回滚
 ```
 
-## 7. How to extend it
-
-当前以太网 OTA 使用 Zephyr MCUmgr SMP over UDP：
-
-```text
-PC mcumgr image upload -> MCU slot1_partition
-PC mcumgr image test   -> MCUboot trailer 标记 test
-PC mcumgr reset        -> 重启进入新固件
-PC mcumgr image confirm 或串口 shell ota confirm
-```
-
-后续如果要增加网页上传，则网页服务只负责替代 PC `mcumgr image upload/test/reset` 这几个动作，底层仍建议使用同一套 MCUboot swap 状态机。业务代码需要做三件事：
-
-```text
-1. 接收 app_update_signed.bin
-2. 写入 slot1_partition
-3. 调用 boot_request_upgrade(BOOT_UPGRADE_TEST)
-```
-
-## 8. Troubleshooting
+## 8. 常见问题
 
 ### PowerShell 提示无法识别 mcumgr
 
@@ -372,11 +364,9 @@ C:\Users\<用户名>\go\bin
 
 ```text
 1. MCU 日志里以太网是否 link up
-2. MCU IP 是否为 192.168.18.32
-3. PC 是否能 ping 192.168.18.32
-4. PC 和 MCU 是否在同一网段
-5. UDP 1337 是否被防火墙拦截
-6. prj.conf 是否启用 CONFIG_MCUMGR_TRANSPORT_UDP=y
+2. PC 是否能 ping <MCU-IP>
+3. UDP 1337 是否被防火墙拦截
+4. prj.conf 是否启用 CONFIG_MCUMGR_TRANSPORT_UDP=y
 ```
 
 ### image test 不知道填哪个 hash
