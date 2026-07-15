@@ -19,9 +19,12 @@ struct storage_partition_status {
 struct storage_service_status {
 	bool initialized;
 	bool internal_flash_ready;
+	bool external_flash_ready;
 	int last_error;
 	struct storage_partition_status coredump;
 	struct storage_partition_status app_storage;
+	struct storage_partition_status param_store;
+	struct storage_partition_status modbus_store;
 };
 
 int storage_service_init(void);

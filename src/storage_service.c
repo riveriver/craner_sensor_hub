@@ -13,14 +13,22 @@ LOG_MODULE_REGISTER(storage_service, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define COREDUMP_PARTITION_NODE DT_NODELABEL(coredump_partition)
 #define APP_STORAGE_PARTITION_NODE DT_NODELABEL(app_storage_partition)
+#define PARAM_STORE_PARTITION_NODE DT_NODELABEL(param_store_partition)
+#define MODBUS_STORE_PARTITION_NODE DT_NODELABEL(modbus_store_partition)
 
 BUILD_ASSERT(DT_NODE_EXISTS(COREDUMP_PARTITION_NODE),
 	     "Missing coredump_partition fixed partition");
 BUILD_ASSERT(DT_NODE_EXISTS(APP_STORAGE_PARTITION_NODE),
 	     "Missing app_storage_partition fixed partition");
+BUILD_ASSERT(DT_NODE_EXISTS(PARAM_STORE_PARTITION_NODE),
+	     "Missing param_store_partition fixed partition");
+BUILD_ASSERT(DT_NODE_EXISTS(MODBUS_STORE_PARTITION_NODE),
+	     "Missing modbus_store_partition fixed partition");
 
 #define COREDUMP_AREA_ID DT_FIXED_PARTITION_ID(COREDUMP_PARTITION_NODE)
 #define APP_STORAGE_AREA_ID DT_FIXED_PARTITION_ID(APP_STORAGE_PARTITION_NODE)
+#define PARAM_STORE_AREA_ID DT_FIXED_PARTITION_ID(PARAM_STORE_PARTITION_NODE)
+#define MODBUS_STORE_AREA_ID DT_FIXED_PARTITION_ID(MODBUS_STORE_PARTITION_NODE)
 
 static struct storage_service_status service_status = {
 	.coredump = {
@@ -30,6 +38,14 @@ static struct storage_service_status service_status = {
 	.app_storage = {
 		.name = "app-storage",
 		.area_id = APP_STORAGE_AREA_ID,
+	},
+	.param_store = {
+		.name = "param-store",
+		.area_id = PARAM_STORE_AREA_ID,
+	},
+	.modbus_store = {
+		.name = "modbus-store",
+		.area_id = MODBUS_STORE_AREA_ID,
 	},
 };
 
@@ -71,6 +87,8 @@ int storage_service_init(void)
 {
 	int coredump_rc;
 	int app_storage_rc;
+	int param_store_rc;
+	int modbus_store_rc;
 
 	memset(&service_status, 0, sizeof(service_status));
 
@@ -78,21 +96,34 @@ int storage_service_init(void)
 				      &service_status.coredump);
 	app_storage_rc = probe_partition(APP_STORAGE_AREA_ID, "app-storage",
 					 &service_status.app_storage);
+	param_store_rc = probe_partition(PARAM_STORE_AREA_ID, "param-store",
+					 &service_status.param_store);
+	modbus_store_rc = probe_partition(MODBUS_STORE_AREA_ID, "modbus-store",
+					  &service_status.modbus_store);
 
 	service_status.initialized = true;
 	service_status.internal_flash_ready =
 		(coredump_rc == 0) && (app_storage_rc == 0);
+	service_status.external_flash_ready =
+		(param_store_rc == 0) && (modbus_store_rc == 0);
 	service_status.last_error = coredump_rc != 0 ? coredump_rc :
-				    app_storage_rc;
+				    app_storage_rc != 0 ? app_storage_rc :
+				    param_store_rc != 0 ? param_store_rc :
+				    modbus_store_rc;
 
-	if (service_status.internal_flash_ready) {
-		LOG_INF("Storage service ready: coredump=0x%08x/%u, app-storage=0x%08x/%u",
+	if (service_status.internal_flash_ready &&
+	    service_status.external_flash_ready) {
+		LOG_INF("Storage service ready: coredump=0x%08x/%u, app-storage=0x%08x/%u, param-store=0x%08x/%u, modbus-store=0x%08x/%u",
 			service_status.coredump.offset,
 			(uint32_t)service_status.coredump.size,
 			service_status.app_storage.offset,
-			(uint32_t)service_status.app_storage.size);
+			(uint32_t)service_status.app_storage.size,
+			service_status.param_store.offset,
+			(uint32_t)service_status.param_store.size,
+			service_status.modbus_store.offset,
+			(uint32_t)service_status.modbus_store.size);
 	} else {
-		LOG_ERR("Storage service internal flash probe failed: %d",
+		LOG_ERR("Storage service partition probe failed: %d",
 			service_status.last_error);
 	}
 

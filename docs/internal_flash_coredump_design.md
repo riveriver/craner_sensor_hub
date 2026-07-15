@@ -193,7 +193,7 @@ coredump_clear
 
 1. `coredump_partition`：保存最近一次崩溃现场，优先级最高，不能被 settings/NVS 使用。
 
-2. `app_storage_partition`：保存设备参数类数据，例如设备配置、网络策略、时间同步模式、校准参数索引等。
+2. `app_storage_partition`：保留 128KB，但 v1 暂不用于 settings/NVS，也不保存设备参数。后续可用于启动标记、故障标记、极少量手写结构，或者评估改用 ZMS。
 
 3. RTC trust record：当前使用 STM32 backup register，不占用内部 Flash。
 
@@ -291,7 +291,7 @@ CoreDump 可能包含敏感数据：
 
 1. CoreDump 分区 v1 是否确定为 128KB？
 
-2. `app-storage` 从 256KB 缩小到 128KB 是否满足设备参数类需求？
+2. `app-storage` 保留 128KB 后，后续是否用于启动标记、故障标记、极少量手写结构，或者改用 ZMS？
 
 3. v1 是否接受只保存最近一次 CoreDump？
 

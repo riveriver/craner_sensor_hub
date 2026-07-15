@@ -1,6 +1,7 @@
 #ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
 #include "coredump_service.h"
 #endif
+#include "shell_app.h"
 #ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
 #include "device_param_store.h"
 #endif
@@ -23,6 +24,44 @@
 #include <zephyr/shell/shell.h>
 #include <zephyr/sys/timeutil.h>
 #include <zephyr/sys/util.h>
+
+#define SHELL_OUTPUT_FORMAT_PARAM "shell/output_format"
+
+static bool shell_output_json;
+
+static int shell_output_format_refresh(void)
+{
+#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+	char value[16];
+	int rc;
+
+	rc = device_param_store_get(SHELL_OUTPUT_FORMAT_PARAM, value,
+				    sizeof(value));
+	if (rc != 0) {
+		shell_output_json = false;
+		return rc;
+	}
+
+	shell_output_json = strcmp(value, "json") == 0;
+	return 0;
+#else
+	shell_output_json = false;
+	return 0;
+#endif
+}
+
+static void shell_output_format_apply(const char *key, const char *value)
+{
+	if (key != NULL && value != NULL &&
+	    strcmp(key, SHELL_OUTPUT_FORMAT_PARAM) == 0) {
+		shell_output_json = strcmp(value, "json") == 0;
+	}
+}
+
+int shell_app_init(void)
+{
+	return shell_output_format_refresh();
+}
 
 static int parse_iso8601_utc(const char *text, int64_t *unix_time_s)
 {
@@ -78,6 +117,11 @@ static int cmd_fw_time(const struct shell *shell, size_t argc, char **argv)
 
 SHELL_CMD_REGISTER(fw_time, NULL, "Show firmware build date and time.", cmd_fw_time);
 
+static bool shell_output_is_json(void)
+{
+	return shell_output_json;
+}
+
 static int cmd_net_status(const struct shell *shell, size_t argc, char **argv)
 {
 	struct network_service_status status;
@@ -115,7 +159,7 @@ static int cmd_storage_status(const struct shell *shell, size_t argc,
 			      char **argv)
 {
 	struct storage_service_status status;
-	char json[1024];
+	char json[1536];
 	int len;
 
 	ARG_UNUSED(argc);
@@ -123,9 +167,54 @@ static int cmd_storage_status(const struct shell *shell, size_t argc,
 
 	storage_service_get_status(&status);
 
+	if (!shell_output_is_json()) {
+		shell_print(shell, "initialized=%s",
+			    status.initialized ? "yes" : "no");
+		shell_print(shell, "internal_flash_ready=%s",
+			    status.internal_flash_ready ? "yes" : "no");
+		shell_print(shell, "external_flash_ready=%s",
+			    status.external_flash_ready ? "yes" : "no");
+		shell_print(shell, "last_error=%d", status.last_error);
+
+		shell_print(shell,
+			    "coredump.available=%s coredump.device_ready=%s coredump.device=%s coredump.offset=0x%08x coredump.size=%u coredump.last_error=%d",
+			    status.coredump.available ? "yes" : "no",
+			    status.coredump.device_ready ? "yes" : "no",
+			    storage_shell_str(status.coredump.device_name),
+			    status.coredump.offset,
+			    (uint32_t)status.coredump.size,
+			    status.coredump.last_error);
+		shell_print(shell,
+			    "app_storage.available=%s app_storage.device_ready=%s app_storage.device=%s app_storage.offset=0x%08x app_storage.size=%u app_storage.last_error=%d",
+			    status.app_storage.available ? "yes" : "no",
+			    status.app_storage.device_ready ? "yes" : "no",
+			    storage_shell_str(status.app_storage.device_name),
+			    status.app_storage.offset,
+			    (uint32_t)status.app_storage.size,
+			    status.app_storage.last_error);
+		shell_print(shell,
+			    "param_store.available=%s param_store.device_ready=%s param_store.device=%s param_store.offset=0x%08x param_store.size=%u param_store.last_error=%d",
+			    status.param_store.available ? "yes" : "no",
+			    status.param_store.device_ready ? "yes" : "no",
+			    storage_shell_str(status.param_store.device_name),
+			    status.param_store.offset,
+			    (uint32_t)status.param_store.size,
+			    status.param_store.last_error);
+		shell_print(shell,
+			    "modbus_store.available=%s modbus_store.device_ready=%s modbus_store.device=%s modbus_store.offset=0x%08x modbus_store.size=%u modbus_store.last_error=%d",
+			    status.modbus_store.available ? "yes" : "no",
+			    status.modbus_store.device_ready ? "yes" : "no",
+			    storage_shell_str(status.modbus_store.device_name),
+			    status.modbus_store.offset,
+			    (uint32_t)status.modbus_store.size,
+			    status.modbus_store.last_error);
+		return 0;
+	}
+
 	len = snprintf(json, sizeof(json),
 		       "{\"type\":\"storage\",\"initialized\":%s,"
-		       "\"internal_flash_ready\":%s,\"last_error\":%d,"
+		       "\"internal_flash_ready\":%s,"
+		       "\"external_flash_ready\":%s,\"last_error\":%d,"
 		       "\"partitions\":{"
 		       "\"coredump\":{\"name\":\"%s\",\"available\":%s,"
 		       "\"device_ready\":%s,\"device\":\"%s\","
@@ -136,9 +225,20 @@ static int cmd_storage_status(const struct shell *shell, size_t argc,
 		       "\"device_ready\":%s,\"device\":\"%s\","
 		       "\"area_id\":%u,\"offset\":%u,"
 		       "\"offset_hex\":\"0x%08x\",\"size\":%u,"
+		       "\"last_error\":%d},"
+		       "\"param_store\":{\"name\":\"%s\",\"available\":%s,"
+		       "\"device_ready\":%s,\"device\":\"%s\","
+		       "\"area_id\":%u,\"offset\":%u,"
+		       "\"offset_hex\":\"0x%08x\",\"size\":%u,"
+		       "\"last_error\":%d},"
+		       "\"modbus_store\":{\"name\":\"%s\",\"available\":%s,"
+		       "\"device_ready\":%s,\"device\":\"%s\","
+		       "\"area_id\":%u,\"offset\":%u,"
+		       "\"offset_hex\":\"0x%08x\",\"size\":%u,"
 		       "\"last_error\":%d}}}",
 		       status.initialized ? "true" : "false",
 		       status.internal_flash_ready ? "true" : "false",
+		       status.external_flash_ready ? "true" : "false",
 		       status.last_error,
 		       storage_shell_str(status.coredump.name),
 		       status.coredump.available ? "true" : "false",
@@ -155,7 +255,23 @@ static int cmd_storage_status(const struct shell *shell, size_t argc,
 		       status.app_storage.area_id, status.app_storage.offset,
 		       status.app_storage.offset,
 		       (uint32_t)status.app_storage.size,
-		       status.app_storage.last_error);
+		       status.app_storage.last_error,
+		       storage_shell_str(status.param_store.name),
+		       status.param_store.available ? "true" : "false",
+		       status.param_store.device_ready ? "true" : "false",
+		       storage_shell_str(status.param_store.device_name),
+		       status.param_store.area_id, status.param_store.offset,
+		       status.param_store.offset,
+		       (uint32_t)status.param_store.size,
+		       status.param_store.last_error,
+		       storage_shell_str(status.modbus_store.name),
+		       status.modbus_store.available ? "true" : "false",
+		       status.modbus_store.device_ready ? "true" : "false",
+		       storage_shell_str(status.modbus_store.device_name),
+		       status.modbus_store.area_id, status.modbus_store.offset,
+		       status.modbus_store.offset,
+		       (uint32_t)status.modbus_store.size,
+		       status.modbus_store.last_error);
 	if (len < 0) {
 		shell_error(shell, "format storage status failed: %d", len);
 		return len;
@@ -176,14 +292,82 @@ SHELL_CMD_REGISTER(storage_status, NULL, "Show persistent storage status.",
 #endif
 
 #ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+static int print_param_pairs(const struct shell *shell, bool json_output)
+{
+	char json[768];
+	size_t used = 0U;
+	size_t count = device_param_store_count();
+
+	if (!json_output) {
+		for (size_t i = 0U; i < count; i++) {
+			const struct device_param_record *record =
+				device_param_store_get_by_index(i);
+
+			if (record != NULL) {
+				shell_print(shell, "%s=%s", record->key,
+					    record->value);
+			}
+		}
+
+		return 0;
+	}
+
+	used += snprintk(json + used, sizeof(json) - used, "{");
+	for (size_t i = 0U; i < count; i++) {
+		const struct device_param_record *record =
+			device_param_store_get_by_index(i);
+		int len;
+
+		if (record == NULL) {
+			continue;
+		}
+
+		len = snprintk(json + used, sizeof(json) - used,
+			       "%s\"%s\":\"%s\"", used > 1U ? "," : "",
+			       record->key, record->value);
+		if (len < 0 || (size_t)len >= sizeof(json) - used) {
+			return -EMSGSIZE;
+		}
+
+		used += (size_t)len;
+	}
+
+	if (used + 2U > sizeof(json)) {
+		return -EMSGSIZE;
+	}
+
+	json[used++] = '}';
+	json[used] = '\0';
+	shell_print(shell, "%s", json);
+
+	return 0;
+}
+
 static int cmd_param_status(const struct shell *shell, size_t argc,
 			    char **argv)
 {
+	struct device_param_store_status status;
 	char json[384];
 	int rc;
 
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
+
+	if (!shell_output_is_json()) {
+		device_param_store_get_status(&status);
+		shell_print(shell, "initialized=%s",
+			    status.initialized ? "yes" : "no");
+		shell_print(shell, "settings_ready=%s",
+			    status.settings_ready ? "yes" : "no");
+		shell_print(shell, "dirty=%s", status.dirty ? "yes" : "no");
+		shell_print(shell, "param_count=%u",
+			    (uint32_t)status.param_count);
+		shell_print(shell, "load_count=%d", status.load_count);
+		shell_print(shell, "save_count=%d", status.save_count);
+		shell_print(shell, "fail_count=%d", status.fail_count);
+		shell_print(shell, "last_error=%d", status.last_error);
+		return 0;
+	}
 
 	rc = device_param_store_format_status(json, sizeof(json));
 	if (rc != 0) {
@@ -200,40 +384,40 @@ SHELL_CMD_REGISTER(param_status, NULL, "Show device parameter store status.",
 
 static int cmd_param_get(const struct shell *shell, size_t argc, char **argv)
 {
-	char json[1536];
 	char value[96];
-	const struct device_param_record *record;
+	const char *key;
 	int rc;
+	bool json_output = shell_output_is_json();
 
-	if (argc == 1) {
-		rc = device_param_store_format_all(json, sizeof(json));
+	if (argc == 1U) {
+		rc = print_param_pairs(shell, json_output);
 		if (rc != 0) {
 			shell_error(shell, "format parameters failed: %d", rc);
 			return rc;
 		}
 
-		shell_print(shell, "%s", json);
 		return 0;
 	}
 
-	if (argc != 2) {
+	if (argc != 2U) {
 		shell_error(shell, "usage: param_get [key]");
 		return -EINVAL;
 	}
 
-	rc = device_param_store_get(argv[1], value, sizeof(value));
-	record = device_param_store_find(argv[1]);
-	if (rc != 0 || record == NULL) {
+	key = argv[1];
+	rc = device_param_store_get(key, value, sizeof(value));
+	if (rc != 0) {
 		shell_error(shell, "get parameter failed: %d", rc);
 		return rc;
 	}
 
-	shell_print(shell,
-		    "{\"type\":\"param\",\"key\":\"%s\",\"value\":\"%s\","
-		    "\"dirty\":%s,\"loaded\":%s,\"last_error\":%d}",
-		    record->key, value, record->dirty ? "true" : "false",
-		    record->loaded_from_settings ? "true" : "false",
-		    record->last_error);
+	if (json_output) {
+		shell_print(shell, "{\"key\":\"%s\",\"value\":\"%s\"}", key,
+			    value);
+	} else {
+		shell_print(shell, "%s=%s", key, value);
+	}
+
 	return 0;
 }
 
@@ -244,7 +428,7 @@ static int cmd_param_set(const struct shell *shell, size_t argc, char **argv)
 {
 	int rc;
 
-	if (argc != 3) {
+	if (argc != 3U) {
 		shell_error(shell, "usage: param_set <key> <value>");
 		return -EINVAL;
 	}
@@ -255,10 +439,18 @@ static int cmd_param_set(const struct shell *shell, size_t argc, char **argv)
 		return rc;
 	}
 
-	shell_print(shell,
-		    "{\"type\":\"param_set\",\"key\":\"%s\",\"value\":\"%s\","
-		    "\"dirty\":true}",
-		    argv[1], argv[2]);
+	shell_output_format_apply(argv[1], argv[2]);
+
+	if (shell_output_is_json()) {
+		shell_print(shell,
+			    "{\"type\":\"param_set\",\"key\":\"%s\",\"value\":\"%s\",\"dirty\":true}",
+			    argv[1], argv[2]);
+	} else {
+		shell_print(shell, "status=ok");
+		shell_print(shell, "%s=%s", argv[1], argv[2]);
+		shell_print(shell, "dirty=yes");
+	}
+
 	return 0;
 }
 
@@ -278,7 +470,12 @@ static int cmd_param_save(const struct shell *shell, size_t argc, char **argv)
 		return rc;
 	}
 
-	shell_print(shell, "{\"type\":\"param_save\",\"status\":\"ok\"}");
+	if (shell_output_is_json()) {
+		shell_print(shell, "{\"type\":\"param_save\",\"status\":\"ok\"}");
+	} else {
+		shell_print(shell, "status=ok");
+	}
+
 	return 0;
 }
 
@@ -299,8 +496,19 @@ static int cmd_param_factory_reset(const struct shell *shell, size_t argc,
 		return rc;
 	}
 
-	shell_warn(shell,
-		   "{\"type\":\"param_factory_reset\",\"status\":\"ok\"}");
+	rc = shell_output_format_refresh();
+	if (rc != 0) {
+		shell_error(shell, "refresh shell output format failed: %d", rc);
+		return rc;
+	}
+
+	if (shell_output_is_json()) {
+		shell_warn(shell,
+			   "{\"type\":\"param_factory_reset\",\"status\":\"ok\"}");
+	} else {
+		shell_warn(shell, "status=ok");
+	}
+
 	return 0;
 }
 

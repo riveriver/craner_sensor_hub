@@ -76,6 +76,15 @@ static struct device_param_entry params[] = {
 			.range = "1..63 hostname chars",
 		},
 	},
+	{
+		.record = {
+			.key = "shell/output_format",
+			.type = DEVICE_PARAM_TYPE_ENUM,
+			.default_value = "kv",
+			.range = "kv|json",
+		},
+		.enum_values = "kv|json",
+	},
 };
 
 static struct device_param_store_status store_status = {
@@ -305,7 +314,7 @@ static int load_one_param(struct device_param_entry *entry)
 		return -EMSGSIZE;
 	}
 
-	value[sizeof(value) - 1U] = '\0';
+	value[len] = '\0';
 	rc = validate_param_value(entry, value);
 	if (rc != 0) {
 		entry->record.last_error = rc;

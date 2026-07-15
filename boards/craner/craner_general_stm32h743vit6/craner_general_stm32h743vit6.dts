@@ -15,6 +15,7 @@
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
 		zephyr,code-partition = &slot0_partition;
+		zephyr,settings-partition = &param_store_partition;
 		zephyr,console = &uart5;
 		zephyr,shell-uart = &uart5;
 	};
@@ -90,9 +91,45 @@
 			reg = <0x001c0000 0x00020000>;
 		};
 
-		storage_partition: app_storage_partition: partition@1e0000 {
+		app_storage_partition: partition@1e0000 {
 			label = "app-storage";
 			reg = <0x001e0000 0x00020000>;
+		};
+	};
+};
+
+&quadspi {
+	pinctrl-0 = <&quadspi_bk1_io0_pd11
+		     &quadspi_bk1_io1_pd12
+		     &quadspi_bk1_io2_pe2
+		     &quadspi_bk1_io3_pd13
+		     &quadspi_bk1_ncs_pb10
+		     &quadspi_clk_pb2>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	w25q64: qspi-nor-flash@0 {
+		compatible = "st,stm32-qspi-nor";
+		reg = <0>;
+		size = <DT_SIZE_M(64)>;
+		qspi-max-frequency = <40000000>;
+		spi-bus-width = <4>;
+		status = "okay";
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			storage_partition: param_store_partition: partition@0 {
+				label = "param-store";
+				reg = <0x00000000 0x00020000>;
+			};
+
+			modbus_store_partition: partition@20000 {
+				label = "modbus-store";
+				reg = <0x00020000 0x00020000>;
+			};
 		};
 	};
 };

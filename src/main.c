@@ -9,6 +9,7 @@
 #ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
 #include "storage_service.h"
 #endif
+#include "shell_app.h"
 #include "time_service.h"
 
 #include <zephyr/kernel.h>
@@ -46,6 +47,11 @@ int main(void)
 		printk("Device parameter store init failed: %d\n", rc);
 	}
 #endif
+
+	rc = shell_app_init();
+	if (rc != 0) {
+		printk("Shell app init failed: %d\n", rc);
+	}
 
 #ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
 	rc = coredump_service_init();

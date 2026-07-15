@@ -10,11 +10,11 @@
 
 1. 内部 Flash 采用 `128KB CoreDump + 128KB app-storage` 的拆分方案。
 
-2. 设备参数使用 Zephyr `settings + NVS`，保存在内部 Flash 的 `app-storage`。
+2. 设备参数使用 Zephyr `settings + NVS`，保存在外部 W25Q64 的 `param-store`。
 
-3. Modbus 持久化数据全部放外部 W25Q64，v1 保存线圈和 Holding Register。
+3. Modbus 持久化数据全部放外部 W25Q64 的 `modbus-store`，v1 保存线圈和 Holding Register。
 
-4. W25Q64 v1 只启用 `modbus-store` 一个分区，暂不启用参数备份区。
+4. W25Q64 v1 启用 `param-store` 和 `modbus-store` 两个分区，各 128KB。
 
 5. MQTT 远程维护 v1 允许查询状态，也允许执行格式化、清除、恢复出厂和完整 CoreDump 导出等维护动作。此类高风险动作需要明确白名单、操作日志和权限控制，不能做成任意 shell 透传。
 
@@ -29,7 +29,7 @@ settings + NVS：使用 settings API，底层由 NVS 写 Flash
 settings + ZMS：使用 settings API，底层由 ZMS 写 Flash
 ```
 
-本项目 v1 选择 `settings + NVS`。原因是设备参数数量少、写入频率低、key-value 模型清晰，NVS 在 Zephyr 项目中使用成熟，足够满足设备参数保存需求。ZMS 是 Zephyr 较新的 settings 后端，目标也是替代或改进部分传统 NVS/FCB 场景，但对本项目 v1 来说，设备参数规模很小，选择 NVS 的风险更低、验证路径更短、资料和示例更多。ZMS 可以作为后续评估项，但 v1 不混用 NVS 和 ZMS，避免存储路径复杂化。
+本项目 v1 选择 `settings + NVS`，但不挂载到 STM32H743 内部 Flash。原因是 Zephyr `settings_nvs` 后端要求 NVS sector size 不超过 `UINT16_MAX`，而 STM32H743 内部 Flash 末尾扇区通常是 128KB，超过 NVS 限制。W25Q64 支持 4KB sector erase，更适合 NVS。ZMS 可以作为后续内部 Flash app-storage 的评估项，但 v1 不混用 NVS 和 ZMS，避免存储路径复杂化。
 
 ## 4. 总体原则
 
@@ -51,7 +51,7 @@ settings + ZMS：使用 settings API，底层由 ZMS 写 Flash
 
 1. Kconfig 是编译期默认值，保存在固件镜像里。固件镜像位于内部 Flash 的 `slot0_partition`，升级镜像位于 `slot1_partition`。例如 MQTT broker、NTP server、默认 DHCP 模式、默认设备类型等，都可以先由 Kconfig 给出出厂默认值。Kconfig 值不能在运行时真正修改，修改 Kconfig 需要重新编译和烧录固件。
 
-2. Shell 设置的是运行时配置。如果该配置需要断电保持，应保存到内部 Flash 的 `app-storage` 分区，后端采用 Zephyr `settings + NVS`。例如 `mqtt/host`、`mqtt/port`、`time/sync_mode`、`network/dhcp_mode`、`device/hostname`、编码器校准参数等，都属于设备参数类。
+2. Shell 设置的是运行时配置。如果该配置需要断电保持，应保存到外部 W25Q64 的 `param-store` 分区，后端采用 Zephyr `settings + NVS`。例如 `mqtt/host`、`mqtt/port`、`time/sync_mode`、`network/dhcp_mode`、`device/hostname`、编码器校准参数等，都属于设备参数类。
 
 3. Modbus 写入的是业务数据。v1 只持久化线圈和 Holding Register 中带 `persistent` 属性的数据，保存到外部 W25Q64 的 `modbus-store` 分区。实时状态、输入寄存器、错误计数、编码器实时值不保存。
 
@@ -59,7 +59,7 @@ settings + ZMS：使用 settings API，底层由 ZMS 写 Flash
 
 ```text
 Kconfig 默认值 -> 启动时生成默认配置
-app-storage settings/NVS -> 覆盖 Kconfig 默认值
+外部 param-store settings/NVS -> 覆盖 Kconfig 默认值
 外部 modbus-store -> 覆盖 Modbus persistent 线圈和 Holding Register 默认值
 RAM 镜像 -> 运行时所有业务实际读取的当前值
 ```
@@ -68,7 +68,7 @@ RAM 镜像 -> 运行时所有业务实际读取的当前值
 
 ```text
 1. 加载 Kconfig 默认值
-2. 从内部 app-storage 读取 Shell/参数服务保存的设备配置
+2. 从外部 W25Q64 param-store 读取 Shell/参数服务保存的设备配置
 3. 有保存值则覆盖默认值，没有保存值则继续使用 Kconfig 默认值
 4. 从外部 W25Q64 读取 Modbus persistent 快照
 5. 快照有效则覆盖 persistent 线圈和 Holding Register，无效则使用默认 Modbus 表
@@ -107,18 +107,19 @@ app_storage_partition: partition@1e0000 {
 };
 ```
 
-`coredump_partition` 只给 Zephyr CoreDump 使用，不挂载 settings，不保存业务数据。`app_storage_partition` 用于设备关键参数、存储服务元数据、上次重启原因等小数据。
+`coredump_partition` 只给 Zephyr CoreDump 使用，不挂载 settings，不保存业务数据。`app_storage_partition` v1 暂不用于 settings/NVS，后续可用于启动标记、故障标记、极少量手写结构，或者评估改用 settings/ZMS。
 
 ## 7. 外部 W25Q64 分区方案
 
-W25Q64 容量为 8MB。v1 只启用 `modbus-store`：
+W25Q64 容量为 8MB。v1 启用 `param-store` 和 `modbus-store`：
 
 ```text
-0x000000 ~ 0x1fffff   modbus-store   2MB
-0x200000 ~ 0x7fffff   reserved       6MB
+0x000000 ~ 0x01ffff   param-store    128KB
+0x020000 ~ 0x03ffff   modbus-store   128KB
+0x040000 ~ 0x7fffff   reserved       7936KB
 ```
 
-`modbus-store` 预留 2MB，是为了后续线圈和 Holding Register 数量持续扩展时不频繁调整分区。`reserved` 暂不格式化，后续可用于参数备份、诊断历史、MQTT 离线队列或新的业务数据区。
+`param-store` 挂载 Zephyr settings/NVS，用于设备参数。`modbus-store` v1 保存线圈和 Holding Register 的持久化快照。`reserved` 暂不格式化，后续可用于参数备份、诊断历史、MQTT 离线队列或新的业务数据区。
 
 ## 8. W25Q64 硬件接入方案
 
@@ -186,11 +187,11 @@ src/coredump_service.h
 
 3. `coredump_service_check_on_boot()` 检查内部 Flash 是否存在 CoreDump。
 
-4. `device_param_store_load()` 先填充 Kconfig 默认值，再从内部 app-storage 加载 Shell 保存的设备参数覆盖默认值。
+4. `device_param_store_init()` 先填充 Kconfig 默认值，再从外部 W25Q64 `param-store` 的 settings/NVS 加载保存的设备参数覆盖默认值。
 
-5. `storage_service_init_external()` 初始化 QSPI 和 W25Q64，读取 JEDEC ID，检查外部分区版本。
+5. `shell_app_init()` 从参数服务已经加载好的 RAM 镜像读取 `shell/output_format`，缓存 Shell 输出格式。后续普通 Shell 命令只读取这个运行时缓存，不反复访问参数服务或 settings/NVS。
 
-6. `modbus_register_store_load()` 从外部 Flash 加载 Modbus 持久化线圈和 Holding Register。
+6. `modbus_register_store_load()` 从外部 Flash `modbus-store` 加载 Modbus 持久化线圈和 Holding Register。
 
 7. 网络、MQTT、NTP、Modbus TCP 等业务服务启动。
 
@@ -200,7 +201,7 @@ src/coredump_service.h
 
 ## 11. 设备参数保存策略
 
-设备参数使用内部 app-storage 保存，采用 Zephyr `settings + NVS`。
+设备参数使用外部 W25Q64 的 `param-store` 保存，采用 Zephyr `settings + NVS`。内部 Flash 的 `app-storage` v1 暂时不用于 settings/NVS，后续可用于启动标记、故障标记、极少量手写结构，或者评估改用 ZMS。
 
 参数示例：
 
@@ -220,21 +221,33 @@ encoder/hoist_zero
 encoder/luffing_zero
 encoder/slewing_zero
 modbus/tcp_max_clients
+shell/output_format
 ```
 
 保存策略：
 
 1. 每个参数都有 Kconfig 默认值或代码默认值。
 
-2. Shell 修改后写入 settings/NVS，重启后由 settings 覆盖默认值。
+2. Shell 执行 `param_set <key> <value>` 后先修改参数服务的 RAM 镜像，并标记 dirty；执行 `param_save` 后才写入外部 `param-store` 的 settings/NVS，重启后由 settings 覆盖默认值。
 
 3. 保存前检查长度、范围和合法性。
 
 4. 参数 schema 带版本号，固件升级时执行迁移。
 
-5. v1 不做外部参数备份，设备参数只保存在内部 app-storage。
+5. v1 不做参数备份，设备参数只保存在外部 W25Q64 的 `param-store`。
 
 6. 恢复出厂只清除设备参数和业务参数，不清除 CoreDump，除非用户明确执行 CoreDump 清除。
+
+Shell 输出格式参数：
+
+```text
+key: shell/output_format
+type: enum
+default: kv
+range: kv|json
+```
+
+`kv` 表示人类易读的 `key=value` 输出，适合串口或 Telnet 人工调试；`json` 表示机器可解析 JSON 输出，适合脚本、自动化测试和远程工具采集。该参数由 `device_param_store` 统一管理，Shell 模块在开机时通过 `shell_app_init()` 读取一次并缓存为运行时变量。执行 `param_set shell/output_format json` 或 `param_set shell/output_format kv` 时，除了修改参数服务 RAM 镜像，还会立即同步更新 Shell 模块缓存；执行 `param_save` 后才持久化，重启后继续生效。普通状态命令不应每次调用 `device_param_store_get()` 查询输出格式。
 
 ## 12. Modbus 线圈和 Holding Register 保存策略
 
@@ -382,6 +395,31 @@ coredump_export
 coredump_clear
 ```
 
+Shell 状态类和参数类命令支持两类输出格式，格式由设备参数 `shell/output_format` 决定，而不是在每条命令后追加临时参数。
+
+```text
+param_get shell/output_format
+param_set shell/output_format json
+param_save
+param_set shell/output_format kv
+param_save
+```
+
+当 `shell/output_format=kv` 时，状态输出采用人类易读的 `key=value` 风格，例如：
+
+```text
+initialized=yes
+external_flash_ready=yes
+param_store.available=yes param_store.offset=0x00000000 param_store.size=131072
+mqtt/host=mqtt.craner.hk
+```
+
+当 `shell/output_format=json` 时，命令输出 JSON，便于自动化脚本解析。`param_get <key>` 只输出业务关心的 key 和 value，不输出 dirty、loaded、last_error 等内部维护字段：
+
+```json
+{"key":"mqtt/host","value":"mqtt.craner.hk"}
+```
+
 其中 `storage_format_external`、`param_factory_reset`、`modbus_store_clear`、`coredump_clear` 都是破坏性维护命令，允许本地串口和 MQTT 远程维护执行，但必须通过白名单服务入口，不允许直接暴露通用 shell。
 
 MQTT shell v1 开放状态查询、维护动作、手动 CoreDump 状态上报和完整 CoreDump 导出：
@@ -470,7 +508,9 @@ CONFIG_DEBUG_COREDUMP_FLASH_CHUNK_SIZE=64
 
 ### 17.3 第三步：实现设备参数服务
 
-启用 `settings + NVS`，将 settings partition 指向内部 `app_storage_partition`。新增 `device_param_store.c/.h`，定义参数表、类型、默认值、范围、settings key 和迁移版本。Shell 命令 `param_get`、`param_set`、`param_save`、`param_factory_reset` 通过参数服务访问，不直接访问 settings API。
+启用 `settings + NVS`，将 settings partition 指向外部 W25Q64 的 `param_store_partition`。新增 `device_param_store.c/.h`，定义参数表、类型、默认值、范围、settings key 和迁移版本。Shell 命令 `param_get`、`param_set`、`param_save`、`param_factory_reset` 通过参数服务访问，不直接访问 settings API。
+
+`shell/output_format` 也作为设备参数保存，默认值为 `kv`，可选值为 `kv|json`。`shell_app` 不应在每次输出前反复读取 settings 或参数服务，而是在 `device_param_store_init()` 完成后通过 `shell_app_init()` 读取一次并缓存为运行时变量。执行 `param_set shell/output_format <value>` 时，应同步更新参数服务 RAM 镜像和 shell 运行时缓存；执行 `param_save` 后再落盘。
 
 加载规则：
 
@@ -485,9 +525,9 @@ CONFIG_DEBUG_COREDUMP_FLASH_CHUNK_SIZE=64
 
 在 board DTS 中补充 QSPI pinctrl、`quadspi` 节点和 `jedec,spi-nor` 子节点。先不承载业务，只做 `storage_service_init_external()`，读取 JEDEC ID、容量、erase/write/read 能力。增加 `storage_status` 中的 external flash 状态。
 
-### 17.5 第五步：实现外部 Flash 分区和参数备份
+### 17.5 第五步：实现外部 Flash 分区
 
-在 W25Q64 下定义 `modbus-store`。`storage_service` 初始化外部分区版本和 magic。v1 不启用 `param-backup`，设备参数仍只保存到内部 app-storage。
+在 W25Q64 下定义 `param-store` 和 `modbus-store` 两个分区。`param-store` 为 128KB，挂载 Zephyr settings/NVS，用于设备参数；`modbus-store` 为 128KB，用于 Modbus 持久化线圈和 Holding Register。v1 不启用 `param-backup`，也不把设备参数保存到内部 app-storage。
 
 ### 17.6 第六步：实现 Modbus 持久化
 
