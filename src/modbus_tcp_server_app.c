@@ -30,6 +30,9 @@ LOG_MODULE_REGISTER(tcp_modbus, LOG_LEVEL_INF);
 #define MODBUS_TCP_SERVER_STACK_SIZE 3072
 #define MODBUS_TCP_SERVER_PRIORITY 8
 #define MODBUS_TCP_PORT 502
+#define MODBUS_TCP_MAX_CLIENTS CONFIG_CRANER_MODBUS_TCP_MAX_CLIENTS
+#define MODBUS_TCP_POLL_FD_COUNT (MODBUS_TCP_MAX_CLIENTS + 1)
+#define MODBUS_TCP_LISTEN_BACKLOG MODBUS_TCP_MAX_CLIENTS
 
 static int custom_read_count;
 
@@ -145,6 +148,7 @@ static struct modbus_user_callbacks mbs_cbs = {
 
 static struct modbus_adu tmp_adu;
 K_SEM_DEFINE(received, 0, 1);
+static K_MUTEX_DEFINE(raw_modbus_lock);
 static int server_iface;
 
 static int server_raw_cb(const int iface, const struct modbus_adu *adu,
@@ -226,18 +230,25 @@ static int modbus_tcp_connection(int client)
 		return rc == 0 ? -ENOTCONN : -errno;
 	}
 
+	k_mutex_lock(&raw_modbus_lock, K_FOREVER);
+
+	while (k_sem_take(&received, K_NO_WAIT) == 0) {
+	}
+
 	LOG_HEXDUMP_DBG(header, sizeof(header), "h:>");
 	modbus_raw_get_header(&tmp_adu, header);
 	data_len = tmp_adu.length;
 
 	rc = recv(client, tmp_adu.data, data_len, MSG_WAITALL);
 	if (rc <= 0) {
+		k_mutex_unlock(&raw_modbus_lock);
 		return rc == 0 ? -ENOTCONN : -errno;
 	}
 
 	LOG_HEXDUMP_DBG(tmp_adu.data, tmp_adu.length, "d:>");
 	if (modbus_raw_submit_rx(server_iface, &tmp_adu)) {
 		LOG_ERR("Failed to submit raw ADU");
+		k_mutex_unlock(&raw_modbus_lock);
 		return -EIO;
 	}
 
@@ -246,7 +257,35 @@ static int modbus_tcp_connection(int client)
 		modbus_raw_set_server_failure(&tmp_adu);
 	}
 
-	return modbus_tcp_reply(client, &tmp_adu);
+	rc = modbus_tcp_reply(client, &tmp_adu);
+	k_mutex_unlock(&raw_modbus_lock);
+
+	return rc;
+}
+
+static void modbus_tcp_client_close(struct pollfd *fds, int index)
+{
+	if (fds[index].fd >= 0) {
+		close(fds[index].fd);
+	}
+
+	fds[index].fd = -1;
+	fds[index].events = POLLIN;
+	fds[index].revents = 0;
+}
+
+static int modbus_tcp_client_add(struct pollfd *fds, int client)
+{
+	for (int i = 1; i < MODBUS_TCP_POLL_FD_COUNT; i++) {
+		if (fds[i].fd < 0) {
+			fds[i].fd = client;
+			fds[i].events = POLLIN;
+			fds[i].revents = 0;
+			return 0;
+		}
+	}
+
+	return -ENOMEM;
 }
 
 static void modbus_tcp_server_thread(void)
@@ -254,6 +293,7 @@ static void modbus_tcp_server_thread(void)
 	int serv;
 	struct sockaddr_in bind_addr;
 	static int counter;
+	struct pollfd fds[MODBUS_TCP_POLL_FD_COUNT];
 
 	if (init_modbus_server()) {
 		LOG_ERR("Modbus TCP server initialization failed");
@@ -276,38 +316,80 @@ static void modbus_tcp_server_thread(void)
 		return;
 	}
 
-	if (listen(serv, 5) < 0) {
+	if (listen(serv, MODBUS_TCP_LISTEN_BACKLOG) < 0) {
 		LOG_ERR("error: listen: %d", errno);
 		return;
 	}
 
-	LOG_INF("Started MODBUS TCP server example on port %d", MODBUS_TCP_PORT);
+	fds[0].fd = serv;
+	fds[0].events = POLLIN;
+	fds[0].revents = 0;
+
+	for (int i = 1; i < MODBUS_TCP_POLL_FD_COUNT; i++) {
+		fds[i].fd = -1;
+		fds[i].events = POLLIN;
+		fds[i].revents = 0;
+	}
+
+	LOG_INF("Started MODBUS TCP server on port %d, max_clients=%d",
+		MODBUS_TCP_PORT, MODBUS_TCP_MAX_CLIENTS);
 
 	while (1) {
-		struct sockaddr_in client_addr;
-		socklen_t client_addr_len = sizeof(client_addr);
-		char addr_str[INET_ADDRSTRLEN];
-		int client;
 		int rc;
 
-		client = accept(serv, (struct sockaddr *)&client_addr,
-				&client_addr_len);
-
-		if (client < 0) {
-			LOG_ERR("error: accept: %d", errno);
+		rc = poll(fds, ARRAY_SIZE(fds), -1);
+		if (rc < 0) {
+			LOG_ERR("error: poll: %d", errno);
 			continue;
 		}
 
-		inet_ntop(client_addr.sin_family, &client_addr.sin_addr,
-			  addr_str, sizeof(addr_str));
-		LOG_INF("Connection #%d from %s", counter++, addr_str);
+		if ((fds[0].revents & POLLIN) != 0) {
+			struct sockaddr_in client_addr;
+			socklen_t client_addr_len = sizeof(client_addr);
+			char addr_str[INET_ADDRSTRLEN];
+			int client;
 
-		do {
-			rc = modbus_tcp_connection(client);
-		} while (!rc);
+			client = accept(serv, (struct sockaddr *)&client_addr,
+					&client_addr_len);
+			if (client < 0) {
+				LOG_ERR("error: accept: %d", errno);
+			} else {
+				inet_ntop(client_addr.sin_family,
+					  &client_addr.sin_addr,
+					  addr_str, sizeof(addr_str));
 
-		close(client);
-		LOG_INF("Connection from %s closed, errno %d", addr_str, rc);
+				if (modbus_tcp_client_add(fds, client) != 0) {
+					LOG_WRN("Rejecting Modbus TCP client from %s: pool full",
+						addr_str);
+					close(client);
+				} else {
+					LOG_INF("Connection #%d from %s, fd=%d",
+						counter++, addr_str, client);
+				}
+			}
+		}
+
+		for (int i = 1; i < MODBUS_TCP_POLL_FD_COUNT; i++) {
+			if (fds[i].fd < 0 || fds[i].revents == 0) {
+				continue;
+			}
+
+			if ((fds[i].revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
+				LOG_INF("Closing Modbus TCP client fd=%d, revents=0x%x",
+					fds[i].fd, fds[i].revents);
+				modbus_tcp_client_close(fds, i);
+				continue;
+			}
+
+			if ((fds[i].revents & POLLIN) != 0) {
+				rc = modbus_tcp_connection(fds[i].fd);
+				if (rc != 0) {
+					LOG_INF("Closing Modbus TCP client fd=%d, rc=%d",
+						fds[i].fd, rc);
+					modbus_tcp_client_close(fds, i);
+				}
+			}
+		}
 	}
 }
 

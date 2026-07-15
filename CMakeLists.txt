@@ -9,6 +9,11 @@ target_include_directories(app PRIVATE include)
 
 target_sources(app PRIVATE
 	src/main.c
+	src/device_identity_service.c
+	src/network_service.c
+	src/time_service.c
+	src/rtc_trust_store.c
+	src/rtc_time_provider.c
 	src/power_control_app.c
 	src/shell_app.c
 	src/modbus_register_map.c
@@ -40,4 +45,16 @@ target_sources_ifdef(CONFIG_CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD app PRIVATE
 
 target_sources_ifdef(CONFIG_CRANER_ENABLE_OTA_CONTROL app PRIVATE
 	src/ota_control_app.c
+)
+
+target_sources_ifdef(CONFIG_CRANER_ENABLE_MQTT_SERVICE_MANAGER app PRIVATE
+	src/mqtt_service_manager.c
+)
+
+target_sources_ifdef(CONFIG_CRANER_ENABLE_MQTT_LOG_SERVICE app PRIVATE
+	src/mqtt_log_service.c
+)
+
+target_sources_ifdef(CONFIG_CRANER_ENABLE_MQTT_SHELL_SERVICE app PRIVATE
+	src/mqtt_shell_service.c
 )

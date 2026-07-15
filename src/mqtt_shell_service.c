@@ -1,0 +1,189 @@
+#include "mqtt_service_manager.h"
+#include "network_service.h"
+#include "rtc_time_provider.h"
+#include "time_service.h"
+
+#include <stdio.h>
+#include <string.h>
+
+#include <zephyr/init.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/sys/reboot.h>
+
+LOG_MODULE_REGISTER(mqtt_shell_service, CONFIG_LOG_DEFAULT_LEVEL);
+
+#define MQTT_SHELL_REQUEST_TOPIC CONFIG_CRANER_MQTT_SHELL_SERVICE_REQUEST_TOPIC
+#define MQTT_SHELL_RESPONSE_TOPIC CONFIG_CRANER_MQTT_SHELL_SERVICE_RESPONSE_TOPIC
+
+static bool topic_matches(const struct mqtt_service_manager_publish *publish,
+			  const char *topic)
+{
+	return publish->topic_len == strlen(topic) &&
+	       memcmp(publish->topic, topic, publish->topic_len) == 0;
+}
+
+static bool payload_equals(const struct mqtt_service_manager_publish *publish,
+			   const char *command)
+{
+	return publish->payload_len == strlen(command) &&
+	       memcmp(publish->payload, command, publish->payload_len) == 0;
+}
+
+static void publish_response(const char *status, const char *command,
+			     const char *message)
+{
+	char response[CONFIG_CRANER_MQTT_SHELL_SERVICE_RESPONSE_SIZE];
+	int len;
+	int rc;
+
+	len = snprintk(response, sizeof(response),
+		      "{\"status\":\"%s\",\"cmd\":\"%s\",\"message\":\"%s\"}",
+		      status, command, message);
+	if (len < 0) {
+		return;
+	}
+
+	rc = mqtt_service_manager_publish(MQTT_SHELL_RESPONSE_TOPIC, response,
+					  MIN((size_t)len, sizeof(response) - 1U),
+					  MQTT_QOS_0_AT_MOST_ONCE, false);
+	if (rc != 0) {
+		LOG_WRN("Failed to publish MQTT shell response: %d", rc);
+	}
+}
+
+static void handle_command(const struct mqtt_service_manager_publish *publish)
+{
+	char msg[384];
+
+	if (payload_equals(publish, "fw_time")) {
+		snprintk(msg, sizeof(msg), "%s %s", __DATE__, __TIME__);
+		publish_response("ok", "fw_time", msg);
+		return;
+	}
+
+	if (payload_equals(publish, "mqtt_status")) {
+		publish_response("ok", "mqtt_status",
+				 mqtt_service_manager_is_connected() ?
+					 "connected" : "disconnected");
+		return;
+	}
+
+	if (payload_equals(publish, "net_status")) {
+		struct network_service_status status;
+
+		network_service_get_status(&status);
+		snprintk(msg, sizeof(msg),
+			 "state=%s,link_up=%s,ready=%s,ip=%s,gateway=%s,dhcp_server=%s,lease_s=%u,fail_count=%u,next_retry_ms=%u",
+			 network_service_state_name(status.state),
+			 status.link_up ? "yes" : "no",
+			 status.ready ? "yes" : "no",
+			 status.ip, status.gateway, status.dhcp_server,
+			 status.dhcp_lease_time_s, status.dhcp_fail_count,
+			 status.dhcp_retry_delay_ms);
+		publish_response("ok", "net_status", msg);
+		return;
+	}
+
+	if (payload_equals(publish, "time_status")) {
+		struct time_service_status status;
+		char iso_time[32] = "invalid";
+
+		time_service_get_status(&status);
+		(void)time_service_format_iso8601(iso_time, sizeof(iso_time));
+		snprintk(msg, sizeof(msg),
+			 "valid=%s,source=%s,quality=%s,mode=%s,unix=%lld,iso=%s,sync_count=%u,fail_count=%u,rtc_available=%s,rtc_valid=%s,rtc_error=%d,ntp=%s",
+			 status.wall_time_valid ? "yes" : "no",
+			 time_service_source_name(status.active_source),
+			 time_service_quality_name(status.quality),
+			 time_service_correction_mode_name(status.correction_mode),
+			 (long long)status.unix_time_s, iso_time,
+			 status.sync_count, status.fail_count,
+			 status.rtc_available ? "yes" : "no",
+			 status.rtc_valid ? "yes" : "no",
+			 status.rtc_last_error,
+			 status.ntp_server);
+		publish_response("ok", "time_status", msg);
+		return;
+	}
+
+	if (payload_equals(publish, "rtc_status")) {
+		struct rtc_time_provider_status status;
+
+		rtc_time_provider_get_status(&status);
+		snprintk(msg, sizeof(msg),
+			 "available=%s,ready=%s,valid=%s,time_range_valid=%s,trust_valid=%s,trust_source=%s,last_error=%d,trust_error=%d,unix=%lld,last_set_unix=%lld,last_set_uptime_ms=%lld",
+			 status.available ? "yes" : "no",
+			 status.ready ? "yes" : "no",
+			 status.valid ? "yes" : "no",
+			 status.time_range_valid ? "yes" : "no",
+			 status.trust_valid ? "yes" : "no",
+			 rtc_trust_source_name(status.trust_source),
+			 status.last_error,
+			 status.trust_error,
+			 (long long)status.unix_time_s,
+			 (long long)status.last_set_unix_time_s,
+			 (long long)status.last_set_uptime_ms);
+		publish_response("ok", "rtc_status", msg);
+		return;
+	}
+
+	if (payload_equals(publish, "time_sync")) {
+		int rc = time_service_sync_now();
+
+		if (rc == 0) {
+			publish_response("ok", "time_sync", "requested");
+		} else {
+			snprintk(msg, sizeof(msg), "failed: %d", rc);
+			publish_response("error", "time_sync", msg);
+		}
+		return;
+	}
+
+	if (payload_equals(publish, "reboot")) {
+		publish_response("ok", "reboot", "rebooting");
+		k_sleep(K_MSEC(250));
+		sys_reboot(SYS_REBOOT_COLD);
+		return;
+	}
+
+	publish_response("error", "unknown", "unsupported command");
+}
+
+static void mqtt_shell_service_event_handler(
+	enum mqtt_service_manager_event event, struct mqtt_client *client,
+	const struct mqtt_service_manager_publish *publish, void *user_data)
+{
+	int rc;
+
+	ARG_UNUSED(client);
+	ARG_UNUSED(user_data);
+
+	switch (event) {
+	case MQTT_SERVICE_MANAGER_CONNECTED:
+		rc = mqtt_service_manager_subscribe(MQTT_SHELL_REQUEST_TOPIC,
+						    MQTT_QOS_0_AT_MOST_ONCE);
+		if (rc != 0) {
+			LOG_WRN("Failed to subscribe MQTT shell topic: %d", rc);
+		}
+		break;
+
+	case MQTT_SERVICE_MANAGER_PUBLISH:
+		if (publish != NULL && topic_matches(publish,
+						     MQTT_SHELL_REQUEST_TOPIC)) {
+			handle_command(publish);
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+static int mqtt_shell_service_init(void)
+{
+	return mqtt_service_manager_register_handler(
+		mqtt_shell_service_event_handler, NULL);
+}
+
+SYS_INIT(mqtt_shell_service_init, APPLICATION, 97);
