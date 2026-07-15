@@ -1,3 +1,6 @@
+#ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
+#include "coredump_service.h"
+#endif
 #include "network_service.h"
 #include "rtc_time_provider.h"
 #ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
@@ -11,6 +14,9 @@
 #include <string.h>
 #include <time.h>
 
+#ifdef CONFIG_CRANER_ENABLE_FAULT_INJECTION_SHELL
+#include <zephyr/kernel.h>
+#endif
 #include <zephyr/shell/shell.h>
 #include <zephyr/sys/timeutil.h>
 
@@ -142,6 +148,75 @@ static int cmd_storage_status(const struct shell *shell, size_t argc,
 
 SHELL_CMD_REGISTER(storage_status, NULL, "Show persistent storage status.",
 		   cmd_storage_status);
+#endif
+
+#ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
+static int cmd_coredump_status(const struct shell *shell, size_t argc,
+			       char **argv)
+{
+	struct coredump_service_status status;
+	int rc;
+
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	rc = coredump_service_refresh();
+	coredump_service_get_status(&status);
+
+	shell_print(shell, "initialized: %s",
+		    status.initialized ? "yes" : "no");
+	shell_print(shell, "stored_dump_found: %s",
+		    status.stored_dump_found ? "yes" : "no");
+	shell_print(shell, "stored_dump_valid: %s",
+		    status.stored_dump_valid ? "yes" : "no");
+	shell_print(shell, "stored_dump_size: %u",
+		    (uint32_t)status.stored_dump_size);
+	shell_print(shell, "backend_error: %d", status.backend_error);
+	shell_print(shell, "verify_result: %d", status.verify_result);
+	shell_print(shell, "last_error: %d", status.last_error);
+
+	return rc;
+}
+
+SHELL_CMD_REGISTER(coredump_status, NULL, "Show stored coredump status.",
+		   cmd_coredump_status);
+
+static int cmd_coredump_clear(const struct shell *shell, size_t argc,
+			      char **argv)
+{
+	int rc;
+
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	rc = coredump_service_clear_stored_dump();
+	if (rc != 0) {
+		shell_error(shell, "clear stored coredump failed: %d", rc);
+		return rc;
+	}
+
+	shell_warn(shell, "stored coredump erased");
+	return 0;
+}
+
+SHELL_CMD_REGISTER(coredump_clear, NULL, "Erase stored coredump.",
+		   cmd_coredump_clear);
+#endif
+
+#ifdef CONFIG_CRANER_ENABLE_FAULT_INJECTION_SHELL
+static int cmd_fault_oops(const struct shell *shell, size_t argc, char **argv)
+{
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	shell_warn(shell, "triggering k_oops for coredump validation");
+	k_oops();
+
+	return 0;
+}
+
+SHELL_CMD_REGISTER(fault_oops, NULL, "Trigger k_oops for coredump testing.",
+		   cmd_fault_oops);
 #endif
 
 static int cmd_time_status(const struct shell *shell, size_t argc, char **argv)

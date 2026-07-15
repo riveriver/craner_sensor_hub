@@ -1,8 +1,12 @@
+#ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
+#include "coredump_service.h"
+#endif
 #include "mqtt_service_manager.h"
 #include "network_service.h"
 #include "rtc_time_provider.h"
 #include "time_service.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -127,6 +131,66 @@ static void handle_command(const struct mqtt_service_manager_publish *publish)
 		publish_response("ok", "rtc_status", msg);
 		return;
 	}
+
+#ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
+	if (payload_equals(publish, "coredump_status")) {
+		struct coredump_service_status status;
+		int rc;
+
+		rc = coredump_service_refresh();
+		coredump_service_get_status(&status);
+		snprintk(msg, sizeof(msg),
+			 "initialized=%s,found=%s,valid=%s,size=%u,backend_error=%d,verify_result=%d,last_error=%d",
+			 status.initialized ? "yes" : "no",
+			 status.stored_dump_found ? "yes" : "no",
+			 status.stored_dump_valid ? "yes" : "no",
+			 (uint32_t)status.stored_dump_size,
+			 status.backend_error, status.verify_result,
+			 status.last_error);
+		publish_response(rc == 0 ? "ok" : "error",
+				 "coredump_status", msg);
+		return;
+	}
+
+	if (payload_equals(publish, "coredump_report")) {
+		int rc;
+
+		rc = coredump_service_publish_report();
+		if (rc == 0) {
+			publish_response("ok", "coredump_report", "published");
+		} else {
+			snprintk(msg, sizeof(msg), "failed: %d", rc);
+			publish_response("error", "coredump_report", msg);
+		}
+		return;
+	}
+
+	if (payload_equals(publish, "coredump_export")) {
+		int rc;
+
+		rc = coredump_service_publish_export();
+		if (rc == 0) {
+			publish_response("ok", "coredump_export", "published");
+		} else {
+			snprintk(msg, sizeof(msg), "failed: %d", rc);
+			publish_response("error", "coredump_export", msg);
+		}
+		return;
+	}
+
+	if (payload_equals(publish, "coredump_clear")) {
+		int rc;
+
+		rc = coredump_service_clear_stored_dump();
+		if (rc == 0) {
+			publish_response("ok", "coredump_clear", "erased");
+		} else {
+			snprintk(msg, sizeof(msg), "failed: %d", rc);
+			publish_response("error", "coredump_clear", msg);
+		}
+		return;
+	}
+#endif
 
 	if (payload_equals(publish, "time_sync")) {
 		int rc = time_service_sync_now();

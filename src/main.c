@@ -1,4 +1,7 @@
 #include "device_identity_service.h"
+#ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
+#include "coredump_service.h"
+#endif
 #include "network_service.h"
 #ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
 #include "storage_service.h"
@@ -31,6 +34,13 @@ int main(void)
 	rc = storage_service_init();
 	if (rc != 0) {
 		printk("Storage service init failed: %d\n", rc);
+	}
+#endif
+
+#ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
+	rc = coredump_service_init();
+	if (rc != 0) {
+		printk("Coredump service init failed: %d\n", rc);
 	}
 #endif
 

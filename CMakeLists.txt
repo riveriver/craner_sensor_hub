@@ -51,6 +51,10 @@ target_sources_ifdef(CONFIG_CRANER_ENABLE_STORAGE_SERVICE app PRIVATE
 	src/storage_service.c
 )
 
+target_sources_ifdef(CONFIG_CRANER_ENABLE_COREDUMP_SERVICE app PRIVATE
+	src/coredump_service.c
+)
+
 target_sources_ifdef(CONFIG_CRANER_ENABLE_MQTT_SERVICE_MANAGER app PRIVATE
 	src/mqtt_service_manager.c
 )
