@@ -94,5 +94,195 @@ config CRANER_OTA_TEST_TIMEOUT_S
 	help
 	  Time allowed for an unconfirmed test image to call ota confirm before
 	  the application reboots and lets MCUboot roll back.
+
+config CRANER_TIME_SERVICE_STACK_SIZE
+	int "Time service thread stack size"
+	default 4096
+	range 2048 8192
+	help
+	  Stack size for the time service thread. The thread performs blocking
+	  SNTP/DNS operations and updates Zephyr realtime clock.
+
+config CRANER_TIME_SERVICE_NTP_SERVER
+	string "NTP server hostname"
+	default "pool.ntp.org"
+	help
+	  NTP/SNTP server used by the time service after DHCP succeeds.
+
+config CRANER_TIME_SERVICE_NTP_TIMEOUT_MS
+	int "NTP query timeout in milliseconds"
+	default 5000
+	range 1000 30000
+	help
+	  Timeout used for a single SNTP request.
+
+config CRANER_TIME_SERVICE_NTP_RETRY_INITIAL_MS
+	int "Initial NTP retry delay in milliseconds"
+	default 10000
+	range 1000 60000
+	help
+	  Delay used for the first NTP retry after a sync failure.
+
+config CRANER_TIME_SERVICE_NTP_RETRY_MAX_MS
+	int "Maximum NTP retry delay in milliseconds"
+	default 300000
+	range 10000 3600000
+	help
+	  Maximum delay used by the NTP exponential backoff retry loop.
+
+config CRANER_TIME_SERVICE_NTP_RESYNC_INTERVAL_S
+	int "NTP resync interval in seconds"
+	default 3600
+	range 60 86400
+	help
+	  Periodic resync interval after a successful NTP sync.
+
+config CRANER_TIME_SERVICE_RTC_MIN_VALID_UNIX_TIME
+	int "Minimum valid RTC Unix time"
+	default 1767225600
+	help
+	  Minimum Unix timestamp accepted as a valid RTC time. The default is
+	  2026-01-01T00:00:00Z.
+
+config CRANER_TIME_SERVICE_RTC_WRITEBACK_THRESHOLD_S
+	int "RTC writeback threshold in seconds"
+	default 2
+	range 0 3600
+	help
+	  Write a synchronized time source back to RTC only when the absolute
+	  difference from the current RTC value is at least this many seconds.
+
+config CRANER_ENABLE_MQTT_SERVICE_MANAGER
+	bool "Enable shared MQTT service manager"
+	default y
+	depends on MQTT_LIB && NET_IPV4 && NET_SOCKETS
+	help
+	  Enable the shared MQTT connection manager. It owns the single MQTT
+	  client instance, handles reconnects and keepalive, and provides publish,
+	  subscribe, and event notification APIs for MQTT-based services.
+
+config CRANER_MQTT_SERVICE_MANAGER_BROKER_HOST
+	string "MQTT broker host"
+	default "mqtt.craner.hk"
+	depends on CRANER_ENABLE_MQTT_SERVICE_MANAGER
+	help
+	  Hostname or IPv4 address of the MQTT broker used by device services.
+
+config CRANER_MQTT_SERVICE_MANAGER_BROKER_PORT
+	int "MQTT broker TCP port"
+	default 1883
+	range 1 65535
+	depends on CRANER_ENABLE_MQTT_SERVICE_MANAGER
+	help
+	  TCP port of the MQTT broker.
+
+config CRANER_MQTT_SERVICE_MANAGER_CLIENT_ID
+	string "MQTT client id"
+	default ""
+	depends on CRANER_ENABLE_MQTT_SERVICE_MANAGER
+	help
+	  Deprecated. MQTT client id is generated at runtime by
+	  device_identity_service from company, project, device type, and
+	  the STM32 unique device id.
+
+config CRANER_MQTT_SERVICE_MANAGER_USERNAME
+	string "MQTT username"
+	default "hkcrctest"
+	depends on CRANER_ENABLE_MQTT_SERVICE_MANAGER
+	help
+	  MQTT username used for broker authentication.
+
+config CRANER_MQTT_SERVICE_MANAGER_PASSWORD
+	string "MQTT password"
+	default "crcHK3130"
+	depends on CRANER_ENABLE_MQTT_SERVICE_MANAGER
+	help
+	  MQTT password used for broker authentication.
+
+config CRANER_MQTT_DEVICE_NAME
+	string "MQTT device name"
+	default ""
+	depends on CRANER_ENABLE_MQTT_SERVICE_MANAGER
+	help
+	  Deprecated. Runtime device name is provided by
+	  device_identity_service.
+
+config CRANER_MQTT_DEVICE_UID
+	string "MQTT device UID"
+	default ""
+	depends on CRANER_ENABLE_MQTT_SERVICE_MANAGER
+	help
+	  Deprecated. Runtime short UID is generated from the STM32 unique
+	  device id by device_identity_service.
+
+config CRANER_MQTT_SERVICE_MANAGER_STACK_SIZE
+	int "MQTT service manager thread stack size"
+	default 4096
+	range 2048 16384
+	depends on CRANER_ENABLE_MQTT_SERVICE_MANAGER
+	help
+	  Stack size of the MQTT service manager thread.
+
+config CRANER_MQTT_SERVICE_MANAGER_RX_BUFFER_SIZE
+	int "MQTT service manager RX buffer size"
+	default 1024
+	range 256 4096
+	depends on CRANER_ENABLE_MQTT_SERVICE_MANAGER
+	help
+	  MQTT protocol RX buffer size.
+
+config CRANER_MQTT_SERVICE_MANAGER_TX_BUFFER_SIZE
+	int "MQTT service manager TX buffer size"
+	default 1024
+	range 256 4096
+	depends on CRANER_ENABLE_MQTT_SERVICE_MANAGER
+	help
+	  MQTT protocol TX buffer size.
+
+config CRANER_MQTT_SERVICE_MANAGER_RX_PAYLOAD_SIZE
+	int "MQTT service manager received payload buffer size"
+	default 512
+	range 64 4096
+	depends on CRANER_ENABLE_MQTT_SERVICE_MANAGER
+	help
+	  Maximum payload size accepted for incoming MQTT publish messages.
+
+config CRANER_ENABLE_MQTT_LOG_SERVICE
+	bool "Enable MQTT log service"
+	default y
+	depends on CRANER_ENABLE_MQTT_SERVICE_MANAGER && LOG_BACKEND_MQTT
+	help
+	  Connect Zephyr's MQTT log backend to the shared MQTT client.
+
+config CRANER_ENABLE_MQTT_SHELL_SERVICE
+	bool "Enable MQTT shell service"
+	default y
+	depends on CRANER_ENABLE_MQTT_SERVICE_MANAGER && REBOOT
+	help
+	  Enable a restricted MQTT remote diagnostic command service. This is not
+	  a full shell bridge; it only executes explicit whitelisted commands.
+
+config CRANER_MQTT_SHELL_SERVICE_REQUEST_TOPIC
+	string "MQTT shell request topic"
+	default "craner/encoder_hub/cmd/request"
+	depends on CRANER_ENABLE_MQTT_SHELL_SERVICE
+	help
+	  Topic subscribed by the device for whitelisted remote diagnostic
+	  commands.
+
+config CRANER_MQTT_SHELL_SERVICE_RESPONSE_TOPIC
+	string "MQTT shell response topic"
+	default "craner/encoder_hub/cmd/response"
+	depends on CRANER_ENABLE_MQTT_SHELL_SERVICE
+	help
+	  Topic used by the device to publish remote diagnostic command results.
+
+config CRANER_MQTT_SHELL_SERVICE_RESPONSE_SIZE
+	int "MQTT shell response buffer size"
+	default 512
+	range 128 1024
+	depends on CRANER_ENABLE_MQTT_SHELL_SERVICE
+	help
+	  Maximum JSON response size for MQTT shell service responses.
 	  
 endmenu
