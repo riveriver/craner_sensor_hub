@@ -5,6 +5,9 @@
 #ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
 #include "device_param_store.h"
 #endif
+#ifdef CONFIG_CRANER_ENABLE_MODBUS_REGISTER_STORE
+#include "modbus_register_store.h"
+#endif
 #include "network_service.h"
 #include "rtc_time_provider.h"
 #ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
@@ -515,6 +518,123 @@ static int cmd_param_factory_reset(const struct shell *shell, size_t argc,
 SHELL_CMD_REGISTER(param_factory_reset, NULL,
 		   "Delete saved device parameters and restore defaults.",
 		   cmd_param_factory_reset);
+#endif
+
+#ifdef CONFIG_CRANER_ENABLE_MODBUS_REGISTER_STORE
+static int cmd_modbus_store_status(const struct shell *shell, size_t argc,
+				   char **argv)
+{
+	struct modbus_register_store_status status;
+	char json[384];
+	int rc;
+
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	if (shell_output_is_json()) {
+		rc = modbus_register_store_format_status(json, sizeof(json));
+		if (rc != 0) {
+			shell_error(shell, "format modbus store status failed: %d",
+				    rc);
+			return rc;
+		}
+
+		shell_print(shell, "%s", json);
+		return 0;
+	}
+
+	modbus_register_store_get_status(&status);
+	shell_print(shell, "initialized=%s", status.initialized ? "yes" : "no");
+	shell_print(shell, "dirty=%s", status.dirty ? "yes" : "no");
+	shell_print(shell, "active_bank_valid=%s",
+		    status.active_bank_valid ? "yes" : "no");
+	shell_print(shell, "active_bank=%u", status.active_bank);
+	shell_print(shell, "active_sequence=%u", status.active_sequence);
+	shell_print(shell, "payload_size=%u", status.payload_size);
+	shell_print(shell, "load_count=%u", status.load_count);
+	shell_print(shell, "save_count=%u", status.save_count);
+	shell_print(shell, "clear_count=%u", status.clear_count);
+	shell_print(shell, "fail_count=%u", status.fail_count);
+	shell_print(shell, "last_error=%d", status.last_error);
+
+	return 0;
+}
+
+SHELL_CMD_REGISTER(modbus_store_status, NULL,
+		   "Show Modbus persistent register store status.",
+		   cmd_modbus_store_status);
+
+static int cmd_modbus_store_save(const struct shell *shell, size_t argc,
+				 char **argv)
+{
+	int rc;
+
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	rc = modbus_register_store_save_now();
+	if (rc != 0) {
+		shell_error(shell, "save modbus store failed: %d", rc);
+		return rc;
+	}
+
+	shell_print(shell, shell_output_is_json() ?
+			    "{\"type\":\"modbus_store_save\",\"status\":\"ok\"}" :
+			    "status=ok");
+	return 0;
+}
+
+SHELL_CMD_REGISTER(modbus_store_save, NULL,
+		   "Immediately save persistent Modbus registers.",
+		   cmd_modbus_store_save);
+
+static int cmd_modbus_store_load(const struct shell *shell, size_t argc,
+				 char **argv)
+{
+	int rc;
+
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	rc = modbus_register_store_load();
+	if (rc != 0) {
+		shell_error(shell, "load modbus store failed: %d", rc);
+		return rc;
+	}
+
+	shell_print(shell, shell_output_is_json() ?
+			    "{\"type\":\"modbus_store_load\",\"status\":\"ok\"}" :
+			    "status=ok");
+	return 0;
+}
+
+SHELL_CMD_REGISTER(modbus_store_load, NULL,
+		   "Reload persistent Modbus registers from flash.",
+		   cmd_modbus_store_load);
+
+static int cmd_modbus_store_clear(const struct shell *shell, size_t argc,
+				  char **argv)
+{
+	int rc;
+
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	rc = modbus_register_store_clear();
+	if (rc != 0) {
+		shell_error(shell, "clear modbus store failed: %d", rc);
+		return rc;
+	}
+
+	shell_warn(shell, shell_output_is_json() ?
+			   "{\"type\":\"modbus_store_clear\",\"status\":\"ok\"}" :
+			   "status=ok");
+	return 0;
+}
+
+SHELL_CMD_REGISTER(modbus_store_clear, NULL,
+		   "Erase persistent Modbus register store.",
+		   cmd_modbus_store_clear);
 #endif
 
 #ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE

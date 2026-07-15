@@ -55,6 +55,10 @@ target_sources_ifdef(CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE app PRIVATE
 	src/device_param_store.c
 )
 
+target_sources_ifdef(CONFIG_CRANER_ENABLE_MODBUS_REGISTER_STORE app PRIVATE
+	src/modbus_register_store.c
+)
+
 target_sources_ifdef(CONFIG_CRANER_ENABLE_COREDUMP_SERVICE app PRIVATE
 	src/coredump_service.c
 )

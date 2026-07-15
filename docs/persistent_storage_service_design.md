@@ -253,13 +253,29 @@ range: kv|json
 
 Modbus 持久化范围确定为线圈和 Holding Register。输入线圈、输入寄存器、实时编码器值、在线状态、错误计数等运行态数据不保存。
 
-Modbus 数据分为三类：
+Modbus 寄存器属性由 flags 明确描述，不再用一个笼统字段表达全部语义：
 
-1. `volatile`：运行时状态，不保存，例如实时编码器值、在线状态、错误计数。
+```c
+#define MODBUS_REG_F_READABLE    BIT(0)
+#define MODBUS_REG_F_WRITABLE    BIT(1)
+#define MODBUS_REG_F_PERSISTENT  BIT(2)
+```
 
-2. `persistent`：断电保持参数，需要保存，例如线圈配置开关、零点、倍率、限位、报警阈值。
+1. `READABLE`：允许 Modbus 主站读取该地址。地址在 `address_size` 内但没有定义时，读取返回 0；地址已经定义但没有 `READABLE` 标志时，读取应失败。
 
-3. `readonly`：只读数据，通常不接受外部写入，也不需要从 Flash 恢复。
+2. `WRITABLE`：允许 Modbus 主站写入该地址。地址未定义、超出地址空间、或已经定义但没有 `WRITABLE` 标志时，写入应失败。
+
+3. `PERSISTENT`：写入后需要断电保存。v1 只保存带 `PERSISTENT` 的线圈和 Holding Register，不保存 Input Register、空洞地址、实时状态、错误计数和时间戳。
+
+常用组合：
+
+```c
+#define MODBUS_REG_ACCESS_RO (MODBUS_REG_F_READABLE)
+#define MODBUS_REG_ACCESS_WO (MODBUS_REG_F_WRITABLE)
+#define MODBUS_REG_ACCESS_RW (MODBUS_REG_F_READABLE | MODBUS_REG_F_WRITABLE)
+#define MODBUS_REG_ACCESS_RW_PERSISTENT \
+	(MODBUS_REG_F_READABLE | MODBUS_REG_F_WRITABLE | MODBUS_REG_F_PERSISTENT)
+```
 
 写入流程：
 
@@ -288,11 +304,11 @@ Modbus 数据分为三类：
 
 后续线圈和 Holding Register 个数会持续扩展，因此不建议使用固定 C 结构体直接保存全部数据。固定结构体在寄存器增加、删除、重排后容易造成版本兼容困难。v1 推荐使用“分段目录 + TLV 记录 + 双 bank 提交”的格式。
 
-`modbus-store` 内部划分为两个等大的 bank：
+`modbus-store` v1 分区为 128KB，内部划分为两个等大的 bank：
 
 ```text
-bank A：1MB
-bank B：1MB
+bank A：64KB
+bank B：64KB
 ```
 
 每次保存写入非活动 bank，写完并校验通过后，新 bank 成为活动 bank。这样可以抵抗写入中途断电。
@@ -323,20 +339,18 @@ value_length
 value
 ```
 
-record_type 建议：
+record_type v1：
 
 ```text
-1 = coil
+1 = coil_bool
 2 = holding_register_u16
-3 = holding_register_u32
-4 = holding_register_blob
 ```
 
 保存规则：
 
-1. 只保存带 `persistent` 属性的线圈和 Holding Register。
+1. 只保存带 `MODBUS_REG_F_PERSISTENT` 属性的线圈和 Holding Register。
 
-2. 线圈按 bitset 或 TLV 都可以。若线圈地址连续且数量多，优先用 bitset 压缩；若地址稀疏，优先用 TLV。
+2. v1 线圈和 Holding Register 都使用 TLV 按地址保存。线圈未来如果数量很多且地址连续，可以再评估 bitset 压缩。
 
 3. Holding Register 默认以地址和值保存，不依赖编译时数组顺序。
 
@@ -531,7 +545,20 @@ CONFIG_DEBUG_COREDUMP_FLASH_CHUNK_SIZE=64
 
 ### 17.6 第六步：实现 Modbus 持久化
 
-给 Modbus 线圈和 Holding Register 定义增加属性字段，例如 `readonly`、`volatile`、`persistent`。新增 `modbus_register_store.c/.h`，实现 dirty 标记、延迟保存、强制保存、双 bank 快照、CRC 校验和版本迁移。
+给 Modbus 线圈、Input Register 和 Holding Register 定义增加 `flags` 字段，拆分为 `READABLE`、`WRITABLE`、`PERSISTENT`。新增 `modbus_register_store.c/.h`，实现 dirty 标记、延迟保存、强制保存、双 bank 快照和 CRC 校验。v1 先支持 `coil_bool` 和 `holding_u16` 两种 TLV record，后续再扩展 32-bit、float、blob 和迁移逻辑。
+
+v1 已实现的行为：
+
+```text
+1. 地址空间大小由 coil_address_size/input_address_size/holding_address_size 显式定义
+2. address_size 内未定义地址读取返回 0
+3. 已定义但没有 READABLE 的地址读取失败
+4. 已定义但没有 WRITABLE 的地址写入失败
+5. 写带 PERSISTENT 的线圈或 Holding Register 后，标记 dirty 并延迟保存
+6. 保存时写入 inactive bank，payload 和 header 均通过 CRC32 校验
+7. 启动时自动选择 sequence 最新且 CRC 正确的 bank 加载
+8. 删除寄存器后，旧数据中的未知地址会被忽略
+```
 
 保存路径：
 

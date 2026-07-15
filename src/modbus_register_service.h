@@ -7,8 +7,20 @@
 
 #include "modbus_register_map.h"
 
+typedef int (*modbus_register_persistent_coil_cb_t)(uint16_t addr, bool value,
+						    void *user_data);
+typedef int (*modbus_register_persistent_holding_cb_t)(uint16_t addr,
+						       uint16_t value,
+						       void *user_data);
+
 int modbus_register_service_register_map(struct modbus_register_map *map);
 int modbus_register_service_init(void);
+int modbus_register_service_foreach_persistent(
+	modbus_register_persistent_coil_cb_t coil_cb,
+	modbus_register_persistent_holding_cb_t holding_cb, void *user_data);
+int modbus_register_service_restore_persistent_coil(uint16_t addr, bool value);
+int modbus_register_service_restore_persistent_holding(uint16_t addr,
+						       uint16_t value);
 
 int modbus_register_service_read_coil(uint16_t addr, bool *value);
 int modbus_register_service_read_coil_by_name(const char *name, bool *value);

@@ -94,6 +94,24 @@ config CRANER_ENABLE_DEVICE_PARAM_STORE
 	  It owns the device parameter schema and exposes controlled get, set,
 	  save, and factory reset APIs for shell and remote maintenance.
 
+config CRANER_ENABLE_MODBUS_REGISTER_STORE
+	bool "Enable Modbus register persistent store"
+	default y
+	depends on CRANER_ENABLE_STORAGE_SERVICE && FLASH && FLASH_MAP
+	help
+	  Enable persistent storage for selected Modbus coils and holding
+	  registers. The v1 backend stores address-based TLV records in the
+	  external W25Q64 modbus-store partition with dual-bank CRC protection.
+
+config CRANER_MODBUS_REGISTER_STORE_SAVE_DELAY_MS
+	int "Modbus register store delayed save time in milliseconds"
+	default 3000
+	range 100 60000
+	depends on CRANER_ENABLE_MODBUS_REGISTER_STORE
+	help
+	  Delay used to merge frequent Modbus writes before saving persistent
+	  registers to external flash.
+
 config CRANER_COREDUMP_SERVICE_MQTT_TOPIC
 	string "Coredump MQTT diagnostic topic"
 	default "craner/test/log/emb"
