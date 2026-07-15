@@ -51,6 +51,10 @@ target_sources_ifdef(CONFIG_CRANER_ENABLE_STORAGE_SERVICE app PRIVATE
 	src/storage_service.c
 )
 
+target_sources_ifdef(CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE app PRIVATE
+	src/device_param_store.c
+)
+
 target_sources_ifdef(CONFIG_CRANER_ENABLE_COREDUMP_SERVICE app PRIVATE
 	src/coredump_service.c
 )

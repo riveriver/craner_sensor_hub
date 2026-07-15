@@ -1,6 +1,9 @@
 #ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
 #include "coredump_service.h"
 #endif
+#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+#include "device_param_store.h"
+#endif
 #include "network_service.h"
 #include "rtc_time_provider.h"
 #ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
@@ -19,6 +22,7 @@
 #endif
 #include <zephyr/shell/shell.h>
 #include <zephyr/sys/timeutil.h>
+#include <zephyr/sys/util.h>
 
 static int parse_iso8601_utc(const char *text, int64_t *unix_time_s)
 {
@@ -107,47 +111,202 @@ static const char *storage_shell_str(const char *value)
 	return value != NULL ? value : "";
 }
 
-static void print_storage_partition(const struct shell *shell,
-				    const char *prefix,
-				    const struct storage_partition_status *status)
-{
-	shell_print(shell, "%s_name: %s", prefix,
-		    storage_shell_str(status->name));
-	shell_print(shell, "%s_available: %s", prefix,
-		    status->available ? "yes" : "no");
-	shell_print(shell, "%s_device_ready: %s", prefix,
-		    status->device_ready ? "yes" : "no");
-	shell_print(shell, "%s_device: %s", prefix,
-		    storage_shell_str(status->device_name));
-	shell_print(shell, "%s_area_id: %u", prefix, status->area_id);
-	shell_print(shell, "%s_offset: 0x%08x", prefix, status->offset);
-	shell_print(shell, "%s_size: %u", prefix, (uint32_t)status->size);
-	shell_print(shell, "%s_last_error: %d", prefix, status->last_error);
-}
-
 static int cmd_storage_status(const struct shell *shell, size_t argc,
 			      char **argv)
 {
 	struct storage_service_status status;
+	char json[1024];
+	int len;
 
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
 	storage_service_get_status(&status);
 
-	shell_print(shell, "initialized: %s",
-		    status.initialized ? "yes" : "no");
-	shell_print(shell, "internal_flash_ready: %s",
-		    status.internal_flash_ready ? "yes" : "no");
-	shell_print(shell, "last_error: %d", status.last_error);
-	print_storage_partition(shell, "coredump", &status.coredump);
-	print_storage_partition(shell, "app_storage", &status.app_storage);
+	len = snprintf(json, sizeof(json),
+		       "{\"type\":\"storage\",\"initialized\":%s,"
+		       "\"internal_flash_ready\":%s,\"last_error\":%d,"
+		       "\"partitions\":{"
+		       "\"coredump\":{\"name\":\"%s\",\"available\":%s,"
+		       "\"device_ready\":%s,\"device\":\"%s\","
+		       "\"area_id\":%u,\"offset\":%u,"
+		       "\"offset_hex\":\"0x%08x\",\"size\":%u,"
+		       "\"last_error\":%d},"
+		       "\"app_storage\":{\"name\":\"%s\",\"available\":%s,"
+		       "\"device_ready\":%s,\"device\":\"%s\","
+		       "\"area_id\":%u,\"offset\":%u,"
+		       "\"offset_hex\":\"0x%08x\",\"size\":%u,"
+		       "\"last_error\":%d}}}",
+		       status.initialized ? "true" : "false",
+		       status.internal_flash_ready ? "true" : "false",
+		       status.last_error,
+		       storage_shell_str(status.coredump.name),
+		       status.coredump.available ? "true" : "false",
+		       status.coredump.device_ready ? "true" : "false",
+		       storage_shell_str(status.coredump.device_name),
+		       status.coredump.area_id, status.coredump.offset,
+		       status.coredump.offset,
+		       (uint32_t)status.coredump.size,
+		       status.coredump.last_error,
+		       storage_shell_str(status.app_storage.name),
+		       status.app_storage.available ? "true" : "false",
+		       status.app_storage.device_ready ? "true" : "false",
+		       storage_shell_str(status.app_storage.device_name),
+		       status.app_storage.area_id, status.app_storage.offset,
+		       status.app_storage.offset,
+		       (uint32_t)status.app_storage.size,
+		       status.app_storage.last_error);
+	if (len < 0) {
+		shell_error(shell, "format storage status failed: %d", len);
+		return len;
+	}
+
+	if ((size_t)len >= sizeof(json)) {
+		shell_error(shell, "storage status JSON truncated");
+		return -EMSGSIZE;
+	}
+
+	shell_print(shell, "%s", json);
 
 	return 0;
 }
 
 SHELL_CMD_REGISTER(storage_status, NULL, "Show persistent storage status.",
 		   cmd_storage_status);
+#endif
+
+#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+static int cmd_param_status(const struct shell *shell, size_t argc,
+			    char **argv)
+{
+	char json[384];
+	int rc;
+
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	rc = device_param_store_format_status(json, sizeof(json));
+	if (rc != 0) {
+		shell_error(shell, "format param status failed: %d", rc);
+		return rc;
+	}
+
+	shell_print(shell, "%s", json);
+	return 0;
+}
+
+SHELL_CMD_REGISTER(param_status, NULL, "Show device parameter store status.",
+		   cmd_param_status);
+
+static int cmd_param_get(const struct shell *shell, size_t argc, char **argv)
+{
+	char json[1536];
+	char value[96];
+	const struct device_param_record *record;
+	int rc;
+
+	if (argc == 1) {
+		rc = device_param_store_format_all(json, sizeof(json));
+		if (rc != 0) {
+			shell_error(shell, "format parameters failed: %d", rc);
+			return rc;
+		}
+
+		shell_print(shell, "%s", json);
+		return 0;
+	}
+
+	if (argc != 2) {
+		shell_error(shell, "usage: param_get [key]");
+		return -EINVAL;
+	}
+
+	rc = device_param_store_get(argv[1], value, sizeof(value));
+	record = device_param_store_find(argv[1]);
+	if (rc != 0 || record == NULL) {
+		shell_error(shell, "get parameter failed: %d", rc);
+		return rc;
+	}
+
+	shell_print(shell,
+		    "{\"type\":\"param\",\"key\":\"%s\",\"value\":\"%s\","
+		    "\"dirty\":%s,\"loaded\":%s,\"last_error\":%d}",
+		    record->key, value, record->dirty ? "true" : "false",
+		    record->loaded_from_settings ? "true" : "false",
+		    record->last_error);
+	return 0;
+}
+
+SHELL_CMD_REGISTER(param_get, NULL, "Get device parameter value.",
+		   cmd_param_get);
+
+static int cmd_param_set(const struct shell *shell, size_t argc, char **argv)
+{
+	int rc;
+
+	if (argc != 3) {
+		shell_error(shell, "usage: param_set <key> <value>");
+		return -EINVAL;
+	}
+
+	rc = device_param_store_set(argv[1], argv[2]);
+	if (rc != 0) {
+		shell_error(shell, "set parameter failed: %d", rc);
+		return rc;
+	}
+
+	shell_print(shell,
+		    "{\"type\":\"param_set\",\"key\":\"%s\",\"value\":\"%s\","
+		    "\"dirty\":true}",
+		    argv[1], argv[2]);
+	return 0;
+}
+
+SHELL_CMD_REGISTER(param_set, NULL, "Set device parameter value.",
+		   cmd_param_set);
+
+static int cmd_param_save(const struct shell *shell, size_t argc, char **argv)
+{
+	int rc;
+
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	rc = device_param_store_save();
+	if (rc != 0) {
+		shell_error(shell, "save parameters failed: %d", rc);
+		return rc;
+	}
+
+	shell_print(shell, "{\"type\":\"param_save\",\"status\":\"ok\"}");
+	return 0;
+}
+
+SHELL_CMD_REGISTER(param_save, NULL, "Save device parameters to settings/NVS.",
+		   cmd_param_save);
+
+static int cmd_param_factory_reset(const struct shell *shell, size_t argc,
+				   char **argv)
+{
+	int rc;
+
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	rc = device_param_store_factory_reset();
+	if (rc != 0) {
+		shell_error(shell, "factory reset parameters failed: %d", rc);
+		return rc;
+	}
+
+	shell_warn(shell,
+		   "{\"type\":\"param_factory_reset\",\"status\":\"ok\"}");
+	return 0;
+}
+
+SHELL_CMD_REGISTER(param_factory_reset, NULL,
+		   "Delete saved device parameters and restore defaults.",
+		   cmd_param_factory_reset);
 #endif
 
 #ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
@@ -201,6 +360,126 @@ static int cmd_coredump_clear(const struct shell *shell, size_t argc,
 
 SHELL_CMD_REGISTER(coredump_clear, NULL, "Erase stored coredump.",
 		   cmd_coredump_clear);
+
+static int cmd_coredump_report(const struct shell *shell, size_t argc,
+			       char **argv)
+{
+	char report[384];
+	int rc;
+	int publish_rc;
+
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	rc = coredump_service_format_report(report, sizeof(report));
+	if (rc != 0) {
+		shell_error(shell, "format coredump report failed: %d", rc);
+		return rc;
+	}
+
+	shell_print(shell, "%s", report);
+
+	publish_rc = coredump_service_publish_report();
+	if (publish_rc == -ENOTCONN) {
+		shell_warn(shell, "MQTT not connected, report printed locally only");
+		return 0;
+	}
+
+	if (publish_rc != 0) {
+		shell_error(shell, "publish coredump report failed: %d",
+			    publish_rc);
+		return publish_rc;
+	}
+
+	shell_print(shell, "coredump report published to MQTT");
+	return 0;
+}
+
+SHELL_CMD_REGISTER(coredump_report, NULL,
+		   "Print coredump status report and publish it to MQTT.",
+		   cmd_coredump_report);
+
+static int cmd_coredump_export(const struct shell *shell, size_t argc,
+			       char **argv)
+{
+	uint8_t chunk[CONFIG_CRANER_COREDUMP_EXPORT_CHUNK_BYTES];
+	char line[(CONFIG_CRANER_COREDUMP_EXPORT_CHUNK_BYTES * 2U) + 5U];
+	struct coredump_service_status status;
+	size_t remaining;
+	off_t offset = 0;
+	int rc;
+	int publish_rc;
+
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	rc = coredump_service_refresh();
+	coredump_service_get_status(&status);
+	if (rc != 0) {
+		shell_error(shell, "refresh coredump status failed: %d", rc);
+		return rc;
+	}
+
+	if (!status.stored_dump_found) {
+		shell_error(shell, "no stored coredump");
+		return -ENOENT;
+	}
+
+	if (!status.stored_dump_valid) {
+		shell_error(shell, "stored coredump is invalid");
+		return -EBADMSG;
+	}
+
+	if (status.stored_dump_size == 0U) {
+		shell_error(shell, "stored coredump is empty");
+		return -ENODATA;
+	}
+
+	shell_print(shell, "#CD:BEGIN#");
+	remaining = status.stored_dump_size;
+	while (remaining > 0U) {
+		size_t chunk_len = MIN(remaining, sizeof(chunk));
+
+		rc = coredump_service_read_stored_dump(offset, chunk, chunk_len);
+		if (rc != 0) {
+			shell_error(shell, "read coredump failed at %lld: %d",
+				    (long long)offset, rc);
+			return rc;
+		}
+
+		rc = coredump_service_format_hex_line(chunk, chunk_len, line,
+						      sizeof(line));
+		if (rc != 0) {
+			shell_error(shell, "format coredump chunk failed: %d",
+				    rc);
+			return rc;
+		}
+
+		shell_print(shell, "%s", line);
+		offset += chunk_len;
+		remaining -= chunk_len;
+	}
+	shell_print(shell, "#CD:END#");
+
+	publish_rc = coredump_service_publish_export();
+	if (publish_rc == -ENOTCONN) {
+		shell_warn(shell, "MQTT not connected, coredump exported locally only");
+		return 0;
+	}
+
+	if (publish_rc != 0) {
+		shell_error(shell, "publish coredump export failed: %d",
+			    publish_rc);
+		return publish_rc;
+	}
+
+	shell_print(shell, "coredump export published to MQTT");
+	return 0;
+}
+
+SHELL_CMD_REGISTER(coredump_export, NULL,
+		   "Export full stored coredump to shell and MQTT.",
+		   cmd_coredump_export);
 #endif
 
 #ifdef CONFIG_CRANER_ENABLE_FAULT_INJECTION_SHELL

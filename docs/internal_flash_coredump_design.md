@@ -144,13 +144,13 @@ CONFIG_DEBUG_COREDUMP_MEMORY_DUMP_MIN=y
 
 2. 查询 `COREDUMP_QUERY_HAS_STORED_DUMP`，判断内部 Flash 是否存在 CoreDump。
 
-3. 如果存在，记录高优先级日志，例如 `Stored coredump found in internal flash`。
+3. 如果存在，只更新 `coredump_service` 内部状态，不在开机阶段主动通过串口或 MQTT 上报。
 
-4. 查询 `COREDUMP_QUERY_GET_STORED_DUMP_SIZE`，输出 CoreDump 大小。
+4. 查询 `COREDUMP_QUERY_GET_STORED_DUMP_SIZE`，记录 CoreDump 大小。
 
 5. 执行 `COREDUMP_CMD_VERIFY_STORED_DUMP` 校验有效性。
 
-6. 在 Shell 中允许本地导出；在 MQTT shell 白名单中只允许状态查询，不建议直接远程打印完整 CoreDump，避免消息过大和泄露敏感信息。
+6. 在 Shell 中允许本地查询、手动 MQTT 上报和本地清除；在 MQTT shell 白名单中只允许状态查询和手动状态上报，不建议直接远程打印完整 CoreDump，避免消息过大和泄露敏感信息。
 
 7. 维护人员确认已导出后，执行擦除命令清除 CoreDump。
 
@@ -172,6 +172,7 @@ coredump error clear
 ```text
 coredump_status
 coredump_export
+coredump_report
 coredump_clear
 ```
 
@@ -179,9 +180,12 @@ coredump_clear
 
 ```text
 coredump_status
+coredump_report
+coredump_export
+coredump_clear
 ```
 
-不建议 v1 通过 MQTT 直接导出完整 CoreDump。CoreDump 可能包含栈内容、设备参数、网络状态、MQTT 用户名片段、业务数据或未初始化内存，远程导出需要额外权限控制、分片、加密和审计。
+不在开机时主动通过 MQTT 上报 CoreDump，只有维护人员执行 `coredump_report` 后才发布状态报告，执行 `coredump_export` 后才导出完整 CoreDump。默认发布主题为 `craner/test/log/emb`，可通过 `CONFIG_CRANER_COREDUMP_SERVICE_MQTT_TOPIC` 修改。完整导出使用简单文本分片格式：`#CD:BEGIN#`、多行 `#CD:<hex>`、`#CD:END#`。CoreDump 可能包含栈内容、设备参数、网络状态、MQTT 用户名片段、业务数据或未初始化内存，远程导出需要额外权限控制、分片、加密和审计。
 
 ## 9. 与设备参数和 Modbus 持久化的关系
 
@@ -294,4 +298,3 @@ CoreDump 可能包含敏感数据：
 4. v1 是否默认禁止 MQTT 远程导出完整 CoreDump？
 
 5. fault 注入命令是否只允许 debug/test 构建启用？
-

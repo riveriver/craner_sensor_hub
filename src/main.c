@@ -1,4 +1,7 @@
 #include "device_identity_service.h"
+#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+#include "device_param_store.h"
+#endif
 #ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
 #include "coredump_service.h"
 #endif
@@ -34,6 +37,13 @@ int main(void)
 	rc = storage_service_init();
 	if (rc != 0) {
 		printk("Storage service init failed: %d\n", rc);
+	}
+#endif
+
+#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+	rc = device_param_store_init();
+	if (rc != 0) {
+		printk("Device parameter store init failed: %d\n", rc);
 	}
 #endif
 

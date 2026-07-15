@@ -1,6 +1,9 @@
 #ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
 #include "coredump_service.h"
 #endif
+#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+#include "device_param_store.h"
+#endif
 #include "mqtt_service_manager.h"
 #include "network_service.h"
 #include "rtc_time_provider.h"
@@ -34,6 +37,23 @@ static bool payload_equals(const struct mqtt_service_manager_publish *publish,
 	       memcmp(publish->payload, command, publish->payload_len) == 0;
 }
 
+static int payload_to_string(const struct mqtt_service_manager_publish *publish,
+			     char *buf, size_t len)
+{
+	if (publish == NULL || buf == NULL || len == 0U) {
+		return -EINVAL;
+	}
+
+	if (publish->payload_len >= len) {
+		return -EMSGSIZE;
+	}
+
+	memcpy(buf, publish->payload, publish->payload_len);
+	buf[publish->payload_len] = '\0';
+
+	return 0;
+}
+
 static void publish_response(const char *status, const char *command,
 			     const char *message)
 {
@@ -58,7 +78,15 @@ static void publish_response(const char *status, const char *command,
 
 static void handle_command(const struct mqtt_service_manager_publish *publish)
 {
+	char command[256];
 	char msg[384];
+	int parse_rc;
+
+	parse_rc = payload_to_string(publish, command, sizeof(command));
+	if (parse_rc != 0) {
+		publish_response("error", "unknown", "payload too large");
+		return;
+	}
 
 	if (payload_equals(publish, "fw_time")) {
 		snprintk(msg, sizeof(msg), "%s %s", __DATE__, __TIME__);
@@ -131,6 +159,105 @@ static void handle_command(const struct mqtt_service_manager_publish *publish)
 		publish_response("ok", "rtc_status", msg);
 		return;
 	}
+
+#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+	if (payload_equals(publish, "param_status")) {
+		int rc;
+
+		rc = device_param_store_format_status(msg, sizeof(msg));
+		publish_response(rc == 0 ? "ok" : "error", "param_status",
+				 rc == 0 ? msg : "format failed");
+		return;
+	}
+
+	if (strncmp(command, "param_get", strlen("param_get")) == 0) {
+		char *saveptr;
+		char *cmd;
+		char *key;
+		char value[96];
+		const struct device_param_record *record;
+		int rc;
+
+		cmd = strtok_r(command, " ", &saveptr);
+		key = strtok_r(NULL, " ", &saveptr);
+		if (cmd == NULL || key == NULL || strtok_r(NULL, " ", &saveptr) != NULL) {
+			publish_response("error", "param_get",
+					 "usage: param_get <key>");
+			return;
+		}
+
+		rc = device_param_store_get(key, value, sizeof(value));
+		record = device_param_store_find(key);
+		if (rc != 0 || record == NULL) {
+			snprintk(msg, sizeof(msg), "failed: %d", rc);
+			publish_response("error", "param_get", msg);
+			return;
+		}
+
+		snprintk(msg, sizeof(msg),
+			 "key=%s,value=%s,dirty=%s,loaded=%s,last_error=%d",
+			 record->key, value, record->dirty ? "true" : "false",
+			 record->loaded_from_settings ? "true" : "false",
+			 record->last_error);
+		publish_response("ok", "param_get", msg);
+		return;
+	}
+
+	if (strncmp(command, "param_set", strlen("param_set")) == 0) {
+		char *saveptr;
+		char *cmd;
+		char *key;
+		char *value;
+		int rc;
+
+		cmd = strtok_r(command, " ", &saveptr);
+		key = strtok_r(NULL, " ", &saveptr);
+		value = strtok_r(NULL, " ", &saveptr);
+		if (cmd == NULL || key == NULL || value == NULL ||
+		    strtok_r(NULL, " ", &saveptr) != NULL) {
+			publish_response("error", "param_set",
+					 "usage: param_set <key> <value>");
+			return;
+		}
+
+		rc = device_param_store_set(key, value);
+		if (rc != 0) {
+			snprintk(msg, sizeof(msg), "failed: %d", rc);
+			publish_response("error", "param_set", msg);
+			return;
+		}
+
+		snprintk(msg, sizeof(msg), "key=%s,value=%s,dirty=true",
+			 key, value);
+		publish_response("ok", "param_set", msg);
+		return;
+	}
+
+	if (payload_equals(publish, "param_save")) {
+		int rc = device_param_store_save();
+
+		if (rc == 0) {
+			publish_response("ok", "param_save", "saved");
+		} else {
+			snprintk(msg, sizeof(msg), "failed: %d", rc);
+			publish_response("error", "param_save", msg);
+		}
+		return;
+	}
+
+	if (payload_equals(publish, "param_factory_reset")) {
+		int rc = device_param_store_factory_reset();
+
+		if (rc == 0) {
+			publish_response("ok", "param_factory_reset",
+					 "factory defaults restored");
+		} else {
+			snprintk(msg, sizeof(msg), "failed: %d", rc);
+			publish_response("error", "param_factory_reset", msg);
+		}
+		return;
+	}
+#endif
 
 #ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
 	if (payload_equals(publish, "coredump_status")) {

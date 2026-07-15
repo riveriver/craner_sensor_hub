@@ -90,7 +90,7 @@
 			reg = <0x001c0000 0x00020000>;
 		};
 
-		app_storage_partition: partition@1e0000 {
+		storage_partition: app_storage_partition: partition@1e0000 {
 			label = "app-storage";
 			reg = <0x001e0000 0x00020000>;
 		};
