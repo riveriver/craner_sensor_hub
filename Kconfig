@@ -26,6 +26,16 @@ config CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD
 	help
 	  Enable the Modbus TCP server thread on TCP port 502.
 
+config CRANER_MODBUS_TCP_MAX_CLIENTS
+	int "Maximum simultaneous Modbus TCP clients"
+	default 4
+	range 1 8
+	depends on CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD
+	help
+	  Maximum number of Modbus TCP clients served at the same time. The
+	  server uses a fixed poll-based client pool, so this value should be
+	  matched with NET_MAX_CONTEXTS, NET_MAX_CONN, and ZVFS_POLL_MAX.
+
 config CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD
 	bool "Enable slewing encoder Modbus RTU thread"
 	default y
@@ -54,6 +64,21 @@ config CRANER_ENABLE_OTA_CONTROL
 	help
 	  Enable shell commands that drive MCUboot's standard swap-based OTA
 	  state machine.
+
+config CRANER_NETWORK_DHCP_RETRY_INITIAL_MS
+	int "Initial DHCP retry delay in milliseconds"
+	default 5000
+	range 1000 60000
+	help
+	  Delay used for the first DHCP retry after startup DHCP timeout or
+	  address loss.
+
+config CRANER_NETWORK_DHCP_RETRY_MAX_MS
+	int "Maximum DHCP retry delay in milliseconds"
+	default 60000
+	range 5000 600000
+	help
+	  Maximum delay used by the DHCP exponential backoff retry loop.
 
 config CRANER_SYSTEM_HEALTH_WDT_TIMEOUT_MS
 	int "System health watchdog timeout in milliseconds"

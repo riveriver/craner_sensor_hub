@@ -101,6 +101,10 @@
 	status = "okay";
 };
 
+&clk_lse {
+	status = "okay";
+};
+
 &pll {
 	div-m = <5>;
 	mul-n = <96>;
@@ -127,6 +131,16 @@
 };
 
 &rng {
+	status = "okay";
+};
+
+&rtc {
+	clocks = <&rcc STM32_CLOCK(APB4, 16)>,
+		 <&rcc STM32_SRC_LSE RTC_SEL(1)>;
+	status = "okay";
+};
+
+&bbram {
 	status = "okay";
 };
 
