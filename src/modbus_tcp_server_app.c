@@ -25,7 +25,7 @@
 #include "modbus_register_service.h"
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(tcp_modbus, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(tcp_modbus, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define MODBUS_TCP_SERVER_STACK_SIZE 3072
 #define MODBUS_TCP_SERVER_PRIORITY 8

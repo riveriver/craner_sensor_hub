@@ -8,7 +8,7 @@
 #include "modbus_register_service.h"
 #include "system_health_app.h"
 
-LOG_MODULE_REGISTER(modbus_rtu_client_app, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(modbus_rtu_client_app, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define MODBUS_ENCODER_STACK_SIZE 2048
 #define MODBUS_ENCODER_PRIORITY 6

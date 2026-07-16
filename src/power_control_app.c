@@ -7,7 +7,7 @@
 
 #include <errno.h>
 
-LOG_MODULE_REGISTER(power_control_app, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(power_control_app, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define POWER_3V3_AND_CCTV_NODE DT_ALIAS(power_3v3_and_cctv)
 #define POWER_5V_NODE DT_ALIAS(power_5v)

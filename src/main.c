@@ -17,25 +17,9 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
-#include <stdio.h>
-
 int main(void)
 {
 	int rc;
-
-	printf("craner_encoder_hub started on %s\n", CONFIG_BOARD);
-	printk("printk remains routed to the board console UART\n");
-	printk("Shell backend is Telnet on port 23 after Ethernet is up\n");
-	printk("Zephyr LOG backend is UART and MQTT\n");
-
-	rc = device_identity_service_init();
-	if (rc != 0) {
-		printk("Device identity init failed: %d\n", rc);
-	} else {
-		printk("Device hostname: %s\n", device_identity_hostname_get());
-		printk("Device mDNS name: %s\n", device_identity_mdns_name_get());
-		printk("MQTT client id: %s\n", device_identity_mqtt_client_id_get());
-	}
 
 #ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
 	rc = storage_service_init();
@@ -50,6 +34,11 @@ int main(void)
 		printk("Device parameter store init failed: %d\n", rc);
 	}
 #endif
+
+	rc = device_identity_service_init();
+	if (rc != 0) {
+		printk("Device identity init failed: %d\n", rc);
+	}
 
 	rc = shell_app_init();
 	if (rc != 0) {

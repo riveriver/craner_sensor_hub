@@ -11,7 +11,7 @@
 #include "modbus_register_store.h"
 #endif
 
-LOG_MODULE_REGISTER(modbus_register_service, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(modbus_register_service, CONFIG_LOG_DEFAULT_LEVEL);
 
 static K_MUTEX_DEFINE(register_lock);
 

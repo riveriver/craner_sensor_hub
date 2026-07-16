@@ -13,7 +13,7 @@
 #include "system_health_app.h"
 #include "system_health_event_table.h"
 
-LOG_MODULE_REGISTER(system_health_app, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(system_health_app, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define STATUS_LED_NODE DT_ALIAS(heartbeat_led)
 #define WATCHDOG_NODE DT_ALIAS(watchdog0)

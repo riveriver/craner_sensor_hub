@@ -6,7 +6,7 @@
 
 #include "modbus_register_service.h"
 
-LOG_MODULE_REGISTER(modbus_register_map, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(modbus_register_map, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define MODBUS_COIL_ADDRESS_SIZE 10U
 #define MODBUS_INPUT_ADDRESS_SIZE 100U
