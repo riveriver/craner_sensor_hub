@@ -11,11 +11,14 @@ struct modbus_register_store_status {
 	bool active_bank_valid;
 	uint8_t active_bank;
 	uint32_t active_sequence;
+	uint32_t bank_size;
 	uint32_t payload_size;
+	uint32_t last_payload_size;
 	uint32_t load_count;
 	uint32_t save_count;
 	uint32_t clear_count;
 	uint32_t fail_count;
+	int last_stage;
 	int last_error;
 };
 

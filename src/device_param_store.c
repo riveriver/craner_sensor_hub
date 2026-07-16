@@ -22,6 +22,7 @@ struct device_param_entry {
 	const char *enum_values;
 	int min_value;
 	int max_value;
+	bool verify_required;
 };
 
 static struct device_param_entry params[] = {
@@ -302,6 +303,36 @@ static bool any_dirty_unlocked(void)
 	return false;
 }
 
+static int verify_entry_saved(struct device_param_entry *entry)
+{
+	char settings_name[PARAM_SETTINGS_NAME_MAX_LEN];
+	char value[PARAM_VALUE_MAX_LEN];
+	ssize_t len;
+	int rc;
+
+	rc = make_settings_name(entry->record.key, settings_name,
+				sizeof(settings_name));
+	if (rc != 0) {
+		return rc;
+	}
+
+	len = settings_load_one(settings_name, value, sizeof(value));
+	if (len < 0) {
+		return (int)len;
+	}
+
+	if (len == 0) {
+		return -ENODATA;
+	}
+
+	if ((size_t)len >= sizeof(value)) {
+		return -EMSGSIZE;
+	}
+
+	value[len] = '\0';
+	return strcmp(value, entry->value) == 0 ? 0 : -EBADMSG;
+}
+
 static int load_one_param(struct device_param_entry *entry)
 {
 	char settings_name[PARAM_SETTINGS_NAME_MAX_LEN];
@@ -317,16 +348,16 @@ static int load_one_param(struct device_param_entry *entry)
 	}
 
 	len = settings_load_one(settings_name, value, sizeof(value));
-	if (len == -ENOENT) {
-		return 0;
-	}
-
 	if (len < 0) {
 		entry->record.last_error = (int)len;
 		return (int)len;
 	}
 
-	if (len == 0 || (size_t)len >= sizeof(value)) {
+	if (len == 0) {
+		return 0;
+	}
+
+	if ((size_t)len >= sizeof(value)) {
 		entry->record.last_error = -EMSGSIZE;
 		return -EMSGSIZE;
 	}
@@ -348,6 +379,7 @@ static int load_one_param(struct device_param_entry *entry)
 
 int device_param_store_init(void)
 {
+	uint32_t loaded_count = 0U;
 	uint32_t rejected_count = 0U;
 	int rc;
 
@@ -378,10 +410,11 @@ int device_param_store_init(void)
 			store_status.fail_count++;
 			store_status.last_error = rc;
 		} else if (params[i].record.loaded_from_settings) {
-			store_status.load_count++;
+			loaded_count++;
 		}
 	}
 
+	store_status.load_count = loaded_count;
 	store_status.dirty = any_dirty_unlocked();
 	store_status.initialized = true;
 	k_mutex_unlock(&param_lock);
@@ -489,11 +522,30 @@ int device_param_store_set(const char *key, const char *value)
 int device_param_store_save(void)
 {
 	char settings_name[PARAM_SETTINGS_NAME_MAX_LEN];
+	uint32_t save_required_count = 0U;
 	int rc;
 
 	k_mutex_lock(&param_lock, K_FOREVER);
 
 	for (size_t i = 0U; i < ARRAY_SIZE(params); i++) {
+		params[i].verify_required = params[i].record.dirty;
+		if (params[i].verify_required) {
+			save_required_count++;
+		}
+	}
+
+	if (save_required_count == 0U) {
+		store_status.dirty = false;
+		store_status.last_error = 0;
+		k_mutex_unlock(&param_lock);
+		return 0;
+	}
+
+	for (size_t i = 0U; i < ARRAY_SIZE(params); i++) {
+		if (!params[i].verify_required) {
+			continue;
+		}
+
 		rc = make_settings_name(params[i].record.key, settings_name,
 					sizeof(settings_name));
 		if (rc != 0) {
@@ -513,12 +565,33 @@ int device_param_store_save(void)
 			return rc;
 		}
 
-		params[i].record.dirty = false;
 		params[i].record.loaded_from_settings = true;
 	}
 
+	for (size_t i = 0U; i < ARRAY_SIZE(params); i++) {
+		if (!params[i].verify_required) {
+			continue;
+		}
+
+		rc = verify_entry_saved(&params[i]);
+		if (rc != 0) {
+			params[i].record.last_error = rc;
+			store_status.last_error = rc;
+			store_status.fail_count++;
+			k_mutex_unlock(&param_lock);
+			return rc;
+		}
+	}
+
+	for (size_t i = 0U; i < ARRAY_SIZE(params); i++) {
+		if (params[i].verify_required) {
+			params[i].record.dirty = false;
+			params[i].verify_required = false;
+		}
+	}
+
 	store_status.save_count++;
-	store_status.dirty = false;
+	store_status.dirty = any_dirty_unlocked();
 	store_status.last_error = 0;
 	k_mutex_unlock(&param_lock);
 
