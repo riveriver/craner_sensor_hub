@@ -10,6 +10,9 @@
 #include <zephyr/net/net_if.h>
 #include <zephyr/net/socket.h>
 
+#ifdef CONFIG_CRANER_ENABLE_SCHEDULED_REBOOT_SERVICE
+#include "scheduled_reboot_service.h"
+#endif
 #include "stack_monitor_service.h"
 #include "system_health_app.h"
 #include "system_health_event_table.h"
@@ -32,7 +35,6 @@ BUILD_ASSERT(DT_NODE_HAS_STATUS(WATCHDOG_NODE, okay),
 #define STATUS_LED_NORMAL_OFF_MS 500U
 #define STATUS_LED_ERROR_BLINK_MS 150U
 #define STATUS_LED_ERROR_PAUSE_MS 3000U
-#define SYSTEM_HEALTH_TIME_REPORT_INTERVAL_MS 6000U
 
 struct system_health_event_state {
 	bool configured;
@@ -321,21 +323,8 @@ static void status_led_show_error(uint32_t now_ms, uint8_t priority)
 			2U) == 0U);
 }
 
-static void system_health_report_device_time(uint32_t now_ms,
-					     uint32_t *last_report_ms)
-{
-	if ((uint32_t)(now_ms - *last_report_ms) <
-	    SYSTEM_HEALTH_TIME_REPORT_INTERVAL_MS) {
-		return;
-	}
-
-	*last_report_ms = now_ms;
-	LOG_INF("System health alive: uptime_ms=%u", now_ms);
-}
-
 static void system_health_thread(void *p1, void *p2, void *p3)
 {
-	uint32_t last_time_report_ms;
 	uint32_t last_stack_scan_ms;
 	int err;
 
@@ -367,8 +356,7 @@ static void system_health_thread(void *p1, void *p2, void *p3)
 		STATUS_LED_ERROR_BLINK_MS,
 		STATUS_LED_ERROR_PAUSE_MS);
 
-	last_time_report_ms = k_uptime_get_32();
-	last_stack_scan_ms = last_time_report_ms -
+	last_stack_scan_ms = k_uptime_get_32() -
 			     CONFIG_CRANER_SYSTEM_HEALTH_STACK_SCAN_INTERVAL_MS;
 
 	while (1) {
@@ -382,6 +370,10 @@ static void system_health_thread(void *p1, void *p2, void *p3)
 			stack_monitor_service_scan(now_ms, true);
 			last_stack_scan_ms = now_ms;
 		}
+
+#ifdef CONFIG_CRANER_ENABLE_SCHEDULED_REBOOT_SERVICE
+		scheduled_reboot_service_check(now_ms);
+#endif
 
 		if (display_event == SYSTEM_HEALTH_NONE) {
 			status_led_show_normal(now_ms);

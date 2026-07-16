@@ -7,6 +7,9 @@
 #include "mqtt_service_manager.h"
 #include "network_service.h"
 #include "rtc_time_provider.h"
+#ifdef CONFIG_CRANER_ENABLE_SCHEDULED_REBOOT_SERVICE
+#include "scheduled_reboot_service.h"
+#endif
 #ifdef CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD
 #include "stack_monitor_service.h"
 #endif
@@ -182,6 +185,31 @@ static void handle_command(const struct mqtt_service_manager_publish *publish)
 			 status.worst_ever.usage_percent,
 			 status.last_error);
 		publish_response("ok", "stack_status", msg);
+		return;
+	}
+#endif
+
+#ifdef CONFIG_CRANER_ENABLE_SCHEDULED_REBOOT_SERVICE
+	if (payload_equals(publish, "scheduled_reboot_status")) {
+		struct scheduled_reboot_status status;
+
+		scheduled_reboot_service_get_status(&status);
+		snprintk(msg, sizeof(msg),
+			 "initialized=%s,time_reliable=%s,in_window=%s,reboot_pending=%s,pending_reason=%s,uptime_ms=%u,unreliable_elapsed_ms=%u,unreliable_limit_ms=%u,local=%02d:%02d,daily=%02u:%02u,window_min=%u,tz_min=%d,last_error=%d",
+			 status.initialized ? "yes" : "no",
+			 status.time_reliable ? "yes" : "no",
+			 status.in_reliable_window ? "yes" : "no",
+			 status.reboot_pending ? "yes" : "no",
+			 scheduled_reboot_reason_name(status.pending_reason),
+			 status.last_check_uptime_ms,
+			 status.unreliable_elapsed_ms,
+			 status.unreliable_limit_ms,
+			 status.local_hour_now, status.local_minute_now,
+			 status.local_hour, status.local_minute,
+			 status.local_window_minutes,
+			 status.timezone_offset_minutes,
+			 status.last_error);
+		publish_response("ok", "scheduled_reboot_status", msg);
 		return;
 	}
 #endif
