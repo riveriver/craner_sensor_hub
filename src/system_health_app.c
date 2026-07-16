@@ -10,6 +10,7 @@
 #include <zephyr/net/net_if.h>
 #include <zephyr/net/socket.h>
 
+#include "stack_monitor_service.h"
 #include "system_health_app.h"
 #include "system_health_event_table.h"
 
@@ -23,8 +24,8 @@ BUILD_ASSERT(DT_NODE_HAS_STATUS(STATUS_LED_NODE, okay),
 BUILD_ASSERT(DT_NODE_HAS_STATUS(WATCHDOG_NODE, okay),
 	     "Missing enabled watchdog0 alias");
 
-#define SYSTEM_HEALTH_CHECK_INTERVAL_MS 100U		 
-#define SYSTEM_HEALTH_STACK_SIZE 1536
+#define SYSTEM_HEALTH_CHECK_INTERVAL_MS CONFIG_CRANER_SYSTEM_HEALTH_CHECK_INTERVAL_MS
+#define SYSTEM_HEALTH_STACK_SIZE 2048
 #define SYSTEM_HEALTH_PRIORITY 5
 #define SYSTEM_HEALTH_NO_WATCHDOG_CHANNEL -1
 #define STATUS_LED_NORMAL_ON_MS 500U
@@ -335,6 +336,7 @@ static void system_health_report_device_time(uint32_t now_ms,
 static void system_health_thread(void *p1, void *p2, void *p3)
 {
 	uint32_t last_time_report_ms;
+	uint32_t last_stack_scan_ms;
 	int err;
 
 	ARG_UNUSED(p1);
@@ -366,12 +368,20 @@ static void system_health_thread(void *p1, void *p2, void *p3)
 		STATUS_LED_ERROR_PAUSE_MS);
 
 	last_time_report_ms = k_uptime_get_32();
+	last_stack_scan_ms = last_time_report_ms -
+			     CONFIG_CRANER_SYSTEM_HEALTH_STACK_SCAN_INTERVAL_MS;
 
 	while (1) {
 		uint32_t now_ms = k_uptime_get_32();
 		uint8_t priority;
 		enum system_health_event display_event =
 			system_health_update_events(now_ms, &priority);
+
+		if ((uint32_t)(now_ms - last_stack_scan_ms) >=
+		    CONFIG_CRANER_SYSTEM_HEALTH_STACK_SCAN_INTERVAL_MS) {
+			stack_monitor_service_scan(now_ms, true);
+			last_stack_scan_ms = now_ms;
+		}
 
 		if (display_event == SYSTEM_HEALTH_NONE) {
 			status_led_show_normal(now_ms);

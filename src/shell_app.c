@@ -13,6 +13,9 @@
 #ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
 #include "storage_service.h"
 #endif
+#ifdef CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD
+#include "stack_monitor_service.h"
+#endif
 #include "time_service.h"
 
 #include <errno.h>
@@ -137,6 +140,85 @@ static bool shell_output_is_json(void)
 {
 	return shell_output_json;
 }
+
+#ifdef CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD
+static void print_stack_thread_cb(
+	const struct stack_monitor_thread_info *info, void *user_data)
+{
+	const struct shell *shell = user_data;
+
+	if (info->error != 0) {
+		shell_print(shell, "thread=%s error=%d", info->name,
+			    info->error);
+		return;
+	}
+
+	shell_print(shell,
+		    "thread=%s size=%u used=%u unused=%u usage_pct=%u",
+		    info->name, (uint32_t)info->stack_size,
+		    (uint32_t)info->used, (uint32_t)info->unused,
+		    info->usage_percent);
+}
+
+static int cmd_stack_status(const struct shell *shell, size_t argc,
+			    char **argv)
+{
+	struct stack_monitor_status status;
+	char json[512];
+	int rc;
+
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	if (shell_output_is_json()) {
+		rc = stack_monitor_service_format_status(json, sizeof(json));
+		if (rc != 0) {
+			shell_error(shell, "format stack status failed: %d", rc);
+			return rc;
+		}
+		shell_print(shell, "%s", json);
+		return 0;
+	}
+
+	stack_monitor_service_get_status(&status);
+	shell_print(shell, "initialized=%s",
+		    status.initialized ? "yes" : "no");
+	shell_print(shell, "warning=%s", status.warning ? "yes" : "no");
+	shell_print(shell, "scan_count=%u", status.scan_count);
+	shell_print(shell, "warn_count=%u", status.warn_count);
+	shell_print(shell, "last_scan_uptime_ms=%u",
+		    status.last_scan_uptime_ms);
+	shell_print(shell, "thread_count=%u", (uint32_t)status.thread_count);
+	shell_print(shell,
+		    "worst_current=%s size=%u used=%u unused=%u usage_pct=%u",
+		    status.worst_current.name,
+		    (uint32_t)status.worst_current.stack_size,
+		    (uint32_t)status.worst_current.used,
+		    (uint32_t)status.worst_current.unused,
+		    status.worst_current.usage_percent);
+	shell_print(shell,
+		    "worst_ever=%s size=%u used=%u unused=%u usage_pct=%u",
+		    status.worst_ever.name,
+		    (uint32_t)status.worst_ever.stack_size,
+		    (uint32_t)status.worst_ever.used,
+		    (uint32_t)status.worst_ever.unused,
+		    status.worst_ever.usage_percent);
+	shell_print(shell, "last_error=%d", status.last_error);
+	shell_print(shell, "threads:");
+
+	rc = stack_monitor_service_foreach(print_stack_thread_cb,
+					   (void *)shell);
+	if (rc != 0) {
+		shell_error(shell, "stack thread scan failed: %d", rc);
+		return rc;
+	}
+
+	return 0;
+}
+
+SHELL_CMD_REGISTER(stack_status, NULL, "Show thread stack watermarks.",
+		   cmd_stack_status);
+#endif
 
 static int cmd_net_status(const struct shell *shell, size_t argc, char **argv)
 {

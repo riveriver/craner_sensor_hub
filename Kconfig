@@ -161,6 +161,34 @@ config CRANER_SYSTEM_HEALTH_WDT_TIMEOUT_MS
 	help
 	  Maximum time allowed between hardware watchdog feeds.
 
+config CRANER_SYSTEM_HEALTH_STACK_SCAN_INTERVAL_MS
+	int "System health stack monitor scan interval in milliseconds"
+	default 10000
+	range 1000 600000
+	depends on CRANER_ENABLE_SYSTEM_HEALTH_THREAD
+	depends on THREAD_STACK_INFO && THREAD_MONITOR && INIT_STACKS
+	help
+	  Period used by the system health thread to scan thread stack
+	  high-water marks.
+
+config CRANER_SYSTEM_HEALTH_STACK_WARN_UNUSED_BYTES
+	int "System health stack warning free bytes threshold"
+	default 512
+	range 128 8192
+	depends on CRANER_ENABLE_SYSTEM_HEALTH_THREAD
+	depends on THREAD_STACK_INFO && THREAD_MONITOR && INIT_STACKS
+	help
+	  Warn when a thread has fewer unused stack bytes than this value.
+
+config CRANER_SYSTEM_HEALTH_STACK_WARN_USAGE_PERCENT
+	int "System health stack warning usage percentage threshold"
+	default 80
+	range 1 99
+	depends on CRANER_ENABLE_SYSTEM_HEALTH_THREAD
+	depends on THREAD_STACK_INFO && THREAD_MONITOR && INIT_STACKS
+	help
+	  Warn when a thread stack usage reaches or exceeds this percentage.
+
 config CRANER_ENABLE_SYSTEM_HEALTH_UDP_SYSLOG_PROBE
 	bool "Enable system health UDP syslog probe"
 	default n

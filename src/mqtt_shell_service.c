@@ -7,6 +7,9 @@
 #include "mqtt_service_manager.h"
 #include "network_service.h"
 #include "rtc_time_provider.h"
+#ifdef CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD
+#include "stack_monitor_service.h"
+#endif
 #include "time_service.h"
 
 #include <stdint.h>
@@ -159,6 +162,29 @@ static void handle_command(const struct mqtt_service_manager_publish *publish)
 		publish_response("ok", "rtc_status", msg);
 		return;
 	}
+
+#ifdef CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD
+	if (payload_equals(publish, "stack_status")) {
+		struct stack_monitor_status status;
+
+		stack_monitor_service_get_status(&status);
+		snprintk(msg, sizeof(msg),
+			 "initialized=%s,warning=%s,scan_count=%u,warn_count=%u,thread_count=%u,worst_current=%s,used=%u,unused=%u,usage_pct=%u,worst_ever=%s,max_usage_pct=%u,last_error=%d",
+			 status.initialized ? "yes" : "no",
+			 status.warning ? "yes" : "no",
+			 status.scan_count, status.warn_count,
+			 (uint32_t)status.thread_count,
+			 status.worst_current.name,
+			 (uint32_t)status.worst_current.used,
+			 (uint32_t)status.worst_current.unused,
+			 status.worst_current.usage_percent,
+			 status.worst_ever.name,
+			 status.worst_ever.usage_percent,
+			 status.last_error);
+		publish_response("ok", "stack_status", msg);
+		return;
+	}
+#endif
 
 #ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
 	if (payload_equals(publish, "param_status")) {

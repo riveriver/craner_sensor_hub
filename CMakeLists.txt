@@ -31,6 +31,7 @@ target_sources_ifdef(CONFIG_CRANER_ENABLE_LOG_COMM_THREAD app PRIVATE
 target_sources_ifdef(CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD app PRIVATE
 	src/system_health_app.c
 	src/system_health_event_table.c
+	src/stack_monitor_service.c
 )
 
 if(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD OR
