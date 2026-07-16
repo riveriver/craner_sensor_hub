@@ -528,11 +528,12 @@ static int time_service_log_timestamp_format(
 							 iso_time,
 							 sizeof(iso_time));
 	if (rc != 0) {
-		return printer(output, "[%llu.%03u] ",
-			       timestamp / 1000ULL, ms);
+		return printer(output, "[%llu] ", timestamp / 1000ULL);
 	}
 
-	return printer(output, "[%s,%03u000] ", iso_time, ms);
+	ARG_UNUSED(ms);
+	iso_time[19] = '\0';
+	return printer(output, "[%s] ", iso_time);
 }
 
 static int time_service_log_timestamp_init(void)
