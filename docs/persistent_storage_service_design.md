@@ -51,7 +51,7 @@ settings + ZMS：使用 settings API，底层由 ZMS 写 Flash
 
 1. Kconfig 是编译期默认值，保存在固件镜像里。固件镜像位于内部 Flash 的 `slot0_partition`，升级镜像位于 `slot1_partition`。例如 MQTT broker、NTP server、默认 DHCP 模式、默认设备类型等，都可以先由 Kconfig 给出出厂默认值。Kconfig 值不能在运行时真正修改，修改 Kconfig 需要重新编译和烧录固件。
 
-2. Shell 设置的是运行时配置。如果该配置需要断电保持，应保存到外部 W25Q64 的 `param-store` 分区，后端采用 Zephyr `settings + NVS`。例如 `mqtt/host`、`mqtt/port`、`time/sync_mode`、`network/dhcp_mode`、`device/hostname`、编码器校准参数等，都属于设备参数类。
+2. Shell 设置的是运行时配置。如果该配置需要断电保持，应保存到外部 W25Q64 的 `param-store` 分区，后端采用 Zephyr `settings + NVS`。例如 `mqtt/host`、`mqtt/port`、`time/sync_mode`、`network/dhcp_mode`、`device/project`、`device/type`、编码器校准参数等，都属于设备参数类。hostname 由 `craner-{project}-{type}-{name_uid}` 派生，不再作为独立参数直接保存，`name_uid` 是 5 字节 short UID 的最后 2 字节。
 
 3. Modbus 写入的是业务数据。v1 只持久化线圈和 Holding Register 中带 `persistent` 属性的数据，保存到外部 W25Q64 的 `modbus-store` 分区。实时状态、输入寄存器、错误计数、编码器实时值不保存。
 
@@ -209,7 +209,6 @@ src/coredump_service.h
 device/company
 device/project
 device/type
-device/hostname
 network/dhcp_mode
 network/static_ip
 mqtt/host

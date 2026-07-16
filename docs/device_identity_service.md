@@ -2,16 +2,17 @@
 
 ## This example implements
 
-本项目使用 `device_identity_service` 统一生成设备身份。固定字段为公司名 `craner`、项目名 `test001`、设备类型 `mt2r`；唯一字段来自 STM32 96-bit Unique Device ID。服务会对完整 STM32 UID 做 FNV-1a 64-bit hash，然后截取 5 字节作为短 UID。
+本项目使用 `device_identity_service` 统一生成设备身份。固定字段为公司名 `craner`；项目名来自设备参数 `device/project`，默认值为 `project`；设备类型来自设备参数 `device/type`，默认值为 `type`。唯一字段来自 STM32 96-bit Unique Device ID。服务会对完整 STM32 UID 做 FNV-1a 64-bit hash，然后截取 5 字节作为短 UID。
 
 最终身份格式如下：
 
 ```text
 short_uid:      a1b2c3d4e5
+name_uid:       d4e5
 mac:            02:a1:b2:c3:d4:e5
-hostname:       craner-test001-mt2r
-mDNS:           craner-test001-mt2r.local
-mqtt_client_id: craner-test001-mt2r-a1b2c3d4e5
+hostname:       craner-project-type-d4e5
+mDNS:           craner-project-type-d4e5.local
+mqtt_client_id: craner-project-type-d4e5
 ```
 
 ## How to use it
@@ -22,10 +23,10 @@ mqtt_client_id: craner-test001-mt2r-a1b2c3d4e5
 net iface
 ```
 
-应能看到 `Hostname` 为 `craner-test001-mt2r`，`Link addr` 变成 `02:xx:xx:xx:xx:xx`，其中后 5 字节与短 UID 一致。设备也会通过 DHCP 使用动态 hostname，并通过 mDNS 响应：
+应能看到 `Hostname` 为 `craner-project-type-<name_uid>`，`Link addr` 变成 `02:xx:xx:xx:xx:xx`，其中后 5 字节与短 UID 一致。`name_uid` 使用短 UID 的最后 2 字节，便于测试和现场识别。设备也会通过 DHCP 使用动态 hostname，并通过 mDNS 响应：
 
 ```powershell
-ping craner-test001-mt2r.local
+ping craner-project-type-<name_uid>.local
 ```
 
 ## Prerequisites
@@ -79,15 +80,15 @@ device_identity_mqtt_client_id_get()
 
 ```c
 #define DEVICE_IDENTITY_COMPANY "craner"
-#define DEVICE_IDENTITY_PROJECT "test001"
-#define DEVICE_IDENTITY_DEVICE_TYPE "mt2r"
+device/project = project
+device/type = type
 ```
 
 如果要把这些字段做成可配置项，可以再把它们迁移到应用 Kconfig。
 
 ## Troubleshooting
 
-如果同一局域网内同时有多台设备，固定 hostname 和固定 mDNS 名称可能冲突。当前方案适合单设备调试；批量部署时建议把短 UID 加回 hostname 或使用 DHCP 租约表 / MQTT 上线信息区分设备。
+如果测试组需要自定义项目名或设备类型，可通过 `param_set device/project <value>` 和 `param_set device/type <value>` 修改，执行 `param_save` 后重启生效。hostname 始终包含 short UID，因此同一局域网内多台设备默认不会因为 hostname 完全相同而冲突。
 
 如果 `net iface` 仍然看到 `02:80:e1:xx:xx:xx`，说明应用层设置 MAC 没有生效，优先检查 `device_identity_service_init()` 是否在 `net_config_init()` 之前执行。
 
