@@ -118,19 +118,23 @@ static void mqtt_service_manager_publish_online_status(void)
 		time_text = iso_time;
 	}
 
-	snprintk(topic, sizeof(topic), "craner/test001/mt2r/%s/status/online",
-		 uid);
+	snprintk(topic, sizeof(topic), "%s/%s/%s/%s/status/online",
+		 device_identity_company_get(), device_identity_project_get(),
+		 device_identity_device_type_get(), uid);
 
 	len = snprintk(payload, sizeof(payload),
-		      "{\"company\":\"craner\",\"project\":\"test001\","
-		      "\"device_type\":\"mt2r\",\"uid\":\"%s\","
+		      "{\"company\":\"%s\",\"project\":\"%s\","
+		      "\"device_type\":\"%s\",\"uid\":\"%s\","
 		      "\"hostname\":\"%s\",\"mdns\":\"%s\","
 		      "\"mqtt_client_id\":\"%s\","
 		      "\"mac\":\"%02x:%02x:%02x:%02x:%02x:%02x\","
 		      "\"ip\":\"%s\",\"gateway\":\"%s\","
 		      "\"time_valid\":%s,\"time\":%s%s%s,"
 		      "\"uptime_ms\":%lld}",
-		      uid, device_identity_hostname_get(),
+		      device_identity_company_get(),
+		      device_identity_project_get(),
+		      device_identity_device_type_get(), uid,
+		      device_identity_hostname_get(),
 		      device_identity_mdns_name_get(),
 		      device_identity_mqtt_client_id_get(),
 		      device_identity_mac_get()[0], device_identity_mac_get()[1],

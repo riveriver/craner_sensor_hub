@@ -70,10 +70,18 @@ static struct device_param_entry params[] = {
 	},
 	{
 		.record = {
-			.key = "device/hostname",
+			.key = "device/project",
 			.type = DEVICE_PARAM_TYPE_STRING,
-			.default_value = CONFIG_NET_HOSTNAME,
-			.range = "1..63 hostname chars",
+			.default_value = "project",
+			.range = "1..23 hostname chars",
+		},
+	},
+	{
+		.record = {
+			.key = "device/type",
+			.type = DEVICE_PARAM_TYPE_STRING,
+			.default_value = "type",
+			.range = "1..15 hostname chars",
 		},
 	},
 	{
@@ -202,8 +210,17 @@ static int validate_param_value(const struct device_param_entry *entry,
 
 	switch (entry->record.type) {
 	case DEVICE_PARAM_TYPE_STRING:
-		if (strcmp(entry->record.key, "device/hostname") == 0) {
-			return is_hostname_string(value) ? 0 : -EINVAL;
+		if (strcmp(entry->record.key, "device/project") == 0) {
+			if (!is_hostname_string(value)) {
+				return -EINVAL;
+			}
+			return strlen(value) <= 23U ? 0 : -ERANGE;
+		}
+		if (strcmp(entry->record.key, "device/type") == 0) {
+			if (!is_hostname_string(value)) {
+				return -EINVAL;
+			}
+			return strlen(value) <= 15U ? 0 : -ERANGE;
 		}
 		return is_printable_ascii_string(value,
 			strcmp(entry->record.key, "mqtt/username") == 0) ? 0 : -EINVAL;
@@ -331,6 +348,7 @@ static int load_one_param(struct device_param_entry *entry)
 
 int device_param_store_init(void)
 {
+	uint32_t rejected_count = 0U;
 	int rc;
 
 	k_mutex_lock(&param_lock, K_FOREVER);
@@ -356,10 +374,9 @@ int device_param_store_init(void)
 	for (size_t i = 0U; i < ARRAY_SIZE(params); i++) {
 		rc = load_one_param(&params[i]);
 		if (rc != 0) {
+			rejected_count++;
 			store_status.fail_count++;
 			store_status.last_error = rc;
-			LOG_WRN("Parameter %s rejected from settings: %d",
-				params[i].record.key, rc);
 		} else if (params[i].record.loaded_from_settings) {
 			store_status.load_count++;
 		}
@@ -369,6 +386,10 @@ int device_param_store_init(void)
 	store_status.initialized = true;
 	k_mutex_unlock(&param_lock);
 
+	if (rejected_count > 0U) {
+		LOG_WRN("Device parameter store loaded defaults for %u rejected setting(s), last_error=%d",
+			rejected_count, store_status.last_error);
+	}
 	LOG_INF("Device parameter store ready: loaded=%d, params=%u",
 		store_status.load_count, (uint32_t)ARRAY_SIZE(params));
 

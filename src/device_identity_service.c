@@ -1,4 +1,7 @@
 #include "device_identity_service.h"
+#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+#include "device_param_store.h"
+#endif
 
 #include <errno.h>
 #include <stdbool.h>
@@ -17,8 +20,8 @@
 LOG_MODULE_REGISTER(device_identity_service, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define DEVICE_IDENTITY_COMPANY "craner"
-#define DEVICE_IDENTITY_PROJECT "test001"
-#define DEVICE_IDENTITY_DEVICE_TYPE "mt2r"
+#define DEVICE_IDENTITY_DEFAULT_PROJECT "project"
+#define DEVICE_IDENTITY_DEFAULT_DEVICE_TYPE "type"
 #define STM32_UID_MAX_SIZE 12
 #define FNV1A64_OFFSET_BASIS 0xcbf29ce484222325ULL
 #define FNV1A64_PRIME 0x100000001b3ULL
@@ -61,6 +64,19 @@ static void format_hex(const uint8_t *bytes, size_t len, char *out, size_t out_l
 	out[len * 2U] = '\0';
 }
 
+static void load_identity_text(const char *key, const char *fallback, char *buf,
+			       size_t len)
+{
+	int rc = -ENOENT;
+
+#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+	rc = device_param_store_get(key, buf, len);
+#endif
+	if (rc != 0) {
+		snprintk(buf, len, "%s", fallback);
+	}
+}
+
 static int build_identity(void)
 {
 	uint8_t stm32_uid[STM32_UID_MAX_SIZE] = { 0 };
@@ -81,15 +97,25 @@ static int build_identity(void)
 
 	format_hex(identity.short_uid, sizeof(identity.short_uid),
 		   identity.short_uid_hex, sizeof(identity.short_uid_hex));
+	format_hex(&identity.short_uid[DEVICE_IDENTITY_SHORT_UID_SIZE -
+				       DEVICE_IDENTITY_NAME_UID_SIZE],
+		   DEVICE_IDENTITY_NAME_UID_SIZE, identity.name_uid_hex,
+		   sizeof(identity.name_uid_hex));
 
-	snprintk(identity.hostname, sizeof(identity.hostname), "%s-%s-%s",
-		 DEVICE_IDENTITY_COMPANY, DEVICE_IDENTITY_PROJECT,
-		 DEVICE_IDENTITY_DEVICE_TYPE);
+	snprintk(identity.company, sizeof(identity.company), "%s",
+		 DEVICE_IDENTITY_COMPANY);
+	load_identity_text("device/project", DEVICE_IDENTITY_DEFAULT_PROJECT,
+			   identity.project, sizeof(identity.project));
+	load_identity_text("device/type", DEVICE_IDENTITY_DEFAULT_DEVICE_TYPE,
+			   identity.device_type, sizeof(identity.device_type));
+
+	snprintk(identity.hostname, sizeof(identity.hostname), "%s-%s-%s-%s",
+		 identity.company, identity.project, identity.device_type,
+		 identity.name_uid_hex);
 	snprintk(identity.mdns_name, sizeof(identity.mdns_name), "%s.local",
 		 identity.hostname);
-	snprintk(identity.mqtt_client_id, sizeof(identity.mqtt_client_id),
-		 "%s-%s-%s-%s", DEVICE_IDENTITY_COMPANY, DEVICE_IDENTITY_PROJECT,
-		 DEVICE_IDENTITY_DEVICE_TYPE, identity.short_uid_hex);
+	snprintk(identity.mqtt_client_id, sizeof(identity.mqtt_client_id), "%s",
+		 identity.hostname);
 
 	return 0;
 }
@@ -193,6 +219,21 @@ const uint8_t *device_identity_mac_get(void)
 const char *device_identity_short_uid_get(void)
 {
 	return identity.short_uid_hex;
+}
+
+const char *device_identity_company_get(void)
+{
+	return identity.company;
+}
+
+const char *device_identity_project_get(void)
+{
+	return identity.project;
+}
+
+const char *device_identity_device_type_get(void)
+{
+	return identity.device_type;
 }
 
 const char *device_identity_hostname_get(void)
