@@ -187,7 +187,7 @@ Holding Register 表：
 
 | 地址 | 名称 | 默认值 | 说明 |
 | --- | --- | --- | --- |
-| `0x0000` | `REG_SYSTEM_TIMESTAMP` | `0` | 系统时间戳/业务写入预留 |
+| `0x0000` | `REG_SYSTEM_RESERVER` | `0` | 系统时间戳/业务写入预留 |
 
 Input Register 表：
 

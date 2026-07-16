@@ -39,7 +39,7 @@ static struct modbus_register_input input_register_table[] = {
 };
 
 static struct modbus_register_holding holding_register_table[] = {
-	{ .name = "REG_SYSTEM_TIMESTAMP", .addr = 0x0000, .default_value = 0,
+	{ .name = "REG_SYSTEM_RESERVER", .addr = 0x0000, .default_value = 0,
 	  .flags = MODBUS_REG_ACCESS_RW_PERSISTENT },
 };
 

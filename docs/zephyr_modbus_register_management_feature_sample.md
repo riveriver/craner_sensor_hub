@@ -47,7 +47,7 @@
 | 类型 | 地址 | 名称 | 含义 |
 | --- | --- | --- | --- |
 | Coil | `0x0000` | `REG_SYSTEM_RESET` | 系统复位控制位 |
-| Holding Register | `0x0000` | `REG_SYSTEM_TIMESTAMP` | 系统时间戳或预留保持寄存器 |
+| Holding Register | `0x0000` | `REG_SYSTEM_RESERVER` | 测试用 |
 
 ## 2. 怎么使用
 
