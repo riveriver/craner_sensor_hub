@@ -19,6 +19,14 @@ config CRANER_SYSTEM_HEALTH_CHECK_INTERVAL_MS
 	help
 	  Period used by the system health monitor thread.
 
+config CRANER_LOCAL_TIMEZONE_OFFSET_MINUTES
+	int "Local timezone offset in minutes"
+	default 480
+	range -720 840
+	help
+	  Local timezone offset used for human-readable logs, shell status, MQTT
+	  status payloads, and local maintenance schedules. The default is UTC+8.
+
 config CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD
 	bool "Enable Modbus TCP server thread"
 	default y
@@ -173,7 +181,7 @@ config CRANER_SYSTEM_HEALTH_STACK_SCAN_INTERVAL_MS
 
 config CRANER_SYSTEM_HEALTH_STACK_WARN_UNUSED_BYTES
 	int "System health stack warning free bytes threshold"
-	default 512
+	default 128
 	range 128 8192
 	depends on CRANER_ENABLE_SYSTEM_HEALTH_THREAD
 	depends on THREAD_STACK_INFO && THREAD_MONITOR && INIT_STACKS
@@ -210,7 +218,7 @@ config CRANER_SCHEDULED_REBOOT_UNRELIABLE_UPTIME_HOURS
 
 config CRANER_SCHEDULED_REBOOT_TIMEZONE_OFFSET_MINUTES
 	int "Scheduled reboot local timezone offset in minutes"
-	default 480
+	default CRANER_LOCAL_TIMEZONE_OFFSET_MINUTES
 	range -720 840
 	depends on CRANER_ENABLE_SCHEDULED_REBOOT_SERVICE
 	help

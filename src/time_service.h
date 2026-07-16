@@ -54,6 +54,8 @@ enum time_service_correction_mode time_service_correction_mode_get(void);
 bool time_service_is_time_valid(void);
 int64_t time_service_unix_time_get(void);
 void time_service_get_status(struct time_service_status *out);
+int time_service_format_local_iso8601_from_unix(int64_t unix_time_s,
+						char *buf, size_t len);
 int time_service_format_iso8601(char *buf, size_t len);
 int time_service_update_from_source(enum time_service_source source,
 				    enum time_service_quality quality,

@@ -1030,7 +1030,7 @@ static int cmd_time_status(const struct shell *shell, size_t argc, char **argv)
 	shell_print(shell, "ntp_server: %s", status.ntp_server);
 
 	if (time_service_format_iso8601(iso_time, sizeof(iso_time)) == 0) {
-		shell_print(shell, "iso8601_utc: %s", iso_time);
+		shell_print(shell, "iso8601_local: %s", iso_time);
 	}
 
 	return 0;
@@ -1131,17 +1131,14 @@ SHELL_CMD_REGISTER(time_set, NULL, "Set system time and RTC from UTC ISO8601.",
 static void print_rtc_status(const struct shell *shell)
 {
 	struct rtc_time_provider_status status;
-	time_t now;
-	struct tm tm_now;
 	char iso_time[32] = "invalid";
 
 	rtc_time_provider_get_status(&status);
 
 	if (status.valid) {
-		now = (time_t)status.unix_time_s;
-		if (gmtime_r(&now, &tm_now) != NULL &&
-		    strftime(iso_time, sizeof(iso_time),
-			     "%Y-%m-%dT%H:%M:%SZ", &tm_now) == 0U) {
+		if (time_service_format_local_iso8601_from_unix(
+			    status.unix_time_s, iso_time,
+			    sizeof(iso_time)) != 0) {
 			strcpy(iso_time, "invalid");
 		}
 	}
@@ -1159,7 +1156,7 @@ static void print_rtc_status(const struct shell *shell)
 	shell_print(shell, "trust_error: %d", status.trust_error);
 	shell_print(shell, "unix_time_s: %lld",
 		    (long long)status.unix_time_s);
-	shell_print(shell, "iso8601_utc: %s", iso_time);
+	shell_print(shell, "iso8601_local: %s", iso_time);
 	shell_print(shell, "last_set_unix_time_s: %lld",
 		    (long long)status.last_set_unix_time_s);
 	shell_print(shell, "last_set_uptime_ms: %lld",

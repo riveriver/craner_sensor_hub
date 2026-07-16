@@ -9,6 +9,9 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#ifdef CONFIG_LOG_OUTPUT_FORMAT_CUSTOM_TIMESTAMP
+#include <zephyr/logging/log_output_custom.h>
+#endif
 #include <zephyr/net/sntp.h>
 #include <zephyr/sys/clock.h>
 #include <zephyr/sys/util.h>
@@ -22,6 +25,8 @@ LOG_MODULE_REGISTER(time_service, CONFIG_LOG_DEFAULT_LEVEL);
 #define NTP_RETRY_INITIAL_MS CONFIG_CRANER_TIME_SERVICE_NTP_RETRY_INITIAL_MS
 #define NTP_RETRY_MAX_MS CONFIG_CRANER_TIME_SERVICE_NTP_RETRY_MAX_MS
 #define RTC_WRITEBACK_THRESHOLD_S CONFIG_CRANER_TIME_SERVICE_RTC_WRITEBACK_THRESHOLD_S
+#define LOCAL_TIME_OFFSET_SECONDS \
+	((int64_t)CONFIG_CRANER_LOCAL_TIMEZONE_OFFSET_MINUTES * 60LL)
 
 static struct time_service_status status = {
 	.active_source = TIME_SERVICE_SOURCE_BOOT_TICK,
@@ -438,6 +443,45 @@ int64_t time_service_unix_time_get(void)
 	return ts.tv_sec;
 }
 
+int time_service_format_local_iso8601_from_unix(int64_t unix_time_s,
+						char *buf, size_t len)
+{
+	time_t local_time_s;
+	struct tm tm_local;
+	int32_t offset_minutes = CONFIG_CRANER_LOCAL_TIMEZONE_OFFSET_MINUTES;
+	char offset_sign = '+';
+	uint32_t offset_abs;
+	int written;
+
+	if (buf == NULL || len == 0U) {
+		return -EINVAL;
+	}
+
+	local_time_s = (time_t)(unix_time_s + LOCAL_TIME_OFFSET_SECONDS);
+	if (gmtime_r(&local_time_s, &tm_local) == NULL) {
+		return -EINVAL;
+	}
+
+	if (offset_minutes < 0) {
+		offset_sign = '-';
+		offset_abs = (uint32_t)-offset_minutes;
+	} else {
+		offset_abs = (uint32_t)offset_minutes;
+	}
+
+	written = snprintk(buf, len,
+			   "%04u-%02u-%02uT%02u:%02u:%02u%c%02u:%02u",
+			   tm_local.tm_year + 1900, tm_local.tm_mon + 1,
+			   tm_local.tm_mday, tm_local.tm_hour, tm_local.tm_min,
+			   tm_local.tm_sec, offset_sign, offset_abs / 60U,
+			   offset_abs % 60U);
+	if (written < 0) {
+		return written;
+	}
+
+	return (size_t)written >= len ? -ENOMEM : 0;
+}
+
 void time_service_get_status(struct time_service_status *out)
 {
 	if (out == NULL) {
@@ -455,9 +499,6 @@ void time_service_get_status(struct time_service_status *out)
 
 int time_service_format_iso8601(char *buf, size_t len)
 {
-	time_t now;
-	struct tm tm_now;
-
 	if (buf == NULL || len == 0U) {
 		return -EINVAL;
 	}
@@ -466,17 +507,42 @@ int time_service_format_iso8601(char *buf, size_t len)
 		return -ENODATA;
 	}
 
-	now = (time_t)time_service_unix_time_get();
-	if (gmtime_r(&now, &tm_now) == NULL) {
-		return -EINVAL;
+	return time_service_format_local_iso8601_from_unix(
+		time_service_unix_time_get(), buf, len);
+}
+
+#ifdef CONFIG_LOG_OUTPUT_FORMAT_CUSTOM_TIMESTAMP
+static int time_service_log_timestamp_format(
+	const struct log_output *output, const log_timestamp_t timestamp,
+	const log_timestamp_printer_t printer)
+{
+	char iso_time[32];
+	int64_t unix_time_s = (int64_t)(timestamp / 1000ULL);
+	uint32_t ms = timestamp % 1000ULL;
+	int rc;
+
+	BUILD_ASSERT(IS_ENABLED(CONFIG_LOG_TIMESTAMP_USE_REALTIME),
+		     "Local log timestamp formatter expects realtime timestamps");
+
+	rc = time_service_format_local_iso8601_from_unix(unix_time_s,
+							 iso_time,
+							 sizeof(iso_time));
+	if (rc != 0) {
+		return printer(output, "[%llu.%03u] ",
+			       timestamp / 1000ULL, ms);
 	}
 
-	if (strftime(buf, len, "%Y-%m-%dT%H:%M:%SZ", &tm_now) == 0U) {
-		return -ENOMEM;
-	}
+	return printer(output, "[%s,%03u000] ", iso_time, ms);
+}
 
+static int time_service_log_timestamp_init(void)
+{
+	log_custom_timestamp_set(time_service_log_timestamp_format);
 	return 0;
 }
+
+SYS_INIT(time_service_log_timestamp_init, APPLICATION, 1);
+#endif
 
 K_THREAD_DEFINE(time_service_tid, TIME_SERVICE_STACK_SIZE,
 		time_service_thread, NULL, NULL, NULL,
