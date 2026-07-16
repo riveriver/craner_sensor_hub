@@ -25,6 +25,7 @@
 #include <zephyr/kernel.h>
 #endif
 #include <zephyr/shell/shell.h>
+#include <zephyr/sys/reboot.h>
 #include <zephyr/sys/timeutil.h>
 #include <zephyr/sys/util.h>
 
@@ -65,6 +66,18 @@ int shell_app_init(void)
 {
 	return shell_output_format_refresh();
 }
+
+static int cmd_reboot(const struct shell *shell, size_t argc, char **argv)
+{
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	shell_warn(shell, "rebooting");
+	sys_reboot(SYS_REBOOT_COLD);
+	return 0;
+}
+
+SHELL_CMD_REGISTER(reboot, NULL, "Reboot the MCU.", cmd_reboot);
 
 static int parse_iso8601_utc(const char *text, int64_t *unix_time_s)
 {
@@ -550,11 +563,14 @@ static int cmd_modbus_store_status(const struct shell *shell, size_t argc,
 		    status.active_bank_valid ? "yes" : "no");
 	shell_print(shell, "active_bank=%u", status.active_bank);
 	shell_print(shell, "active_sequence=%u", status.active_sequence);
+	shell_print(shell, "bank_size=%u", status.bank_size);
 	shell_print(shell, "payload_size=%u", status.payload_size);
+	shell_print(shell, "last_payload_size=%u", status.last_payload_size);
 	shell_print(shell, "load_count=%u", status.load_count);
 	shell_print(shell, "save_count=%u", status.save_count);
 	shell_print(shell, "clear_count=%u", status.clear_count);
 	shell_print(shell, "fail_count=%u", status.fail_count);
+	shell_print(shell, "last_stage=%d", status.last_stage);
 	shell_print(shell, "last_error=%d", status.last_error);
 
 	return 0;
