@@ -803,7 +803,7 @@ reboot
 当前 Coil：
 
 ```text
-地址 0: REG_SYSTEM_RESET
+地址 0: REG_COIL_RESERVER
 权限: write-only
 持久化: no
 ```
@@ -819,7 +819,7 @@ reboot
 当前 Holding Register：
 
 ```text
-地址 0: REG_SYSTEM_RESERVER
+地址 0: REG_HOLDING_RESERVER
 权限: read-write
 持久化: yes
 ```

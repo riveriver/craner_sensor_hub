@@ -13,8 +13,13 @@ LOG_MODULE_REGISTER(modbus_register_map, CONFIG_LOG_DEFAULT_LEVEL);
 #define MODBUS_HOLDING_ADDRESS_SIZE 10U
 
 static struct modbus_register_coil coil_table[] = {
-	{ .name = "REG_SYSTEM_RESET", .addr = 0x0000, .default_value = false,
-	  .flags = MODBUS_REG_ACCESS_WO },
+	{ .name = "REG_COIL_RESERVER", .addr = 0x0000, .default_value = false,
+	  .flags = MODBUS_REG_ACCESS_RW },
+};
+
+static struct modbus_register_holding holding_register_table[] = {
+	{ .name = "REG_HOLDING_RESERVER", .addr = 0x0000, .default_value = 0,
+	  .flags = MODBUS_REG_ACCESS_RW_PERSISTENT },
 };
 
 static struct modbus_register_input input_register_table[] = {
@@ -36,11 +41,6 @@ static struct modbus_register_input input_register_table[] = {
 	{ .name = "REG_HOISTING_OFFLINE_STATUS", .addr = 0x000F, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_HOISTING_TRUN_CNT", .addr = 0x0010, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_HOISTING_SINAGLE_VAL", .addr = 0x0011, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-};
-
-static struct modbus_register_holding holding_register_table[] = {
-	{ .name = "REG_SYSTEM_RESERVER", .addr = 0x0000, .default_value = 0,
-	  .flags = MODBUS_REG_ACCESS_RW_PERSISTENT },
 };
 
 static struct modbus_register_map app_register_map = {
