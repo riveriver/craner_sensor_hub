@@ -33,6 +33,7 @@ LOG_MODULE_REGISTER(tcp_modbus, CONFIG_LOG_DEFAULT_LEVEL);
 #define MODBUS_TCP_MAX_CLIENTS CONFIG_CRANER_MODBUS_TCP_MAX_CLIENTS
 #define MODBUS_TCP_POLL_FD_COUNT (MODBUS_TCP_MAX_CLIENTS + 1)
 #define MODBUS_TCP_LISTEN_BACKLOG MODBUS_TCP_MAX_CLIENTS
+#define MODBUS_TCP_RECV_TIMEOUT_MS 1000
 
 static int custom_read_count;
 
@@ -219,15 +220,58 @@ static int modbus_tcp_reply(int client, struct modbus_adu *adu)
 	return 0;
 }
 
+static int modbus_tcp_recv_exact(int client, uint8_t *buf, size_t len)
+{
+	size_t received_len = 0U;
+
+	while (received_len < len) {
+		struct pollfd pfd = {
+			.fd = client,
+			.events = POLLIN,
+		};
+		int rc;
+
+		rc = poll(&pfd, 1, MODBUS_TCP_RECV_TIMEOUT_MS);
+		if (rc == 0) {
+			return -ETIMEDOUT;
+		}
+
+		if (rc < 0) {
+			return -errno;
+		}
+
+		if ((pfd.revents & POLLIN) == 0) {
+			if ((pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
+				return -ECONNRESET;
+			}
+
+			return -EIO;
+		}
+
+		rc = recv(client, &buf[received_len], len - received_len, 0);
+		if (rc == 0) {
+			return -ENOTCONN;
+		}
+
+		if (rc < 0) {
+			return -errno;
+		}
+
+		received_len += (size_t)rc;
+	}
+
+	return 0;
+}
+
 static int modbus_tcp_connection(int client)
 {
 	uint8_t header[MODBUS_MBAP_AND_FC_LENGTH];
 	int rc;
 	int data_len;
 
-	rc = recv(client, header, sizeof(header), MSG_WAITALL);
-	if (rc <= 0) {
-		return rc == 0 ? -ENOTCONN : -errno;
+	rc = modbus_tcp_recv_exact(client, header, sizeof(header));
+	if (rc != 0) {
+		return rc;
 	}
 
 	k_mutex_lock(&raw_modbus_lock, K_FOREVER);
@@ -238,11 +282,15 @@ static int modbus_tcp_connection(int client)
 	LOG_HEXDUMP_DBG(header, sizeof(header), "h:>");
 	modbus_raw_get_header(&tmp_adu, header);
 	data_len = tmp_adu.length;
-
-	rc = recv(client, tmp_adu.data, data_len, MSG_WAITALL);
-	if (rc <= 0) {
+	if (data_len > CONFIG_MODBUS_BUFFER_SIZE) {
 		k_mutex_unlock(&raw_modbus_lock);
-		return rc == 0 ? -ENOTCONN : -errno;
+		return -EMSGSIZE;
+	}
+
+	rc = modbus_tcp_recv_exact(client, tmp_adu.data, data_len);
+	if (rc != 0) {
+		k_mutex_unlock(&raw_modbus_lock);
+		return rc;
 	}
 
 	LOG_HEXDUMP_DBG(tmp_adu.data, tmp_adu.length, "d:>");
@@ -266,6 +314,7 @@ static int modbus_tcp_connection(int client)
 static void modbus_tcp_client_close(struct pollfd *fds, int index)
 {
 	if (fds[index].fd >= 0) {
+		(void)shutdown(fds[index].fd, SHUT_RDWR);
 		close(fds[index].fd);
 	}
 
