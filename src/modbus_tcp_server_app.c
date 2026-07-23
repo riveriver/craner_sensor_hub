@@ -311,7 +311,8 @@ static int modbus_tcp_connection(int client)
 	return rc;
 }
 
-static void modbus_tcp_client_close(struct pollfd *fds, int index)
+static void modbus_tcp_client_close(struct pollfd *fds, uint32_t *client_order,
+				    int index)
 {
 	if (fds[index].fd >= 0) {
 		(void)shutdown(fds[index].fd, SHUT_RDWR);
@@ -321,20 +322,53 @@ static void modbus_tcp_client_close(struct pollfd *fds, int index)
 	fds[index].fd = -1;
 	fds[index].events = POLLIN;
 	fds[index].revents = 0;
+	client_order[index] = 0U;
 }
 
-static int modbus_tcp_client_add(struct pollfd *fds, int client)
+static int modbus_tcp_oldest_client_index(const uint32_t *client_order)
+{
+	uint32_t oldest_order = UINT32_MAX;
+	int oldest_index = -1;
+
+	for (int i = 1; i < MODBUS_TCP_POLL_FD_COUNT; i++) {
+		if (client_order[i] != 0U && client_order[i] < oldest_order) {
+			oldest_order = client_order[i];
+			oldest_index = i;
+		}
+	}
+
+	return oldest_index;
+}
+
+static int modbus_tcp_client_add(struct pollfd *fds, uint32_t *client_order,
+				 int client, uint32_t order)
 {
 	for (int i = 1; i < MODBUS_TCP_POLL_FD_COUNT; i++) {
 		if (fds[i].fd < 0) {
 			fds[i].fd = client;
 			fds[i].events = POLLIN;
 			fds[i].revents = 0;
+			client_order[i] = order;
 			return 0;
 		}
 	}
 
-	return -ENOMEM;
+	int oldest_index = modbus_tcp_oldest_client_index(client_order);
+
+	if (oldest_index < 0) {
+		return -ENOMEM;
+	}
+
+	LOG_WRN("Replacing oldest Modbus TCP client fd=%d with new fd=%d",
+		fds[oldest_index].fd, client);
+	modbus_tcp_client_close(fds, client_order, oldest_index);
+
+	fds[oldest_index].fd = client;
+	fds[oldest_index].events = POLLIN;
+	fds[oldest_index].revents = 0;
+	client_order[oldest_index] = order;
+
+	return 0;
 }
 
 static void modbus_tcp_server_thread(void)
@@ -343,6 +377,8 @@ static void modbus_tcp_server_thread(void)
 	struct sockaddr_in bind_addr;
 	static int counter;
 	struct pollfd fds[MODBUS_TCP_POLL_FD_COUNT];
+	uint32_t client_order[MODBUS_TCP_POLL_FD_COUNT];
+	uint32_t next_client_order = 1U;
 
 	if (init_modbus_server()) {
 		LOG_ERR("Modbus TCP server initialization failed");
@@ -378,7 +414,9 @@ static void modbus_tcp_server_thread(void)
 		fds[i].fd = -1;
 		fds[i].events = POLLIN;
 		fds[i].revents = 0;
+		client_order[i] = 0U;
 	}
+	client_order[0] = 0U;
 
 	LOG_INF("Started MODBUS TCP server on port %d, max_clients=%d",
 		MODBUS_TCP_PORT, MODBUS_TCP_MAX_CLIENTS);
@@ -407,9 +445,16 @@ static void modbus_tcp_server_thread(void)
 					  &client_addr.sin_addr,
 					  addr_str, sizeof(addr_str));
 
-				if (modbus_tcp_client_add(fds, client) != 0) {
+				if (next_client_order == 0U) {
+					next_client_order = 1U;
+				}
+
+				if (modbus_tcp_client_add(fds, client_order,
+							  client,
+							  next_client_order++) != 0) {
 					LOG_WRN("Rejecting Modbus TCP client from %s: pool full",
 						addr_str);
+					(void)shutdown(client, SHUT_RDWR);
 					close(client);
 				} else {
 					LOG_INF("Connection #%d from %s, fd=%d",
@@ -426,7 +471,7 @@ static void modbus_tcp_server_thread(void)
 			if ((fds[i].revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
 				LOG_INF("Closing Modbus TCP client fd=%d, revents=0x%x",
 					fds[i].fd, fds[i].revents);
-				modbus_tcp_client_close(fds, i);
+				modbus_tcp_client_close(fds, client_order, i);
 				continue;
 			}
 
@@ -435,7 +480,7 @@ static void modbus_tcp_server_thread(void)
 				if (rc != 0) {
 					LOG_INF("Closing Modbus TCP client fd=%d, rc=%d",
 						fds[i].fd, rc);
-					modbus_tcp_client_close(fds, i);
+					modbus_tcp_client_close(fds, client_order, i);
 				}
 			}
 		}
