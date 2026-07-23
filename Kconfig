@@ -65,6 +65,13 @@ config CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD
 	help
 	  Enable the Modbus RTU client thread for the hook encoder.
 
+config CRANER_ENABLE_READ_ANEMOMETER_THREAD
+	bool "Enable anemometer Modbus RTU thread"
+	default y
+	depends on MODBUS
+	help
+	  Enable the Modbus RTU client thread for the anemometer (wind speed sensor).
+
 config CRANER_ENABLE_OTA_CONTROL
 	bool "Enable MCUboot swap OTA control shell"
 	default y

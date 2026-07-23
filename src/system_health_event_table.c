@@ -49,6 +49,13 @@ const struct system_health_event_obj system_health_event_table[] = {
 		.offline_timeout_ms = 3000,
 		.offline_first_func = system_health_log_offline_event,
 	},
+	{
+		.event = SYSTEM_HEALTH_READ_ANEMOMETER,
+		.enable = IS_ENABLED(CONFIG_CRANER_ENABLE_READ_ANEMOMETER_THREAD),
+		.priority = 6,
+		.offline_timeout_ms = 3000,
+		.offline_first_func = system_health_log_offline_event,
+	},
 };
 
 const int system_health_event_table_size =

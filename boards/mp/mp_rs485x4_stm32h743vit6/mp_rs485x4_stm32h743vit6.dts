@@ -26,6 +26,7 @@
 		modbus-slewing-encoder = &modbus_slewing_encoder;
 		modbus-luffing-encoder = &modbus_luffing_encoder;
 		modbus-hook-encoder = &modbus_hook_encoder;
+		modbus-anemometer = &modbus_anemometer;
 		heartbeat-led = &heartbeat_led;
 		watchdog0 = &iwdg;
 	};
@@ -139,6 +140,18 @@
 	pinctrl-names = "default";
 	current-speed = <115200>;
 	status = "okay";
+};
+
+&usart6 {
+	pinctrl-0 = <&usart6_tx_pc6 &usart6_rx_pc7>;
+	pinctrl-names = "default";
+	current-speed = <9600>;
+	status = "okay";
+
+	modbus_anemometer: modbus-anemometer {
+		compatible = "zephyr,modbus-serial";
+		status = "okay";
+	};
 };
 
 &uart7 {
