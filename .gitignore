@@ -1,4 +1,5 @@
 build/
+scripts/
 *.bin
 *.elf
 *.hex

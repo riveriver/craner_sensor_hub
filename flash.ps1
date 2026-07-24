@@ -6,8 +6,15 @@ param(
     [string]$Connection = "port=SWD",
     [string]$Programmer = "STM32_Programmer_CLI",
     [switch]$IncludeBootloader,
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$Version
 )
+
+$ScriptVersion = "2.0.0"
+if ($Version) {
+    Write-Host "flash.ps1 version $ScriptVersion"
+    exit 0
+}
 
 $workspaceRoot = Resolve-Path "$PSScriptRoot\.."
 $env:ZEPHYR_BASE = Join-Path $workspaceRoot "zephyrproject\zephyr"
@@ -58,7 +65,7 @@ function Flash-Bootloader {
 }
 
 function Flash-App {
-    $appHex = Join-Path $buildDir "ota_images\app_initial_confirmed.hex"
+    $appHex = Join-Path $buildDir "craner_encoder_hub\zephyr\zephyr.signed.confirmed.hex"
     Require-File $appHex
 
     Invoke-Stm32Programmer `
