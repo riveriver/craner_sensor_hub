@@ -33,7 +33,9 @@ BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_HOISTING_ENCODER_NODE, okay),
 	     "Missing modbus-hook-encoder alias");
 #endif
 
-#define MODBUS_ENCODER_UNIT_ID 1
+#define MODBUS_SLEWING_ENCODER_UNIT_ID 1
+#define MODBUS_LUFFING_ENCODER_UNIT_ID 2
+#define MODBUS_HOISTING_ENCODER_UNIT_ID 3
 #define MODBUS_ENCODER_BAUDRATE 115200
 #define MODBUS_ENCODER_RX_TIMEOUT_US 200000
 #define MODBUS_ENCODER_POLL_PERIOD_MS 20
@@ -41,7 +43,7 @@ BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_HOISTING_ENCODER_NODE, okay),
 #define MODBUS_ENCODER_REGISTER_COUNT 2
 #define MODBUS_ENCODER_MAX_REGISTER_COUNT 2
 #define MODBUS_ANEMOMETER_POLL_PERIOD_MS 50
-#define MODBUS_ANEMOMETER_UNIT_ID 1
+#define MODBUS_ANEMOMETER_UNIT_ID 4
 #define MODBUS_ANEMOMETER_START_ADDR 0x0009
 #define MODBUS_ANEMOMETER_REGISTER_COUNT 5
 #define MODBUS_ANEMOMETER_MAX_REGISTER_COUNT 5
@@ -89,7 +91,7 @@ static const struct modbus_iface_param modbus_encoder_param = {
 	},
 };
 
-#define MODBUS_ANEMOMETER_BAUDRATE 9600
+#define MODBUS_ANEMOMETER_BAUDRATE 115200
 
 static const struct modbus_iface_param modbus_anemometer_param = {
 	.mode = MODBUS_MODE_RTU,
@@ -105,7 +107,7 @@ static const struct modbus_iface_param modbus_anemometer_param = {
 static struct modbus_encoder_client slewing_encoder = {
 	.name = "slewing encoder",
 	.iface_name = DEVICE_DT_NAME(MODBUS_SLEWING_ENCODER_NODE),
-	.unit_id = MODBUS_ENCODER_UNIT_ID,
+	.unit_id = MODBUS_SLEWING_ENCODER_UNIT_ID,
 	.start_addr = MODBUS_ENCODER_START_ADDR,
 	.register_count = MODBUS_ENCODER_REGISTER_COUNT,
 	.timestamp_high_name = "REG_SLEWING_TIMESTAMP_H",
@@ -123,7 +125,7 @@ static struct modbus_encoder_client slewing_encoder = {
 static struct modbus_encoder_client luffing_encoder = {
 	.name = "luffing encoder",
 	.iface_name = DEVICE_DT_NAME(MODBUS_LUFFING_ENCODER_NODE),
-	.unit_id = MODBUS_ENCODER_UNIT_ID,
+	.unit_id = MODBUS_LUFFING_ENCODER_UNIT_ID,
 	.start_addr = MODBUS_ENCODER_START_ADDR,
 	.register_count = MODBUS_ENCODER_REGISTER_COUNT,
 	.timestamp_high_name = "REG_LUFFING_TIMESTAMP_H",
@@ -141,7 +143,7 @@ static struct modbus_encoder_client luffing_encoder = {
 static struct modbus_encoder_client hook_encoder = {
 	.name = "hoisting encoder",
 	.iface_name = DEVICE_DT_NAME(MODBUS_HOISTING_ENCODER_NODE),
-	.unit_id = MODBUS_ENCODER_UNIT_ID,
+	.unit_id = MODBUS_HOISTING_ENCODER_UNIT_ID,
 	.start_addr = MODBUS_ENCODER_START_ADDR,
 	.register_count = MODBUS_ENCODER_REGISTER_COUNT,
 	.timestamp_high_name = "REG_HOISTING_TIMESTAMP_H",
@@ -562,7 +564,7 @@ static void modbus_anemometer_thread(void *p1, void *p2, void *p3)
 		return;
 	}
 
-	LOG_INF("%s Modbus RTU client started, iface=%s, 9600 8N1, rx_timeout=%u us, unit=%u, addr=0x%04x, qty=%u",
+	LOG_INF("%s Modbus RTU client started, iface=%s, 115200 8N1, rx_timeout=%u us, unit=%u, addr=0x%04x, qty=%u",
 		anem->name, anem->iface_name, MODBUS_ENCODER_RX_TIMEOUT_US,
 		anem->unit_id, anem->start_addr,
 		(unsigned int)anem->register_count);
