@@ -1,9 +1,0 @@
-{
-  "Version": "2.0.0",
-  "Board": "craner_general_stm32h743vit6",
-  "Address": "192.168.46.32",
-  "Port": 1337,
-  "ConnType": "udp",
-  "McuMgr": "mcumgr",
-  "ImagePath": ""
-}

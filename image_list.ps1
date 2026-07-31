@@ -1,3 +1,4 @@
+# Version: 3.0.0
 param(
     [string]$Config = "",
     [string]$Address = "",
@@ -7,19 +8,19 @@ param(
     [switch]$Version
 )
 
-$ScriptVersion = "2.0.0"
+$ScriptVersion = "3.0.0"
 if ($Version) {
     Write-Host "image_list.ps1 version $ScriptVersion"
     exit 0
 }
 
-. "$PSScriptRoot\ota_common.ps1"
+. "$PSScriptRoot\project_common.ps1"
 
-$otaConfig = Get-OtaConfig $Config
-$Address = Use-ConfigValue $Address $otaConfig.Address
-$Port = Use-ConfigValue $Port $otaConfig.Port
-$ConnType = Use-ConfigValue $ConnType $otaConfig.ConnType
-$McuMgr = Use-ConfigValue $McuMgr $otaConfig.McuMgr
+$projectConfig = Get-ProjectConfig $Config
+$Address = Use-ConfigValue $Address $projectConfig.Address
+$Port = Use-ConfigValue $Port $projectConfig.Port
+$ConnType = Use-ConfigValue $ConnType $projectConfig.ConnType
+$McuMgr = Use-ConfigValue $McuMgr $projectConfig.McuMgr
 $connString = "$Address`:$Port"
 
 Write-Host "Querying MCUboot image list from $connString..."

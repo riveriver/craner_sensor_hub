@@ -1,3 +1,4 @@
+# Version: 3.0.0
 param(
     [string]$Config = "",
     [string]$Board = "",
@@ -13,29 +14,34 @@ param(
     [switch]$Version
 )
 
-$ScriptVersion = "2.0.0"
+$ScriptVersion = "3.0.0"
 if ($Version) {
     Write-Host "ota.ps1 version $ScriptVersion"
     exit 0
 }
 
-. "$PSScriptRoot\ota_common.ps1"
+. "$PSScriptRoot\project_common.ps1"
 
-$otaConfig = Get-OtaConfig $Config
-$Board = Use-ConfigValue $Board $otaConfig.Board
-$Address = Use-ConfigValue $Address $otaConfig.Address
-$Port = Use-ConfigValue $Port $otaConfig.Port
-$ConnType = Use-ConfigValue $ConnType $otaConfig.ConnType
-$McuMgr = Use-ConfigValue $McuMgr $otaConfig.McuMgr
-$ImagePath = Use-ConfigValue $ImagePath $otaConfig.ImagePath
+$projectConfig = Get-ProjectConfig $Config
+$Board = Use-ConfigValue $Board $projectConfig.Board
+$Address = Use-ConfigValue $Address $projectConfig.Address
+$Port = Use-ConfigValue $Port $projectConfig.Port
+$ConnType = Use-ConfigValue $ConnType $projectConfig.ConnType
+$McuMgr = Use-ConfigValue $McuMgr $projectConfig.McuMgr
+$ImagePath = Use-ConfigValue $ImagePath $projectConfig.ImagePath
 
-$buildDir = Join-Path $PSScriptRoot "build\$Board"
-$appZephyrDir = Join-Path $buildDir "craner_encoder_hub\zephyr"
-$otaDir = Join-Path $buildDir "ota_images"
-$defaultSignedBin = Join-Path $appZephyrDir "zephyr.signed.bin"
-$defaultSignedHex = Join-Path $appZephyrDir "zephyr.signed.hex"
-$updateBin = Join-Path $otaDir "app_update_signed.bin"
-$updateHex = Join-Path $otaDir "app_update_signed.hex"
+$Board = Require-ConfigValue "Board" $Board
+$Address = Require-ConfigValue "Address" $Address
+$Port = Require-ConfigValue "Port" $Port
+$ConnType = Require-ConfigValue "ConnType" $ConnType
+$McuMgr = Require-ConfigValue "McuMgr" $McuMgr
+
+$buildDir = Resolve-ProjectPath (Expand-ProjectConfigValue (Require-ConfigValue "BuildDir" $projectConfig.BuildDir) $projectConfig)
+$otaDir = Resolve-ProjectPath (Expand-ProjectConfigValue (Require-ConfigValue "OtaOutputDir" $projectConfig.OtaOutputDir) $projectConfig)
+$defaultSignedBin = Resolve-ProjectPath (Expand-ProjectConfigValue (Require-ConfigValue "AppSignedBinPath" $projectConfig.AppSignedBinPath) $projectConfig)
+$defaultSignedHex = Resolve-ProjectPath (Expand-ProjectConfigValue (Require-ConfigValue "AppSignedHexPath" $projectConfig.AppSignedHexPath) $projectConfig)
+$updateBin = Resolve-ProjectPath (Expand-ProjectConfigValue (Require-ConfigValue "OtaUpdateBinPath" $projectConfig.OtaUpdateBinPath) $projectConfig)
+$updateHex = Resolve-ProjectPath (Expand-ProjectConfigValue (Require-ConfigValue "OtaUpdateHexPath" $projectConfig.OtaUpdateHexPath) $projectConfig)
 $connString = "$Address`:$Port"
 
 function Require-File {
@@ -145,6 +151,11 @@ if (-not $SkipUpload) {
 
 Write-Host "Reading image list..."
 $imageList = Invoke-McuMgr @("--conntype", $ConnType, "--connstring", $connString, "image", "list")
+if ($DryRun) {
+    Write-Host "Dry run stops before parsing slot1 image hash."
+    exit 0
+}
+
 $slot1Hash = Get-Slot1Hash $imageList
 if ([string]::IsNullOrWhiteSpace($slot1Hash)) {
     Write-Error "Could not find slot1 image hash from mcumgr image list output."

@@ -1,21 +1,28 @@
+# Version: 3.0.0
 param(
-    [string]$Board = "craner_general_stm32h743vit6",
+    [string]$Config = "",
+    [string]$Board = "",
     [string]$ExtraConf = "",
     [switch]$Version
 )
 
-$ScriptVersion = "2.0.0"
+$ScriptVersion = "3.0.0"
 if ($Version) {
     Write-Host "build.ps1 version $ScriptVersion"
     exit 0
 }
 
-$workspaceRoot = Resolve-Path "$PSScriptRoot\.."
-$env:ZEPHYR_BASE = Join-Path $workspaceRoot "zephyrproject\zephyr"
-$env:ZEPHYR_TOOLCHAIN_VARIANT = "zephyr"
-$env:ZEPHYR_SDK_INSTALL_DIR = Join-Path $workspaceRoot "zephyr-sdk-1.0.1\zephyr-sdk-1.0.1"
+. "$PSScriptRoot\project_common.ps1"
 
-$buildDir = Join-Path $PSScriptRoot "build\$Board"
+$projectConfig = Get-ProjectConfig $Config
+$Board = Use-ConfigValue $Board $projectConfig.Board
+$Board = Require-ConfigValue "Board" $Board
+
+$env:ZEPHYR_BASE = Resolve-ProjectPath (Expand-ProjectConfigValue (Require-ConfigValue "ZephyrBase" $projectConfig.ZephyrBase) $projectConfig)
+$env:ZEPHYR_TOOLCHAIN_VARIANT = "zephyr"
+$env:ZEPHYR_SDK_INSTALL_DIR = Resolve-ProjectPath (Expand-ProjectConfigValue (Require-ConfigValue "ZephyrSdkInstallDir" $projectConfig.ZephyrSdkInstallDir) $projectConfig)
+
+$buildDir = Resolve-ProjectPath (Expand-ProjectConfigValue (Require-ConfigValue "BuildDir" $projectConfig.BuildDir) $projectConfig)
 $westArgs = @(
     "build", "--sysbuild",
     "-p", "always",
