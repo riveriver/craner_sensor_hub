@@ -34,11 +34,11 @@ BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_HOISTING_ENCODER_NODE, okay),
 #endif
 
 #define MODBUS_SLEWING_ENCODER_UNIT_ID 1
-#define MODBUS_LUFFING_ENCODER_UNIT_ID 3
-#define MODBUS_HOISTING_ENCODER_UNIT_ID 1
+#define MODBUS_LUFFING_ENCODER_UNIT_ID  3
+#define MODBUS_HOISTING_ENCODER_UNIT_ID 2
 #define MODBUS_ENCODER_BAUDRATE 115200
 #define MODBUS_ENCODER_RX_TIMEOUT_US 200000
-#define MODBUS_ENCODER_POLL_PERIOD_MS 20
+#define MODBUS_ENCODER_POLL_PERIOD_MS 50
 #define MODBUS_ENCODER_START_ADDR 0x0002
 #define MODBUS_ENCODER_REGISTER_COUNT 2
 #define MODBUS_ENCODER_MAX_REGISTER_COUNT 2
@@ -75,6 +75,7 @@ struct modbus_encoder_client {
 	const char *turn_count_name;
 	const char *single_value_name;
 	enum system_health_event health_event;
+	uint32_t start_delay_ms;
 	int iface;
 	struct modbus_encoder_stats stats;
 };
@@ -117,6 +118,7 @@ static struct modbus_encoder_client slewing_encoder = {
 	.turn_count_name = "REG_SLEWING_TRUN_CNT",
 	.single_value_name = "REG_SLEWING_SINAGLE_VAL",
 	.health_event = SYSTEM_HEALTH_READ_SLEWING_ENCODER,
+	.start_delay_ms = 0,
 	.iface = -1,
 };
 #endif
@@ -135,6 +137,7 @@ static struct modbus_encoder_client luffing_encoder = {
 	.turn_count_name = "REG_LUFFING_TRUN_CNT",
 	.single_value_name = "REG_LUFFING_SINAGLE_VAL",
 	.health_event = SYSTEM_HEALTH_READ_LUFFING_ENCODER,
+	.start_delay_ms = 7,
 	.iface = -1,
 };
 #endif
@@ -153,6 +156,7 @@ static struct modbus_encoder_client hook_encoder = {
 	.turn_count_name = "REG_HOISTING_TRUN_CNT",
 	.single_value_name = "REG_HOISTING_SINAGLE_VAL",
 	.health_event = SYSTEM_HEALTH_READ_HOISTING_ENCODER,
+	.start_delay_ms = 14,
 	.iface = -1,
 };
 #endif
@@ -173,6 +177,7 @@ struct modbus_anemometer_client {
 	const char *wind_speed_name;
 	const char *wind_direction_name;
 	enum system_health_event health_event;
+	uint32_t start_delay_ms;
 	int iface;
 	struct modbus_encoder_stats stats;
 };
@@ -194,6 +199,7 @@ static struct modbus_anemometer_client anemometer = {
 	.wind_speed_name = "REG_ANEMOMETER_WIND_SPEED",
 	.wind_direction_name = "REG_ANEMOMETER_WIND_DIRECTION",
 	.health_event = SYSTEM_HEALTH_READ_ANEMOMETER,
+	.start_delay_ms = 21,
 	.iface = -1,
 };
 #endif
@@ -558,6 +564,10 @@ static void modbus_anemometer_thread(void *p1, void *p2, void *p3)
 	ARG_UNUSED(p2);
 	ARG_UNUSED(p3);
 
+	if (anem->start_delay_ms) {
+		k_sleep(K_MSEC(anem->start_delay_ms));
+	}
+
 	err = modbus_anemometer_client_init(anem);
 	if (err != 0) {
 		LOG_ERR("%s Modbus RTU client init failed: %d", anem->name, err);
@@ -624,6 +634,10 @@ static void modbus_encoder_thread(void *p1, void *p2, void *p3)
 
 	ARG_UNUSED(p2);
 	ARG_UNUSED(p3);
+
+	if (encoder->start_delay_ms) {
+		k_sleep(K_MSEC(encoder->start_delay_ms));
+	}
 
 	err = modbus_encoder_client_init(encoder);
 	if (err != 0) {
