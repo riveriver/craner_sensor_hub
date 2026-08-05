@@ -59,11 +59,13 @@ struct modbus_encoder_stats {
 	uint32_t success_count;
 	uint32_t failure_count;
 	int last_error;
+	int last_occur_error;
 	bool has_last_success;
 };
 
 struct modbus_encoder_client {
 	const char *name;
+	const char *stats_name;
 	const char *iface_name;
 	uint8_t unit_id;
 	uint16_t start_addr;
@@ -107,6 +109,7 @@ static const struct modbus_iface_param modbus_anemometer_param = {
 #if defined(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD)
 static struct modbus_encoder_client slewing_encoder = {
 	.name = "slewing encoder",
+	.stats_name = "slewing",
 	.iface_name = DEVICE_DT_NAME(MODBUS_SLEWING_ENCODER_NODE),
 	.unit_id = MODBUS_SLEWING_ENCODER_UNIT_ID,
 	.start_addr = MODBUS_ENCODER_START_ADDR,
@@ -126,6 +129,7 @@ static struct modbus_encoder_client slewing_encoder = {
 #if defined(CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD)
 static struct modbus_encoder_client luffing_encoder = {
 	.name = "luffing encoder",
+	.stats_name = "luffing",
 	.iface_name = DEVICE_DT_NAME(MODBUS_LUFFING_ENCODER_NODE),
 	.unit_id = MODBUS_LUFFING_ENCODER_UNIT_ID,
 	.start_addr = MODBUS_ENCODER_START_ADDR,
@@ -145,6 +149,7 @@ static struct modbus_encoder_client luffing_encoder = {
 #if defined(CONFIG_CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD)
 static struct modbus_encoder_client hook_encoder = {
 	.name = "hoisting encoder",
+	.stats_name = "hoisting",
 	.iface_name = DEVICE_DT_NAME(MODBUS_HOISTING_ENCODER_NODE),
 	.unit_id = MODBUS_HOISTING_ENCODER_UNIT_ID,
 	.start_addr = MODBUS_ENCODER_START_ADDR,
@@ -163,6 +168,7 @@ static struct modbus_encoder_client hook_encoder = {
 
 struct modbus_anemometer_client {
 	const char *name;
+	const char *stats_name;
 	const char *iface_name;
 	uint8_t unit_id;
 	uint16_t start_addr;
@@ -185,6 +191,7 @@ struct modbus_anemometer_client {
 #if defined(CONFIG_CRANER_ENABLE_READ_ANEMOMETER_THREAD)
 static struct modbus_anemometer_client anemometer = {
 	.name = "anemometer",
+	.stats_name = "anemometer",
 	.iface_name = DEVICE_DT_NAME(MODBUS_ANEMOMETER_NODE),
 	.unit_id = MODBUS_ANEMOMETER_UNIT_ID,
 	.start_addr = MODBUS_ANEMOMETER_START_ADDR,
@@ -329,6 +336,7 @@ static void modbus_encoder_record_attempt(struct modbus_encoder_client *encoder,
 	} else {
 		stats->failure_count++;
 		stats->last_error = err;
+		stats->last_occur_error = err;
 		k_mutex_unlock(&modbus_encoder_stats_lock);
 		return;
 	}
@@ -370,6 +378,7 @@ static void modbus_anemometer_record_attempt(struct modbus_anemometer_client *an
 	} else {
 		stats->failure_count++;
 		stats->last_error = err;
+		stats->last_occur_error = err;
 		k_mutex_unlock(&modbus_encoder_stats_lock);
 		return;
 	}
@@ -405,11 +414,11 @@ static void shell_print_encoder_stats(const struct shell *shell,
 	uint32_t max_success_interval_ms;
 	uint32_t success_count;
 	uint32_t failure_count;
-	int last_error;
+	int last_occur_error;
 	bool has_last_success;
 	uint32_t avg_ms = 0;
 	uint32_t total_count;
-	uint32_t success_rate_x100 = 0;
+	uint32_t failure_rate_x100 = 0;
 
 	k_mutex_lock(&modbus_encoder_stats_lock, K_FOREVER);
 	success_interval_sum_ms = encoder->stats.success_interval_sum_ms;
@@ -417,7 +426,7 @@ static void shell_print_encoder_stats(const struct shell *shell,
 	max_success_interval_ms = encoder->stats.max_success_interval_ms;
 	success_count = encoder->stats.success_count;
 	failure_count = encoder->stats.failure_count;
-	last_error = encoder->stats.last_error;
+	last_occur_error = encoder->stats.last_occur_error;
 	has_last_success = encoder->stats.has_last_success;
 	k_mutex_unlock(&modbus_encoder_stats_lock);
 
@@ -428,16 +437,17 @@ static void shell_print_encoder_stats(const struct shell *shell,
 	}
 
 	if (total_count > 0) {
-		success_rate_x100 = (uint32_t)(((uint64_t)success_count * 10000U) /
-					       total_count);
+		failure_rate_x100 =
+			(uint32_t)((((uint64_t)failure_count * 10000U) +
+				    (total_count / 2U)) /
+				   total_count);
 	}
 
 	shell_print(shell,
-		    "%s: total=%u success=%u failure=%u success_rate=%u.%02u%% success_intervals=%u avg=%u ms max=%u ms last_error=%d%s",
-		    encoder->name, total_count, success_count, failure_count,
-		    success_rate_x100 / 100U, success_rate_x100 % 100U,
-		    success_interval_count, avg_ms, max_success_interval_ms,
-		    last_error,
+		    "%s: fail=%u.%02u%%(%u/%u) last_occur_error=%d avg=%ums max=%ums%s",
+		    encoder->stats_name, failure_rate_x100 / 100U,
+		    failure_rate_x100 % 100U, failure_count, total_count,
+		    last_occur_error, avg_ms, max_success_interval_ms,
 		    has_last_success ? "" : " waiting_first_success");
 }
 
@@ -456,11 +466,11 @@ static void shell_print_anemometer_stats(const struct shell *shell,
 	uint32_t max_success_interval_ms;
 	uint32_t success_count;
 	uint32_t failure_count;
-	int last_error;
+	int last_occur_error;
 	bool has_last_success;
 	uint32_t avg_ms = 0;
 	uint32_t total_count;
-	uint32_t success_rate_x100 = 0;
+	uint32_t failure_rate_x100 = 0;
 
 	k_mutex_lock(&modbus_encoder_stats_lock, K_FOREVER);
 	success_interval_sum_ms = anem->stats.success_interval_sum_ms;
@@ -468,7 +478,7 @@ static void shell_print_anemometer_stats(const struct shell *shell,
 	max_success_interval_ms = anem->stats.max_success_interval_ms;
 	success_count = anem->stats.success_count;
 	failure_count = anem->stats.failure_count;
-	last_error = anem->stats.last_error;
+	last_occur_error = anem->stats.last_occur_error;
 	has_last_success = anem->stats.has_last_success;
 	k_mutex_unlock(&modbus_encoder_stats_lock);
 
@@ -479,16 +489,17 @@ static void shell_print_anemometer_stats(const struct shell *shell,
 	}
 
 	if (total_count > 0) {
-		success_rate_x100 = (uint32_t)(((uint64_t)success_count * 10000U) /
-					       total_count);
+		failure_rate_x100 =
+			(uint32_t)((((uint64_t)failure_count * 10000U) +
+				    (total_count / 2U)) /
+				   total_count);
 	}
 
 	shell_print(shell,
-		    "%s: total=%u success=%u failure=%u success_rate=%u.%02u%% success_intervals=%u avg=%u ms max=%u ms last_error=%d%s",
-		    anem->name, total_count, success_count, failure_count,
-		    success_rate_x100 / 100U, success_rate_x100 % 100U,
-		    success_interval_count, avg_ms, max_success_interval_ms,
-		    last_error,
+		    "%s: fail=%u.%02u%%(%u/%u) last_occur_error=%d avg=%ums max=%ums%s",
+		    anem->stats_name, failure_rate_x100 / 100U,
+		    failure_rate_x100 % 100U, failure_count, total_count,
+		    last_occur_error, avg_ms, max_success_interval_ms,
 		    has_last_success ? "" : " waiting_first_success");
 }
 
@@ -505,7 +516,7 @@ static int cmd_show_encoder_stats(const struct shell *shell, size_t argc,
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	shell_print(shell, "Modbus RTU stats; avg/max use successful intervals only:");
+	shell_print(shell, "Modbus RTU stats:");
 #if defined(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD)
 	shell_print_encoder_stats(shell, &slewing_encoder);
 #endif
