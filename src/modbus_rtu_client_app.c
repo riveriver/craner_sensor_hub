@@ -33,16 +33,22 @@ BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_HOISTING_ENCODER_NODE, okay),
 	     "Missing modbus-hook-encoder alias");
 #endif
 
+#if defined(CONFIG_CRANER_ENABLE_READ_ANEMOMETER_THREAD)
+BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_ANEMOMETER_NODE, okay),
+	     "Missing modbus-anemometer alias");
+#endif
+
 #define MODBUS_SLEWING_ENCODER_UNIT_ID 1
 #define MODBUS_LUFFING_ENCODER_UNIT_ID  3
 #define MODBUS_HOISTING_ENCODER_UNIT_ID 1
 #define MODBUS_ENCODER_BAUDRATE 115200
-#define MODBUS_ENCODER_RX_TIMEOUT_US 200000
+#define MODBUS_ENCODER_RX_TIMEOUT_US 30000
 #define MODBUS_ENCODER_POLL_PERIOD_MS 50
 #define MODBUS_ENCODER_START_ADDR 0x0002
 #define MODBUS_ENCODER_REGISTER_COUNT 2
 #define MODBUS_ENCODER_MAX_REGISTER_COUNT 2
-#define MODBUS_ANEMOMETER_POLL_PERIOD_MS 50
+#define MODBUS_ANEMOMETER_RX_TIMEOUT_US 100000
+#define MODBUS_ANEMOMETER_POLL_PERIOD_MS 100
 #define MODBUS_ANEMOMETER_UNIT_ID 4
 #define MODBUS_ANEMOMETER_START_ADDR 0x0009
 #define MODBUS_ANEMOMETER_REGISTER_COUNT 5
@@ -50,17 +56,17 @@ BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_HOISTING_ENCODER_NODE, okay),
 
 BUILD_ASSERT(MODBUS_ENCODER_REGISTER_COUNT <= MODBUS_ENCODER_MAX_REGISTER_COUNT,
 	     "Increase MODBUS_ENCODER_MAX_REGISTER_COUNT");
+BUILD_ASSERT(MODBUS_ANEMOMETER_REGISTER_COUNT <= MODBUS_ANEMOMETER_MAX_REGISTER_COUNT,
+	     "Increase MODBUS_ANEMOMETER_MAX_REGISTER_COUNT");
 
 struct modbus_encoder_stats {
-	uint64_t success_interval_sum_ms;
-	uint32_t success_interval_count;
-	uint32_t max_success_interval_ms;
-	uint32_t last_success_ms;
+	uint64_t success_latency_sum_ms;
+	uint32_t success_latency_count;
+	uint32_t max_success_latency_ms;
 	uint32_t success_count;
 	uint32_t failure_count;
 	int last_error;
 	int last_occur_error;
-	bool has_last_success;
 };
 
 struct modbus_encoder_client {
@@ -98,7 +104,7 @@ static const struct modbus_iface_param modbus_encoder_param = {
 
 static const struct modbus_iface_param modbus_anemometer_param = {
 	.mode = MODBUS_MODE_RTU,
-	.rx_timeout = MODBUS_ENCODER_RX_TIMEOUT_US,
+	.rx_timeout = MODBUS_ANEMOMETER_RX_TIMEOUT_US,
 	.serial = {
 		.baud = MODBUS_ANEMOMETER_BAUDRATE,
 		.parity = UART_CFG_PARITY_NONE,
@@ -141,7 +147,7 @@ static struct modbus_encoder_client luffing_encoder = {
 	.turn_count_name = "REG_LUFFING_TRUN_CNT",
 	.single_value_name = "REG_LUFFING_SINAGLE_VAL",
 	.health_event = SYSTEM_HEALTH_READ_LUFFING_ENCODER,
-	.start_delay_ms = 7,
+	.start_delay_ms = 10,
 	.iface = -1,
 };
 #endif
@@ -161,7 +167,7 @@ static struct modbus_encoder_client hook_encoder = {
 	.turn_count_name = "REG_HOISTING_TRUN_CNT",
 	.single_value_name = "REG_HOISTING_SINAGLE_VAL",
 	.health_event = SYSTEM_HEALTH_READ_HOISTING_ENCODER,
-	.start_delay_ms = 14,
+	.start_delay_ms = 20,
 	.iface = -1,
 };
 #endif
@@ -206,7 +212,7 @@ static struct modbus_anemometer_client anemometer = {
 	.wind_speed_name = "REG_ANEMOMETER_WIND_SPEED",
 	.wind_direction_name = "REG_ANEMOMETER_WIND_DIRECTION",
 	.health_event = SYSTEM_HEALTH_READ_ANEMOMETER,
-	.start_delay_ms = 21,
+	.start_delay_ms = 35,
 	.iface = -1,
 };
 #endif
@@ -323,16 +329,21 @@ static int modbus_encoder_record_registers(struct modbus_encoder_client *encoder
 }
 
 static void modbus_encoder_record_attempt(struct modbus_encoder_client *encoder,
-					  int err)
+					  int err, uint32_t elapsed_ms)
 {
 	struct modbus_encoder_stats *stats = &encoder->stats;
-	uint32_t now_ms = k_uptime_get_32();
-	uint32_t interval_ms;
 
 	k_mutex_lock(&modbus_encoder_stats_lock, K_FOREVER);
 
 	if (err == 0) {
 		stats->success_count++;
+		stats->success_latency_count++;
+		stats->success_latency_sum_ms += elapsed_ms;
+		if (elapsed_ms > stats->max_success_latency_ms) {
+			stats->max_success_latency_ms = elapsed_ms;
+		}
+
+		LOG_DBG("%s RTU success latency=%u ms", encoder->name, elapsed_ms);
 	} else {
 		stats->failure_count++;
 		stats->last_error = err;
@@ -342,39 +353,26 @@ static void modbus_encoder_record_attempt(struct modbus_encoder_client *encoder,
 	}
 
 	stats->last_error = 0;
-
-	if (!stats->has_last_success) {
-		stats->last_success_ms = now_ms;
-		stats->has_last_success = true;
-		k_mutex_unlock(&modbus_encoder_stats_lock);
-		return;
-	}
-
-	interval_ms = now_ms - stats->last_success_ms;
-	stats->last_success_ms = now_ms;
-
-	stats->success_interval_count++;
-	stats->success_interval_sum_ms += interval_ms;
-	if (interval_ms > stats->max_success_interval_ms) {
-		stats->max_success_interval_ms = interval_ms;
-	}
-
-	LOG_DBG("%s RTU success interval=%u ms", encoder->name, interval_ms);
 
 	k_mutex_unlock(&modbus_encoder_stats_lock);
 }
 
 static void modbus_anemometer_record_attempt(struct modbus_anemometer_client *anem,
-					     int err)
+					     int err, uint32_t elapsed_ms)
 {
 	struct modbus_encoder_stats *stats = &anem->stats;
-	uint32_t now_ms = k_uptime_get_32();
-	uint32_t interval_ms;
 
 	k_mutex_lock(&modbus_encoder_stats_lock, K_FOREVER);
 
 	if (err == 0) {
 		stats->success_count++;
+		stats->success_latency_count++;
+		stats->success_latency_sum_ms += elapsed_ms;
+		if (elapsed_ms > stats->max_success_latency_ms) {
+			stats->max_success_latency_ms = elapsed_ms;
+		}
+
+		LOG_DBG("%s RTU success latency=%u ms", anem->name, elapsed_ms);
 	} else {
 		stats->failure_count++;
 		stats->last_error = err;
@@ -384,24 +382,6 @@ static void modbus_anemometer_record_attempt(struct modbus_anemometer_client *an
 	}
 
 	stats->last_error = 0;
-
-	if (!stats->has_last_success) {
-		stats->last_success_ms = now_ms;
-		stats->has_last_success = true;
-		k_mutex_unlock(&modbus_encoder_stats_lock);
-		return;
-	}
-
-	interval_ms = now_ms - stats->last_success_ms;
-	stats->last_success_ms = now_ms;
-
-	stats->success_interval_count++;
-	stats->success_interval_sum_ms += interval_ms;
-	if (interval_ms > stats->max_success_interval_ms) {
-		stats->max_success_interval_ms = interval_ms;
-	}
-
-	LOG_DBG("%s RTU success interval=%u ms", anem->name, interval_ms);
 
 	k_mutex_unlock(&modbus_encoder_stats_lock);
 }
@@ -409,31 +389,29 @@ static void modbus_anemometer_record_attempt(struct modbus_anemometer_client *an
 static void shell_print_encoder_stats(const struct shell *shell,
 				      struct modbus_encoder_client *encoder)
 {
-	uint64_t success_interval_sum_ms;
-	uint32_t success_interval_count;
-	uint32_t max_success_interval_ms;
+	uint64_t success_latency_sum_ms;
+	uint32_t success_latency_count;
+	uint32_t max_success_latency_ms;
 	uint32_t success_count;
 	uint32_t failure_count;
 	int last_occur_error;
-	bool has_last_success;
 	uint32_t avg_ms = 0;
 	uint32_t total_count;
 	uint32_t failure_rate_x100 = 0;
 
 	k_mutex_lock(&modbus_encoder_stats_lock, K_FOREVER);
-	success_interval_sum_ms = encoder->stats.success_interval_sum_ms;
-	success_interval_count = encoder->stats.success_interval_count;
-	max_success_interval_ms = encoder->stats.max_success_interval_ms;
+	success_latency_sum_ms = encoder->stats.success_latency_sum_ms;
+	success_latency_count = encoder->stats.success_latency_count;
+	max_success_latency_ms = encoder->stats.max_success_latency_ms;
 	success_count = encoder->stats.success_count;
 	failure_count = encoder->stats.failure_count;
 	last_occur_error = encoder->stats.last_occur_error;
-	has_last_success = encoder->stats.has_last_success;
 	k_mutex_unlock(&modbus_encoder_stats_lock);
 
 	total_count = success_count + failure_count;
-	if (success_interval_count > 0) {
-		avg_ms = (uint32_t)(success_interval_sum_ms /
-				    success_interval_count);
+	if (success_latency_count > 0) {
+		avg_ms = (uint32_t)(success_latency_sum_ms /
+				    success_latency_count);
 	}
 
 	if (total_count > 0) {
@@ -447,8 +425,8 @@ static void shell_print_encoder_stats(const struct shell *shell,
 		    "%s: fail=%u.%02u%%(%u/%u) last_occur_error=%d avg=%ums max=%ums%s",
 		    encoder->stats_name, failure_rate_x100 / 100U,
 		    failure_rate_x100 % 100U, failure_count, total_count,
-		    last_occur_error, avg_ms, max_success_interval_ms,
-		    has_last_success ? "" : " waiting_first_success");
+		    last_occur_error, avg_ms, max_success_latency_ms,
+		    success_count > 0U ? "" : " waiting_first_success");
 }
 
 static void reset_encoder_stats(struct modbus_encoder_client *encoder)
@@ -461,31 +439,29 @@ static void reset_encoder_stats(struct modbus_encoder_client *encoder)
 static void shell_print_anemometer_stats(const struct shell *shell,
 					 struct modbus_anemometer_client *anem)
 {
-	uint64_t success_interval_sum_ms;
-	uint32_t success_interval_count;
-	uint32_t max_success_interval_ms;
+	uint64_t success_latency_sum_ms;
+	uint32_t success_latency_count;
+	uint32_t max_success_latency_ms;
 	uint32_t success_count;
 	uint32_t failure_count;
 	int last_occur_error;
-	bool has_last_success;
 	uint32_t avg_ms = 0;
 	uint32_t total_count;
 	uint32_t failure_rate_x100 = 0;
 
 	k_mutex_lock(&modbus_encoder_stats_lock, K_FOREVER);
-	success_interval_sum_ms = anem->stats.success_interval_sum_ms;
-	success_interval_count = anem->stats.success_interval_count;
-	max_success_interval_ms = anem->stats.max_success_interval_ms;
+	success_latency_sum_ms = anem->stats.success_latency_sum_ms;
+	success_latency_count = anem->stats.success_latency_count;
+	max_success_latency_ms = anem->stats.max_success_latency_ms;
 	success_count = anem->stats.success_count;
 	failure_count = anem->stats.failure_count;
 	last_occur_error = anem->stats.last_occur_error;
-	has_last_success = anem->stats.has_last_success;
 	k_mutex_unlock(&modbus_encoder_stats_lock);
 
 	total_count = success_count + failure_count;
-	if (success_interval_count > 0) {
-		avg_ms = (uint32_t)(success_interval_sum_ms /
-				    success_interval_count);
+	if (success_latency_count > 0) {
+		avg_ms = (uint32_t)(success_latency_sum_ms /
+				    success_latency_count);
 	}
 
 	if (total_count > 0) {
@@ -499,8 +475,8 @@ static void shell_print_anemometer_stats(const struct shell *shell,
 		    "%s: fail=%u.%02u%%(%u/%u) last_occur_error=%d avg=%ums max=%ums%s",
 		    anem->stats_name, failure_rate_x100 / 100U,
 		    failure_rate_x100 % 100U, failure_count, total_count,
-		    last_occur_error, avg_ms, max_success_interval_ms,
-		    has_last_success ? "" : " waiting_first_success");
+		    last_occur_error, avg_ms, max_success_latency_ms,
+		    success_count > 0U ? "" : " waiting_first_success");
 }
 
 static void reset_anemometer_stats(struct modbus_anemometer_client *anem)
@@ -586,21 +562,26 @@ static void modbus_anemometer_thread(void *p1, void *p2, void *p3)
 	}
 
 	LOG_INF("%s Modbus RTU client started, iface=%s, 115200 8N1, rx_timeout=%u us, unit=%u, addr=0x%04x, qty=%u",
-		anem->name, anem->iface_name, MODBUS_ENCODER_RX_TIMEOUT_US,
+		anem->name, anem->iface_name, MODBUS_ANEMOMETER_RX_TIMEOUT_US,
 		anem->unit_id, anem->start_addr,
 		(unsigned int)anem->register_count);
 
 	next_poll_time = k_uptime_get();
 
 	while (1) {
+		uint32_t request_start_ms;
+		uint32_t elapsed_ms;
+
 		next_poll_time += MODBUS_ANEMOMETER_POLL_PERIOD_MS;
 
+		request_start_ms = k_uptime_get_32();
 		err = modbus_read_holding_regs(anem->iface,
 					       anem->unit_id,
 					       anem->start_addr,
 					       regs,
 					       anem->register_count);
-		modbus_anemometer_record_attempt(anem, err);
+		elapsed_ms = k_uptime_get_32() - request_start_ms;
+		modbus_anemometer_record_attempt(anem, err, elapsed_ms);
 
 		if (err == 0) {
 			int write_err;
@@ -664,14 +645,19 @@ static void modbus_encoder_thread(void *p1, void *p2, void *p3)
 	next_poll_time = k_uptime_get();
 
 	while (1) {
+		uint32_t request_start_ms;
+		uint32_t elapsed_ms;
+
 		next_poll_time += MODBUS_ENCODER_POLL_PERIOD_MS;
 
+		request_start_ms = k_uptime_get_32();
 		err = modbus_read_holding_regs(encoder->iface,
 					       encoder->unit_id,
 					       encoder->start_addr,
 					       regs,
 					       encoder->register_count);
-		modbus_encoder_record_attempt(encoder, err);
+		elapsed_ms = k_uptime_get_32() - request_start_ms;
+		modbus_encoder_record_attempt(encoder, err, elapsed_ms);
 
 		if (err == 0) {
 			int write_err;

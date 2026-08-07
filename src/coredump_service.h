@@ -21,10 +21,8 @@ void coredump_service_get_status(struct coredump_service_status *status);
 int coredump_service_refresh(void);
 int coredump_service_clear_stored_dump(void);
 int coredump_service_format_report(char *buf, size_t len);
-int coredump_service_publish_report(void);
 int coredump_service_read_stored_dump(off_t offset, uint8_t *buf, size_t len);
 int coredump_service_format_hex_line(const uint8_t *data, size_t data_len,
 				     char *buf, size_t buf_len);
-int coredump_service_publish_export(void);
 
 #endif /* COREDUMP_SERVICE_H_ */

@@ -1,7 +1,4 @@
 #include "coredump_service.h"
-#ifdef CONFIG_CRANER_ENABLE_MQTT_SERVICE_MANAGER
-#include "mqtt_service_manager.h"
-#endif
 
 #include <errno.h>
 #include <stdint.h>
@@ -30,34 +27,6 @@ static int hex_nibble_to_char(uint8_t nibble, char *ch)
 	}
 
 	return -EINVAL;
-}
-
-static int coredump_service_check_export_ready(size_t *stored_size)
-{
-	int rc;
-
-	rc = coredump_service_refresh();
-	if (rc != 0) {
-		return rc;
-	}
-
-	if (!service_status.stored_dump_found) {
-		return -ENOENT;
-	}
-
-	if (!service_status.stored_dump_valid) {
-		return -EBADMSG;
-	}
-
-	if (service_status.stored_dump_size == 0U) {
-		return -ENODATA;
-	}
-
-	if (stored_size != NULL) {
-		*stored_size = service_status.stored_dump_size;
-	}
-
-	return 0;
 }
 
 int coredump_service_refresh(void)
@@ -167,17 +136,10 @@ int coredump_service_format_report(char *buf, size_t len)
 
 	written = snprintk(buf, len,
 			   "{\"type\":\"coredump\","
-#ifdef CONFIG_CRANER_ENABLE_MQTT_SERVICE_MANAGER
-			   "\"uid\":\"%s\",\"hostname\":\"%s\","
-#endif
 			   "\"found\":%s,\"valid\":%s,"
 			   "\"size\":%u,\"backend_error\":%d,"
 			   "\"verify_result\":%d,\"last_error\":%d,"
 			   "\"uptime_ms\":%lld}",
-#ifdef CONFIG_CRANER_ENABLE_MQTT_SERVICE_MANAGER
-			   mqtt_service_manager_device_uid_get(),
-			   mqtt_service_manager_device_name_get(),
-#endif
 			   status.stored_dump_found ? "true" : "false",
 			   status.stored_dump_valid ? "true" : "false",
 			   (uint32_t)status.stored_dump_size,
@@ -192,29 +154,6 @@ int coredump_service_format_report(char *buf, size_t len)
 	}
 
 	return 0;
-}
-
-int coredump_service_publish_report(void)
-{
-#ifdef CONFIG_CRANER_ENABLE_MQTT_SERVICE_MANAGER
-	char payload[384];
-	int rc;
-
-	if (!mqtt_service_manager_is_connected()) {
-		return -ENOTCONN;
-	}
-
-	rc = coredump_service_format_report(payload, sizeof(payload));
-	if (rc != 0) {
-		return rc;
-	}
-
-	return mqtt_service_manager_publish(
-		CONFIG_CRANER_COREDUMP_SERVICE_MQTT_TOPIC, payload,
-		strlen(payload), MQTT_QOS_0_AT_MOST_ONCE, false);
-#else
-	return -ENOTSUP;
-#endif
 }
 
 int coredump_service_read_stored_dump(off_t offset, uint8_t *buf, size_t len)
@@ -266,64 +205,4 @@ int coredump_service_format_hex_line(const uint8_t *data, size_t data_len,
 
 	buf[pos] = '\0';
 	return 0;
-}
-
-int coredump_service_publish_export(void)
-{
-#ifdef CONFIG_CRANER_ENABLE_MQTT_SERVICE_MANAGER
-	uint8_t chunk[CONFIG_CRANER_COREDUMP_EXPORT_CHUNK_BYTES];
-	char line[(CONFIG_CRANER_COREDUMP_EXPORT_CHUNK_BYTES * 2U) + 5U];
-	size_t stored_size;
-	size_t remaining;
-	off_t offset = 0;
-	int rc;
-
-	if (!mqtt_service_manager_is_connected()) {
-		return -ENOTCONN;
-	}
-
-	rc = coredump_service_check_export_ready(&stored_size);
-	if (rc != 0) {
-		return rc;
-	}
-
-	rc = mqtt_service_manager_publish(
-		CONFIG_CRANER_COREDUMP_SERVICE_MQTT_TOPIC, "#CD:BEGIN#",
-		strlen("#CD:BEGIN#"), MQTT_QOS_0_AT_MOST_ONCE, false);
-	if (rc != 0) {
-		return rc;
-	}
-
-	remaining = stored_size;
-	while (remaining > 0U) {
-		size_t chunk_len = MIN(remaining, sizeof(chunk));
-
-		rc = coredump_service_read_stored_dump(offset, chunk, chunk_len);
-		if (rc != 0) {
-			return rc;
-		}
-
-		rc = coredump_service_format_hex_line(chunk, chunk_len, line,
-						      sizeof(line));
-		if (rc != 0) {
-			return rc;
-		}
-
-		rc = mqtt_service_manager_publish(
-			CONFIG_CRANER_COREDUMP_SERVICE_MQTT_TOPIC, line,
-			strlen(line), MQTT_QOS_0_AT_MOST_ONCE, false);
-		if (rc != 0) {
-			return rc;
-		}
-
-		offset += chunk_len;
-		remaining -= chunk_len;
-	}
-
-	return mqtt_service_manager_publish(
-		CONFIG_CRANER_COREDUMP_SERVICE_MQTT_TOPIC, "#CD:END#",
-		strlen("#CD:END#"), MQTT_QOS_0_AT_MOST_ONCE, false);
-#else
-	return -ENOTSUP;
-#endif
 }

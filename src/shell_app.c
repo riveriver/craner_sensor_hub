@@ -863,7 +863,6 @@ static int cmd_coredump_report(const struct shell *shell, size_t argc,
 {
 	char report[384];
 	int rc;
-	int publish_rc;
 
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
@@ -875,25 +874,11 @@ static int cmd_coredump_report(const struct shell *shell, size_t argc,
 	}
 
 	shell_print(shell, "%s", report);
-
-	publish_rc = coredump_service_publish_report();
-	if (publish_rc == -ENOTCONN) {
-		shell_warn(shell, "MQTT not connected, report printed locally only");
-		return 0;
-	}
-
-	if (publish_rc != 0) {
-		shell_error(shell, "publish coredump report failed: %d",
-			    publish_rc);
-		return publish_rc;
-	}
-
-	shell_print(shell, "coredump report published to MQTT");
 	return 0;
 }
 
 SHELL_CMD_REGISTER(coredump_report, NULL,
-		   "Print coredump status report and publish it to MQTT.",
+		   "Print coredump status report.",
 		   cmd_coredump_report);
 
 static int cmd_coredump_export(const struct shell *shell, size_t argc,
@@ -905,7 +890,6 @@ static int cmd_coredump_export(const struct shell *shell, size_t argc,
 	size_t remaining;
 	off_t offset = 0;
 	int rc;
-	int publish_rc;
 
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
@@ -957,25 +941,11 @@ static int cmd_coredump_export(const struct shell *shell, size_t argc,
 		remaining -= chunk_len;
 	}
 	shell_print(shell, "#CD:END#");
-
-	publish_rc = coredump_service_publish_export();
-	if (publish_rc == -ENOTCONN) {
-		shell_warn(shell, "MQTT not connected, coredump exported locally only");
-		return 0;
-	}
-
-	if (publish_rc != 0) {
-		shell_error(shell, "publish coredump export failed: %d",
-			    publish_rc);
-		return publish_rc;
-	}
-
-	shell_print(shell, "coredump export published to MQTT");
 	return 0;
 }
 
 SHELL_CMD_REGISTER(coredump_export, NULL,
-		   "Export full stored coredump to shell and MQTT.",
+		   "Export full stored coredump to shell.",
 		   cmd_coredump_export);
 #endif
 

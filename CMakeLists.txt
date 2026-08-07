@@ -68,15 +68,3 @@ target_sources_ifdef(CONFIG_CRANER_ENABLE_MODBUS_REGISTER_STORE app PRIVATE
 target_sources_ifdef(CONFIG_CRANER_ENABLE_COREDUMP_SERVICE app PRIVATE
 	src/coredump_service.c
 )
-
-target_sources_ifdef(CONFIG_CRANER_ENABLE_MQTT_SERVICE_MANAGER app PRIVATE
-	src/mqtt_service_manager.c
-)
-
-target_sources_ifdef(CONFIG_CRANER_ENABLE_MQTT_LOG_SERVICE app PRIVATE
-	src/mqtt_log_service.c
-)
-
-target_sources_ifdef(CONFIG_CRANER_ENABLE_MQTT_SHELL_SERVICE app PRIVATE
-	src/mqtt_shell_service.c
-)

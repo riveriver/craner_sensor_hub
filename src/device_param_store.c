@@ -45,32 +45,6 @@ static struct device_param_entry params[] = {
 	},
 	{
 		.record = {
-			.key = "mqtt/host",
-			.type = DEVICE_PARAM_TYPE_STRING,
-			.default_value = CONFIG_CRANER_MQTT_SERVICE_MANAGER_BROKER_HOST,
-			.range = "1..63 printable chars",
-		},
-	},
-	{
-		.record = {
-			.key = "mqtt/port",
-			.type = DEVICE_PARAM_TYPE_INT,
-			.default_value = STRINGIFY(CONFIG_CRANER_MQTT_SERVICE_MANAGER_BROKER_PORT),
-			.range = "1..65535",
-		},
-		.min_value = 1,
-		.max_value = 65535,
-	},
-	{
-		.record = {
-			.key = "mqtt/username",
-			.type = DEVICE_PARAM_TYPE_STRING,
-			.default_value = CONFIG_CRANER_MQTT_SERVICE_MANAGER_USERNAME,
-			.range = "0..63 printable chars",
-		},
-	},
-	{
-		.record = {
 			.key = "device/project",
 			.type = DEVICE_PARAM_TYPE_STRING,
 			.default_value = "project",
@@ -223,8 +197,7 @@ static int validate_param_value(const struct device_param_entry *entry,
 			}
 			return strlen(value) <= 15U ? 0 : -ERANGE;
 		}
-		return is_printable_ascii_string(value,
-			strcmp(entry->record.key, "mqtt/username") == 0) ? 0 : -EINVAL;
+		return is_printable_ascii_string(value, false) ? 0 : -EINVAL;
 
 	case DEVICE_PARAM_TYPE_INT:
 		errno = 0;
