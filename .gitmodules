@@ -1,0 +1,3 @@
+[submodule "zephyr-dev-workflow"]
+	path = zephyr-dev-workflow
+	url = https://github.com/HKCRC/zephyr-dev-workflow.git

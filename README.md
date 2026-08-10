@@ -15,10 +15,16 @@
 
 ## 编译
 
+首次拉取仓库后初始化共享开发脚本子模块：
+
+```powershell
+git submodule update --init --recursive
+```
+
 在当前目录执行：
 
 ```powershell
-.\build.ps1
+.\zephyr-dev-workflow\script\build.ps1
 ```
 
 等价的手动命令：
@@ -33,7 +39,7 @@ python -m west build -b craner_general_stm32h743vit6 . -d build\craner_general_s
 将 ST-LINK 连接到板子后，烧录已有构建产物：
 
 ```powershell
-.\flash.ps1
+.\zephyr-dev-workflow\script\flash.ps1
 ```
 
 等价的手动命令：
