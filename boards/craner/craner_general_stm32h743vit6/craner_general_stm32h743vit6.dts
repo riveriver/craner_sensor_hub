@@ -214,7 +214,7 @@
 &uart7 {
 	pinctrl-0 = <&uart7_tx_pe8 &uart7_rx_pe7>;
 	pinctrl-names = "default";
-	current-speed = <115200>;
+	current-speed = <9600>;
 	status = "okay";
 
 	modbus_slewing_encoder: modbus-slewing-encoder {
@@ -226,7 +226,7 @@
 &uart8 {
 	pinctrl-0 = <&uart8_tx_pe1 &uart8_rx_pe0>;
 	pinctrl-names = "default";
-	current-speed = <115200>;
+	current-speed = <9600>;
 	status = "okay";
 
 	modbus_luffing_encoder: modbus-luffing-encoder {
@@ -238,7 +238,7 @@
 &uart4 {
 	pinctrl-0 = <&uart4_tx_pd1 &uart4_rx_pd0>;
 	pinctrl-names = "default";
-	current-speed = <115200>;
+	current-speed = <9600>;
 	status = "okay";
 
 	modbus_hook_encoder: modbus-hook-encoder {
