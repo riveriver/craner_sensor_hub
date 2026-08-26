@@ -15,15 +15,15 @@ static void system_health_log_offline_event(
 
 const struct system_health_event_obj system_health_event_table[] = {
 	{
-		.event = SYSTEM_HEALTH_ETHERNET,
+		.event = SYSTEM_HEALTH_SYSTEM_OFFLINE,
 		.enable = false,
 		.priority = 1,
 		.offline_timeout_ms = 3000,
 		.offline_first_func = system_health_log_offline_event,
 	},
 	{
-		.event = SYSTEM_HEALTH_MODBUS_TCP,
-		.enable = false,
+		.event = SYSTEM_HEALTH_ETHERNET,
+		.enable = true,
 		.priority = 2,
 		.offline_timeout_ms = 3000,
 		.offline_first_func = system_health_log_offline_event,
