@@ -1,0 +1,260 @@
+menu "System health service"
+
+config SYS_HEALTH_SERVICE
+	bool "Enable system health service"
+	default n
+	help
+	  Enable the reusable system health service core. The core owns health
+	  events, offline detection, and action state. Probes/checks detect
+	  health conditions. Backends handle requested actions or presentation.
+
+config SYS_HEALTH_CHECK_INTERVAL_MS
+	int "System health check interval in milliseconds"
+	default 100
+	range 10 10000
+	depends on SYS_HEALTH_SERVICE
+
+config SYS_HEALTH_MAX_EVENTS
+	int "Maximum registered health events"
+	default 16
+	range 4 64
+	depends on SYS_HEALTH_SERVICE
+
+config SYS_HEALTH_MAX_ACTION_CALLBACKS
+	int "Maximum registered health action callbacks"
+	default 4
+	range 1 16
+	depends on SYS_HEALTH_SERVICE
+
+config SYS_HEALTH_MAX_ACTION_HANDLERS
+	int "Maximum registered health action handlers"
+	default 4
+	range 1 16
+	depends on SYS_HEALTH_SERVICE
+
+config SYS_HEALTH_MAX_PERIODIC_HANDLERS
+	int "Maximum registered health periodic handlers"
+	default 4
+	range 1 16
+	depends on SYS_HEALTH_SERVICE
+
+config SYS_HEALTH_WDT_TIMEOUT_MS
+	int "System health watchdog timeout in milliseconds"
+	default 30000
+	range 1000 30000
+	depends on SYS_HEALTH_WATCHDOG_FEED_BACKEND
+
+config SYS_HEALTH_WATCHDOG_FEED_BACKEND
+	bool "Enable watchdog feed backend"
+	default n
+	depends on SYS_HEALTH_SERVICE && WATCHDOG
+	help
+	  Own the hardware watchdog feed loop. This backend can optionally stop
+	  feeding when a health action requests watchdog feed stop.
+
+config SYS_HEALTH_WATCHDOG_FEED_INTERVAL_MS
+	int "Watchdog feed interval in milliseconds"
+	default 1000
+	range 100 30000
+	depends on SYS_HEALTH_WATCHDOG_FEED_BACKEND
+
+config SYS_HEALTH_REBOOT_ACTION_BACKEND
+	bool "Enable reboot action backend"
+	default n
+	depends on SYS_HEALTH_SERVICE && REBOOT
+	help
+	  Reboot the system when a health event action requests reboot. Without
+	  this backend the core only latches reboot_requested status.
+
+config SYS_HEALTH_REBOOT_ACTION_DELAY_MS
+	int "Delay before executing requested reboot"
+	default 250
+	range 0 60000
+	depends on SYS_HEALTH_REBOOT_ACTION_BACKEND
+
+config SYS_HEALTH_LED_INDICATOR_BACKEND
+	bool "Enable health event LED display backend"
+	default n
+	depends on SYS_HEALTH_SERVICE && GPIO
+	help
+	  Drive the heartbeat LED and display the highest-priority offline event
+	  through blink count.
+
+config SYS_HEALTH_NORMAL_ON_MS
+	int "Normal LED on time in milliseconds"
+	default 500
+	range 10 10000
+	depends on SYS_HEALTH_LED_INDICATOR_BACKEND
+
+config SYS_HEALTH_NORMAL_OFF_MS
+	int "Normal LED off time in milliseconds"
+	default 500
+	range 10 10000
+	depends on SYS_HEALTH_LED_INDICATOR_BACKEND
+
+config SYS_HEALTH_ERROR_BLINK_MS
+	int "Error LED blink slice in milliseconds"
+	default 250
+	range 50 2000
+	depends on SYS_HEALTH_LED_INDICATOR_BACKEND
+
+config SYS_HEALTH_ERROR_PAUSE_MS
+	int "Error LED pause in milliseconds"
+	default 3000
+	range 500 10000
+	depends on SYS_HEALTH_LED_INDICATOR_BACKEND
+
+config SYS_HEALTH_STACK_USAGE_CHECK
+	bool "Enable stack usage check"
+	default n
+	depends on SYS_HEALTH_SERVICE
+	depends on THREAD_STACK_INFO && THREAD_MONITOR && INIT_STACKS
+
+config SYS_HEALTH_STACK_USAGE_CHECK_INTERVAL_MS
+	int "Stack usage check interval in milliseconds"
+	default 10000
+	range 1000 600000
+	depends on SYS_HEALTH_STACK_USAGE_CHECK
+
+config SYS_HEALTH_STACK_WARN_UNUSED_BYTES
+	int "System health stack warning free bytes threshold"
+	default 128
+	range 128 8192
+	depends on SYS_HEALTH_STACK_USAGE_CHECK
+
+config SYS_HEALTH_STACK_WARN_USAGE_PERCENT
+	int "System health stack warning usage percentage threshold"
+	default 80
+	range 1 99
+	depends on SYS_HEALTH_STACK_USAGE_CHECK
+
+config SYS_HEALTH_STACK_USAGE_CHECK_THREAD_STACK_SIZE
+	int "Stack usage check thread stack size"
+	default 2048
+	range 1024 8192
+	depends on SYS_HEALTH_STACK_USAGE_CHECK
+
+config SYS_HEALTH_STACK_USAGE_CHECK_THREAD_PRIORITY
+	int "Stack usage check thread priority"
+	default 8
+	range 0 15
+	depends on SYS_HEALTH_STACK_USAGE_CHECK
+
+config SYS_HEALTH_ICMP_PROBE
+	bool "Enable ICMP health probe"
+	default n
+	depends on SYS_HEALTH_SERVICE && NET_IPV4
+	help
+	  Periodically send ICMP echo requests to a configured IPv4 target and
+	  report failures to a health event. Product policy decides whether that
+	  event raises degraded state or requests a reboot.
+
+config SYS_HEALTH_ICMP_PROBE_EVENT_ID
+	int "Health event ID updated by the ICMP probe"
+	default 0
+	range 0 65535
+	depends on SYS_HEALTH_ICMP_PROBE
+	help
+	  Health event ID to report when the ICMP probe succeeds or fails. The
+	  event itself must be registered by the application.
+
+config SYS_HEALTH_ICMP_PROBE_TARGET_GATEWAY
+	bool "Use default interface IPv4 gateway as ICMP probe target"
+	default y
+	depends on SYS_HEALTH_ICMP_PROBE
+	help
+	  Read the current gateway from the default network interface before each
+	  probe.
+
+config SYS_HEALTH_ICMP_PROBE_TARGET_IPV4
+	string "ICMP probe target IPv4"
+	default "0.0.0.0"
+	depends on SYS_HEALTH_ICMP_PROBE && !SYS_HEALTH_ICMP_PROBE_TARGET_GATEWAY
+	help
+	  IPv4 target used by the optional ICMP probe. Product applications
+	  should override this with a stable network target such as the gateway.
+
+config SYS_HEALTH_ICMP_PROBE_STARTUP_GRACE_MS
+	int "ICMP probe startup grace time in milliseconds"
+	default 30000
+	range 0 300000
+	depends on SYS_HEALTH_ICMP_PROBE
+
+config SYS_HEALTH_ICMP_PROBE_PERIOD_MS
+	int "ICMP probe period in milliseconds"
+	default 5000
+	range 1000 600000
+	depends on SYS_HEALTH_ICMP_PROBE
+
+config SYS_HEALTH_ICMP_PROBE_TIMEOUT_MS
+	int "ICMP probe timeout in milliseconds"
+	default 1000
+	range 100 30000
+	depends on SYS_HEALTH_ICMP_PROBE
+
+config SYS_HEALTH_ICMP_PROBE_MAX_CONSECUTIVE_FAILURES
+	int "Maximum consecutive ICMP probe failures"
+	default 8
+	range 1 100
+	depends on SYS_HEALTH_ICMP_PROBE
+
+config SYS_HEALTH_ICMP_PROBE_THREAD_STACK_SIZE
+	int "ICMP probe thread stack size"
+	default 2048
+	range 1024 8192
+	depends on SYS_HEALTH_ICMP_PROBE
+
+config SYS_HEALTH_ICMP_PROBE_THREAD_PRIORITY
+	int "ICMP probe thread priority"
+	default 8
+	range 0 15
+	depends on SYS_HEALTH_ICMP_PROBE
+
+config SYS_HEALTH_SCHEDULED_REBOOT
+	bool "Enable scheduled health reboot"
+	default n
+	depends on SYS_HEALTH_SERVICE && REBOOT
+
+config SYS_HEALTH_SCHEDULED_REBOOT_UNRELIABLE_UPTIME_HOURS
+	int "Scheduled reboot uptime limit when time is unavailable"
+	default 24
+	range 1 168
+	depends on SYS_HEALTH_SCHEDULED_REBOOT
+
+config SYS_HEALTH_SCHEDULED_REBOOT_TIMEZONE_OFFSET_MINUTES
+	int "Scheduled reboot local timezone offset in minutes"
+	default 480
+	range -720 840
+	depends on SYS_HEALTH_SCHEDULED_REBOOT
+
+config SYS_HEALTH_SCHEDULED_REBOOT_LOCAL_HOUR
+	int "Scheduled reboot local hour"
+	default 4
+	range 0 23
+	depends on SYS_HEALTH_SCHEDULED_REBOOT
+
+config SYS_HEALTH_SCHEDULED_REBOOT_LOCAL_MINUTE
+	int "Scheduled reboot local minute"
+	default 0
+	range 0 59
+	depends on SYS_HEALTH_SCHEDULED_REBOOT
+
+config SYS_HEALTH_SCHEDULED_REBOOT_WINDOW_MINUTES
+	int "Scheduled reboot local window in minutes"
+	default 5
+	range 1 60
+	depends on SYS_HEALTH_SCHEDULED_REBOOT
+
+config SYS_HEALTH_SCHEDULED_REBOOT_MIN_UPTIME_MS
+	int "Minimum uptime before scheduled reboot"
+	default 600000
+	range 0 3600000
+	depends on SYS_HEALTH_SCHEDULED_REBOOT
+
+config SYS_HEALTH_SCHEDULED_REBOOT_CHECK_INTERVAL_MS
+	int "Scheduled reboot check interval in milliseconds"
+	default 30000
+	range 1000 600000
+	depends on SYS_HEALTH_SCHEDULED_REBOOT
+
+endmenu

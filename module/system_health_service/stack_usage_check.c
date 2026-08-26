@@ -1,4 +1,5 @@
-#include "stack_monitor_service.h"
+#include "stack_usage_check.h"
+#include "system_health_service.h"
 
 #include <errno.h>
 #include <string.h>
@@ -7,21 +8,21 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/util.h>
 
-LOG_MODULE_REGISTER(stack_monitor_service, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(stack_usage_check, CONFIG_LOG_DEFAULT_LEVEL);
 
 struct stack_scan_context {
-	struct stack_monitor_status status;
+	struct stack_usage_check_status status;
 	bool log_warning;
 };
 
 struct stack_foreach_context {
-	stack_monitor_thread_cb_t cb;
+	stack_usage_check_thread_cb_t cb;
 	void *user_data;
 	int first_error;
 };
 
-static K_MUTEX_DEFINE(stack_monitor_lock);
-static struct stack_monitor_status monitor_status;
+static K_MUTEX_DEFINE(stack_usage_check_lock);
+static struct stack_usage_check_status check_status;
 
 static uint8_t stack_usage_percent(size_t used, size_t size)
 {
@@ -32,21 +33,21 @@ static uint8_t stack_usage_percent(size_t used, size_t size)
 	return (uint8_t)MIN((used * 100U) / size, 100U);
 }
 
-static bool stack_info_is_warning(const struct stack_monitor_thread_info *info)
+static bool stack_info_is_warning(const struct stack_usage_check_thread_info *info)
 {
 	if (info->error != 0 || info->stack_size == 0U) {
 		return false;
 	}
 
 	return info->unused <
-		       CONFIG_CRANER_SYSTEM_HEALTH_STACK_WARN_UNUSED_BYTES ||
+		       CONFIG_SYS_HEALTH_STACK_WARN_UNUSED_BYTES ||
 	       info->usage_percent >=
-		       CONFIG_CRANER_SYSTEM_HEALTH_STACK_WARN_USAGE_PERCENT;
+		       CONFIG_SYS_HEALTH_STACK_WARN_USAGE_PERCENT;
 }
 
 static bool stack_info_is_worse(
-	const struct stack_monitor_thread_info *candidate,
-	const struct stack_monitor_thread_info *current)
+	const struct stack_usage_check_thread_info *candidate,
+	const struct stack_usage_check_thread_info *current)
 {
 	if (candidate->error != 0 || candidate->stack_size == 0U) {
 		return false;
@@ -64,7 +65,7 @@ static bool stack_info_is_worse(
 }
 
 static int fill_stack_thread_info(const struct k_thread *thread,
-				  struct stack_monitor_thread_info *info)
+				  struct stack_usage_check_thread_info *info)
 {
 	const char *name;
 	size_t unused = 0U;
@@ -99,7 +100,7 @@ static int fill_stack_thread_info(const struct k_thread *thread,
 static void stack_scan_cb(const struct k_thread *thread, void *user_data)
 {
 	struct stack_scan_context *context = user_data;
-	struct stack_monitor_thread_info info;
+	struct stack_usage_check_thread_info info;
 	int rc;
 
 	rc = fill_stack_thread_info(thread, &info);
@@ -126,7 +127,7 @@ static void stack_scan_cb(const struct k_thread *thread, void *user_data)
 	}
 }
 
-void stack_monitor_service_scan(uint32_t now_ms, bool log_warning)
+void stack_usage_check_scan(uint32_t now_ms, bool log_warning)
 {
 	struct stack_scan_context context;
 
@@ -137,34 +138,34 @@ void stack_monitor_service_scan(uint32_t now_ms, bool log_warning)
 
 	k_thread_foreach_unlocked(stack_scan_cb, &context);
 
-	k_mutex_lock(&stack_monitor_lock, K_FOREVER);
-	context.status.scan_count = monitor_status.scan_count + 1U;
-	context.status.warn_count += monitor_status.warn_count;
-	if (stack_info_is_worse(&monitor_status.worst_ever,
+	k_mutex_lock(&stack_usage_check_lock, K_FOREVER);
+	context.status.scan_count = check_status.scan_count + 1U;
+	context.status.warn_count += check_status.warn_count;
+	if (stack_info_is_worse(&check_status.worst_ever,
 				&context.status.worst_current)) {
-		context.status.worst_ever = monitor_status.worst_ever;
+		context.status.worst_ever = check_status.worst_ever;
 	} else {
 		context.status.worst_ever = context.status.worst_current;
 	}
-	monitor_status = context.status;
-	k_mutex_unlock(&stack_monitor_lock);
+	check_status = context.status;
+	k_mutex_unlock(&stack_usage_check_lock);
 }
 
-void stack_monitor_service_get_status(struct stack_monitor_status *status)
+void stack_usage_check_get_status(struct stack_usage_check_status *status)
 {
 	if (status == NULL) {
 		return;
 	}
 
-	k_mutex_lock(&stack_monitor_lock, K_FOREVER);
-	*status = monitor_status;
-	k_mutex_unlock(&stack_monitor_lock);
+	k_mutex_lock(&stack_usage_check_lock, K_FOREVER);
+	*status = check_status;
+	k_mutex_unlock(&stack_usage_check_lock);
 }
 
 static void stack_foreach_cb(const struct k_thread *thread, void *user_data)
 {
 	struct stack_foreach_context *context = user_data;
-	struct stack_monitor_thread_info info;
+	struct stack_usage_check_thread_info info;
 	int rc;
 
 	rc = fill_stack_thread_info(thread, &info);
@@ -177,8 +178,8 @@ static void stack_foreach_cb(const struct k_thread *thread, void *user_data)
 	}
 }
 
-int stack_monitor_service_foreach(stack_monitor_thread_cb_t cb,
-				  void *user_data)
+int stack_usage_check_foreach(stack_usage_check_thread_cb_t cb,
+			       void *user_data)
 {
 	struct stack_foreach_context context = {
 		.cb = cb,
@@ -194,16 +195,16 @@ int stack_monitor_service_foreach(stack_monitor_thread_cb_t cb,
 	return context.first_error;
 }
 
-int stack_monitor_service_format_status(char *buf, size_t len)
+int stack_usage_check_format_status(char *buf, size_t len)
 {
-	struct stack_monitor_status status;
+	struct stack_usage_check_status status;
 	int written;
 
 	if (buf == NULL || len == 0U) {
 		return -EINVAL;
 	}
 
-	stack_monitor_service_get_status(&status);
+	stack_usage_check_get_status(&status);
 	written = snprintk(buf, len,
 			   "{\"type\":\"stack_status\",\"initialized\":%s,"
 			   "\"warning\":%s,\"scan_count\":%u,"
@@ -237,3 +238,36 @@ int stack_monitor_service_format_status(char *buf, size_t len)
 
 	return (size_t)written >= len ? -EMSGSIZE : 0;
 }
+
+static void stack_usage_check_thread(void *p1, void *p2, void *p3)
+{
+	uint32_t last_scan_ms = 0U;
+
+	ARG_UNUSED(p1);
+	ARG_UNUSED(p2);
+	ARG_UNUSED(p3);
+
+	while (!sys_health_is_initialized()) {
+		k_sleep(K_MSEC(100));
+	}
+
+	last_scan_ms = k_uptime_get_32() -
+		       CONFIG_SYS_HEALTH_STACK_USAGE_CHECK_INTERVAL_MS;
+
+	while (1) {
+		uint32_t now_ms = k_uptime_get_32();
+
+		if ((uint32_t)(now_ms - last_scan_ms) >=
+		    CONFIG_SYS_HEALTH_STACK_USAGE_CHECK_INTERVAL_MS) {
+			stack_usage_check_scan(now_ms, true);
+			last_scan_ms = now_ms;
+		}
+
+		k_sleep(K_MSEC(100));
+	}
+}
+
+K_THREAD_DEFINE(system_health_stack_usage_check_tid,
+		CONFIG_SYS_HEALTH_STACK_USAGE_CHECK_THREAD_STACK_SIZE,
+		stack_usage_check_thread, NULL, NULL, NULL,
+		CONFIG_SYS_HEALTH_STACK_USAGE_CHECK_THREAD_PRIORITY, 0, 0);

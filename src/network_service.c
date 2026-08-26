@@ -15,15 +15,10 @@
 #include <zephyr/net/dhcpv4.h>
 #include <zephyr/sys/util.h>
 
-#ifdef CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD
-#include "system_health_app.h"
-#endif
-
 LOG_MODULE_REGISTER(network_service, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define DHCP_RETRY_INITIAL_MS CONFIG_CRANER_NETWORK_DHCP_RETRY_INITIAL_MS
 #define DHCP_RETRY_MAX_MS CONFIG_CRANER_NETWORK_DHCP_RETRY_MAX_MS
-#define NETWORK_HEALTH_REPORT_INTERVAL_MS 1000U
 
 struct network_handler_entry {
 	network_service_event_handler_t handler;
@@ -36,44 +31,8 @@ static struct network_service_status status = {
 static struct network_handler_entry handlers[NETWORK_SERVICE_MAX_HANDLERS];
 static struct net_mgmt_event_callback network_mgmt_cb;
 static struct k_work_delayable dhcp_retry_work;
-#ifdef CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD
-static struct k_work_delayable network_health_report_work;
-#endif
 static K_MUTEX_DEFINE(network_lock);
 static bool initialized;
-
-#ifdef CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD
-static void network_health_report_work_handler(struct k_work *work)
-{
-	ARG_UNUSED(work);
-
-	if (!network_service_is_ready()) {
-		return;
-	}
-
-	system_health_update_event(SYSTEM_HEALTH_ETHERNET);
-	k_work_reschedule(&network_health_report_work,
-			  K_MSEC(NETWORK_HEALTH_REPORT_INTERVAL_MS));
-}
-
-static void network_health_report_ready(void)
-{
-	k_work_reschedule(&network_health_report_work, K_NO_WAIT);
-}
-
-static void network_health_report_lost(void)
-{
-	k_work_cancel_delayable(&network_health_report_work);
-}
-#else
-static void network_health_report_ready(void)
-{
-}
-
-static void network_health_report_lost(void)
-{
-}
-#endif
 
 static void notify_handlers(enum network_service_event event)
 {
@@ -248,7 +207,6 @@ static void dhcp_retry_work_handler(struct k_work *work)
 
 	if (refresh_status_from_iface(iface)) {
 		k_work_cancel_delayable(&dhcp_retry_work);
-		network_health_report_ready();
 		notify_handlers(NETWORK_SERVICE_EVENT_READY);
 		return;
 	}
@@ -297,7 +255,6 @@ static void network_event_handler(struct net_mgmt_event_callback *cb,
 	case NET_EVENT_IPV4_ADDR_ADD:
 		update_ipv4_status(iface);
 		k_work_cancel_delayable(&dhcp_retry_work);
-		network_health_report_ready();
 		LOG_INF("DHCP bound: ip=%s gateway=%s lease=%us",
 			status.ip, status.gateway, status.dhcp_lease_time_s);
 		notify_handlers(NETWORK_SERVICE_EVENT_READY);
@@ -313,7 +270,6 @@ static void network_event_handler(struct net_mgmt_event_callback *cb,
 		clear_ipv4_status();
 		set_state(status.link_up ? NETWORK_SERVICE_STATE_LINK_UP :
 					   NETWORK_SERVICE_STATE_DOWN);
-		network_health_report_lost();
 		notify_handlers(NETWORK_SERVICE_EVENT_LOST);
 		schedule_dhcp_retry();
 		break;
@@ -353,10 +309,6 @@ int network_service_init(void)
 	}
 
 	k_work_init_delayable(&dhcp_retry_work, dhcp_retry_work_handler);
-#ifdef CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD
-	k_work_init_delayable(&network_health_report_work,
-			      network_health_report_work_handler);
-#endif
 
 	net_mgmt_init_event_callback(&network_mgmt_cb, network_event_handler,
 				     NET_EVENT_IF_UP |
@@ -386,7 +338,6 @@ int network_service_start(void)
 	(void)network_service_init();
 
 	if (refresh_status_from_iface(iface)) {
-		network_health_report_ready();
 		notify_handlers(NETWORK_SERVICE_EVENT_READY);
 		return 0;
 	}
@@ -397,7 +348,6 @@ int network_service_start(void)
 			     CONFIG_NET_CONFIG_INIT_TIMEOUT * MSEC_PER_SEC);
 
 	if (refresh_status_from_iface(iface)) {
-		network_health_report_ready();
 		notify_handlers(NETWORK_SERVICE_EVENT_READY);
 		return 0;
 	}
@@ -408,7 +358,6 @@ int network_service_start(void)
 		status.ready = false;
 		status.dhcp_fail_count++;
 		k_mutex_unlock(&network_lock);
-		network_health_report_lost();
 		notify_handlers(NETWORK_SERVICE_EVENT_DHCP_FAILED);
 		schedule_dhcp_retry();
 		return rc;

@@ -10,14 +10,11 @@
 #endif
 #include "network_service.h"
 #include "rtc_time_provider.h"
-#ifdef CONFIG_CRANER_ENABLE_SCHEDULED_REBOOT_SERVICE
-#include "scheduled_reboot_service.h"
-#endif
 #ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
 #include "storage_service.h"
 #endif
-#ifdef CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD
-#include "stack_monitor_service.h"
+#ifdef CONFIG_SYS_HEALTH_STACK_USAGE_CHECK
+#include "stack_usage_check.h"
 #endif
 #include "time_service.h"
 
@@ -144,9 +141,9 @@ static bool shell_output_is_json(void)
 	return shell_output_json;
 }
 
-#ifdef CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD
+#ifdef CONFIG_SYS_HEALTH_STACK_USAGE_CHECK
 static void print_stack_thread_cb(
-	const struct stack_monitor_thread_info *info, void *user_data)
+	const struct stack_usage_check_thread_info *info, void *user_data)
 {
 	const struct shell *shell = user_data;
 
@@ -166,7 +163,7 @@ static void print_stack_thread_cb(
 static int cmd_stack_status(const struct shell *shell, size_t argc,
 			    char **argv)
 {
-	struct stack_monitor_status status;
+	struct stack_usage_check_status status;
 	char json[512];
 	int rc;
 
@@ -174,7 +171,7 @@ static int cmd_stack_status(const struct shell *shell, size_t argc,
 	ARG_UNUSED(argv);
 
 	if (shell_output_is_json()) {
-		rc = stack_monitor_service_format_status(json, sizeof(json));
+		rc = stack_usage_check_format_status(json, sizeof(json));
 		if (rc != 0) {
 			shell_error(shell, "format stack status failed: %d", rc);
 			return rc;
@@ -183,7 +180,7 @@ static int cmd_stack_status(const struct shell *shell, size_t argc,
 		return 0;
 	}
 
-	stack_monitor_service_get_status(&status);
+	stack_usage_check_get_status(&status);
 	shell_print(shell, "initialized=%s",
 		    status.initialized ? "yes" : "no");
 	shell_print(shell, "warning=%s", status.warning ? "yes" : "no");
@@ -209,8 +206,7 @@ static int cmd_stack_status(const struct shell *shell, size_t argc,
 	shell_print(shell, "last_error=%d", status.last_error);
 	shell_print(shell, "threads:");
 
-	rc = stack_monitor_service_foreach(print_stack_thread_cb,
-					   (void *)shell);
+	rc = stack_usage_check_foreach(print_stack_thread_cb, (void *)shell);
 	if (rc != 0) {
 		shell_error(shell, "stack thread scan failed: %d", rc);
 		return rc;
@@ -221,74 +217,6 @@ static int cmd_stack_status(const struct shell *shell, size_t argc,
 
 SHELL_CMD_REGISTER(stack_status, NULL, "Show thread stack watermarks.",
 		   cmd_stack_status);
-#endif
-
-#ifdef CONFIG_CRANER_ENABLE_SCHEDULED_REBOOT_SERVICE
-static int cmd_scheduled_reboot_status(const struct shell *shell,
-				       size_t argc, char **argv)
-{
-	struct scheduled_reboot_status status;
-	char json[768];
-	int rc;
-
-	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
-
-	if (shell_output_is_json()) {
-		rc = scheduled_reboot_service_format_status(json,
-							    sizeof(json));
-		if (rc != 0) {
-			shell_error(shell,
-				    "format scheduled reboot status failed: %d",
-				    rc);
-			return rc;
-		}
-
-		shell_print(shell, "%s", json);
-		return 0;
-	}
-
-	scheduled_reboot_service_get_status(&status);
-	shell_print(shell, "initialized=%s",
-		    status.initialized ? "yes" : "no");
-	shell_print(shell, "time_reliable=%s",
-		    status.time_reliable ? "yes" : "no");
-	shell_print(shell, "in_reliable_window=%s",
-		    status.in_reliable_window ? "yes" : "no");
-	shell_print(shell, "reboot_pending=%s",
-		    status.reboot_pending ? "yes" : "no");
-	shell_print(shell, "pending_reason=%s",
-		    scheduled_reboot_reason_name(status.pending_reason));
-	shell_print(shell, "last_check_uptime_ms=%u",
-		    status.last_check_uptime_ms);
-	shell_print(shell, "unreliable_start_uptime_ms=%u",
-		    status.unreliable_start_uptime_ms);
-	shell_print(shell, "unreliable_elapsed_ms=%u",
-		    status.unreliable_elapsed_ms);
-	shell_print(shell, "unreliable_limit_ms=%u",
-		    status.unreliable_limit_ms);
-	shell_print(shell, "min_uptime_ms=%u", status.min_uptime_ms);
-	shell_print(shell, "timezone_offset_minutes=%d",
-		    status.timezone_offset_minutes);
-	shell_print(shell, "daily_reboot_local=%02u:%02u window_min=%u",
-		    status.local_hour, status.local_minute,
-		    status.local_window_minutes);
-	shell_print(shell, "unix_time_s=%lld",
-		    (long long)status.unix_time_s);
-	shell_print(shell, "local_date_year=%d local_yday=%d",
-		    status.local_year, status.local_yday);
-	shell_print(shell, "local_time=%02d:%02d",
-		    status.local_hour_now, status.local_minute_now);
-	shell_print(shell, "last_reliable_reboot_day_key=%d",
-		    status.last_reliable_reboot_day_key);
-	shell_print(shell, "last_error=%d", status.last_error);
-
-	return 0;
-}
-
-SHELL_CMD_REGISTER(scheduled_reboot_status, NULL,
-		   "Show scheduled reboot service status.",
-		   cmd_scheduled_reboot_status);
 #endif
 
 static int cmd_net_status(const struct shell *shell, size_t argc, char **argv)

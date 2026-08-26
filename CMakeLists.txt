@@ -5,6 +5,8 @@ list(APPEND BOARD_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(craner_encoder_hub)
 
+add_subdirectory(module/system_health_service)
+
 target_include_directories(app PRIVATE include)
 
 target_sources(app PRIVATE
@@ -28,14 +30,8 @@ target_sources_ifdef(CONFIG_CRANER_ENABLE_LOG_COMM_THREAD app PRIVATE
 	src/log_app_comm.c
 )
 
-target_sources_ifdef(CONFIG_CRANER_ENABLE_SYSTEM_HEALTH_THREAD app PRIVATE
-	src/system_health_app.c
+target_sources_ifdef(CONFIG_SYS_HEALTH_SERVICE app PRIVATE
 	src/system_health_event_table.c
-	src/stack_monitor_service.c
-)
-
-target_sources_ifdef(CONFIG_CRANER_ENABLE_SCHEDULED_REBOOT_SERVICE app PRIVATE
-	src/scheduled_reboot_service.c
 )
 
 if(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD OR
