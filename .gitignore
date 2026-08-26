@@ -5,3 +5,4 @@ scripts/
 *.hex
 *.map
 *.uf2
+project_config.json
