@@ -7,11 +7,14 @@ project(craner_encoder_hub)
 
 add_subdirectory(driver/wit_imu_modbus)
 add_subdirectory(driver/idecoder_encoder_modbus)
+add_subdirectory(driver/anemometer_modbus)
 add_subdirectory(module/system_health_service)
 add_subdirectory(module/imu_sample_service)
 add_subdirectory(module/encoder_sample_service)
+add_subdirectory(module/anemometer_sample_service)
 add_subdirectory(app/luffing_imu_app)
 add_subdirectory(app/crane_encoder_app)
+add_subdirectory(app/crane_anemometer_app)
 
 target_include_directories(app PRIVATE include src)
 
@@ -38,10 +41,6 @@ target_sources_ifdef(CONFIG_ENABLE_LOG_COMM_THREAD app PRIVATE
 
 target_sources_ifdef(CONFIG_SYS_HEALTH_SERVICE app PRIVATE
 	src/system_health_event_table.c
-)
-
-target_sources_ifdef(CONFIG_ENABLE_READ_ANEMOMETER_THREAD app PRIVATE
-	src/modbus_rtu_client_app.c
 )
 
 target_sources_ifdef(CONFIG_ENABLE_MODBUS_TCP_SERVER_THREAD app PRIVATE
@@ -71,6 +70,8 @@ target_sources_ifdef(CONFIG_ENABLE_COREDUMP_SERVICE app PRIVATE
 target_link_libraries(app PRIVATE
 	wit_imu_modbus
 	idecoder_encoder_modbus
+	anemometer_modbus
 	imu_sample_service
 	encoder_sample_service
+	anemometer_sample_service
 )

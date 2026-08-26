@@ -81,7 +81,7 @@ const struct sys_health_event system_health_event_table[] = {
 	{
 		.event = SYSTEM_HEALTH_READ_ANEMOMETER,
 		.name = "anemometer",
-		.enable = IS_ENABLED(CONFIG_ENABLE_READ_ANEMOMETER_THREAD),
+		.enable = IS_ENABLED(CONFIG_ENABLE_CRANE_ANEMOMETER_APP),
 		.priority = 6,
 		.offline_timeout_ms = 3000,
 		.offline_first_func = log_offline_event,

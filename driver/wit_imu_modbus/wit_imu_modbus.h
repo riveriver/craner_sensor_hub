@@ -39,5 +39,6 @@ int wit_imu_modbus_init(struct wit_imu_modbus_client *client,
 			const struct wit_imu_modbus_config *config);
 int wit_imu_modbus_fetch(struct wit_imu_modbus_client *client,
 			 struct wit_imu_modbus_sample *sample);
+void wit_imu_modbus_reset(struct wit_imu_modbus_client *client);
 
 #endif /* WIT_IMU_MODBUS_H_ */

@@ -1,0 +1,6 @@
+config ANEMOMETER_MODBUS
+	bool "Anemometer Modbus helper"
+	depends on MODBUS
+	help
+	  Enable the Modbus RTU helper for one anemometer. This layer only
+	  initializes a Modbus RTU client and fetches one raw sample.

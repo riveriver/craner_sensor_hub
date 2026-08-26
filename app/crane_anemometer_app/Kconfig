@@ -1,0 +1,41 @@
+config ENABLE_CRANE_ANEMOMETER_APP
+	bool "Enable crane anemometer application"
+	default y
+	depends on ANEMOMETER_SAMPLE_SERVICE
+	help
+	  Enable product-level anemometer sampling bindings.
+
+if ENABLE_CRANE_ANEMOMETER_APP
+
+config CRANE_ANEMOMETER_IFACE_NAME
+	string "Anemometer RS485 interface name"
+	default "rs485-usart6"
+
+config CRANE_ANEMOMETER_MODBUS_UNIT_ID
+	int "Anemometer Modbus unit id"
+	default 4
+	range 1 247
+
+config CRANE_ANEMOMETER_MODBUS_BAUD
+	int "Anemometer Modbus baud rate"
+	default 115200
+
+config CRANE_ANEMOMETER_MODBUS_RX_TIMEOUT_US
+	int "Anemometer Modbus RX timeout in microseconds"
+	default 100000
+
+config CRANE_ANEMOMETER_SAMPLE_PERIOD_MS
+	int "Anemometer sample period in milliseconds"
+	default 1000
+	range 100 60000
+
+config CRANE_ANEMOMETER_MODBUS_START_ADDR
+	hex "Anemometer Modbus holding register start address"
+	default 0x0009
+
+config CRANE_ANEMOMETER_MODBUS_REGISTER_COUNT
+	int "Anemometer Modbus holding register count"
+	default 5
+	range 5 5
+
+endif

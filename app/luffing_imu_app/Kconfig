@@ -8,4 +8,46 @@ config ENABLE_LUFFING_IMU_APP
 	  Bridge the reusable IMU sample service into this product's luffing
 	  IMU Modbus TCP input registers and luffing health event.
 
+if ENABLE_LUFFING_IMU_APP
+
+choice LUFFING_IMU_MODEL
+	prompt "Luffing IMU model"
+	default LUFFING_IMU_MODEL_WIT_STANDARD_PRECISION
+
+config LUFFING_IMU_MODEL_WIT_STANDARD_PRECISION
+	bool "WIT standard precision"
+	help
+	  Standard-precision WIT Modbus angle format.
+
+config LUFFING_IMU_MODEL_WIT_HIGH_PRECISION
+	bool "WIT high precision"
+	help
+	  High-precision WIT Modbus angle format.
+
+endchoice
+
+config LUFFING_IMU_IFACE_NAME
+	string "Luffing IMU RS485 interface name"
+	default "rs485-uart8"
+
+config LUFFING_IMU_MODBUS_UNIT_ID
+	int "Luffing IMU Modbus unit ID"
+	default 80
+	range 1 247
+
+config LUFFING_IMU_MODBUS_BAUD
+	int "Luffing IMU Modbus baud rate"
+	default 9600
+
+config LUFFING_IMU_MODBUS_RX_TIMEOUT_US
+	int "Luffing IMU Modbus RX timeout in microseconds"
+	default 50000
+
+config LUFFING_IMU_SAMPLE_PERIOD_MS
+	int "Luffing IMU sample period in milliseconds"
+	default 50
+	range 20 10000
+
+endif
+
 endmenu

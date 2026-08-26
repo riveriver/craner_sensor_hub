@@ -12,6 +12,23 @@
 
 LOG_MODULE_REGISTER(luffing_imu_app, CONFIG_LOG_DEFAULT_LEVEL);
 
+static struct imu_sample_service luffing_imu_service;
+
+static const struct imu_sample_service_config luffing_imu_config = {
+	.name = "luffing_imu",
+	.iface_name = CONFIG_LUFFING_IMU_IFACE_NAME,
+#if defined(CONFIG_LUFFING_IMU_MODEL_WIT_HIGH_PRECISION)
+	.model = WIT_IMU_MODBUS_MODEL_HIGH_PRECISION,
+#else
+	.model = WIT_IMU_MODBUS_MODEL_STANDARD_PRECISION,
+#endif
+	.unit_id = CONFIG_LUFFING_IMU_MODBUS_UNIT_ID,
+	.baud = CONFIG_LUFFING_IMU_MODBUS_BAUD,
+	.rx_timeout_us = CONFIG_LUFFING_IMU_MODBUS_RX_TIMEOUT_US,
+	.period_ms = CONFIG_LUFFING_IMU_SAMPLE_PERIOD_MS,
+	.start_delay_ms = 0U,
+};
+
 static uint16_t error_code_to_reg(int err)
 {
 	if (err < 0) {
@@ -66,11 +83,12 @@ static int luffing_imu_app_write_success(
 }
 
 static void luffing_imu_app_sample_cb(
-	int err, const struct imu_sample_service_sample *sample,
-	void *user_data)
+	struct imu_sample_service *service, int err,
+	const struct imu_sample_service_sample *sample, void *user_data)
 {
 	int write_err;
 
+	ARG_UNUSED(service);
 	ARG_UNUSED(user_data);
 
 	if (err == 0 && sample != NULL) {
@@ -95,14 +113,16 @@ static int luffing_imu_app_init(void)
 {
 	int err;
 
-	err = imu_sample_service_register_callback(luffing_imu_app_sample_cb,
-						   NULL);
+	err = imu_sample_service_start(&luffing_imu_service,
+				       &luffing_imu_config,
+				       luffing_imu_app_sample_cb,
+				       NULL);
 	if (err != 0) {
-		LOG_ERR("Failed to register luffing IMU callback: %d", err);
+		LOG_ERR("Failed to start luffing IMU service: %d", err);
 		return err;
 	}
 
 	return 0;
 }
 
-SYS_INIT(luffing_imu_app_init, APPLICATION, 80);
+SYS_INIT(luffing_imu_app_init, APPLICATION, 95);

@@ -184,3 +184,14 @@ int wit_imu_modbus_fetch(struct wit_imu_modbus_client *client,
 		return -EINVAL;
 	}
 }
+
+void wit_imu_modbus_reset(struct wit_imu_modbus_client *client)
+{
+	if (client == NULL) {
+		return;
+	}
+
+	client->config = NULL;
+	client->iface = -1;
+	client->ready = false;
+}

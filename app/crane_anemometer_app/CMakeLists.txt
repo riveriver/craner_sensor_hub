@@ -1,0 +1,3 @@
+target_sources_ifdef(CONFIG_ENABLE_CRANE_ANEMOMETER_APP app PRIVATE
+	crane_anemometer_app.c
+)

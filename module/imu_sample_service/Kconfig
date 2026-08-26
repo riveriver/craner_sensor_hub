@@ -5,56 +5,8 @@ config IMU_SAMPLE_SERVICE
 	default y if TOWER_TYPE_LUFFING_JIB
 	depends on WIT_IMU_MODBUS
 	help
-	  Enable a reusable IMU sampling thread, latest-sample cache, fault
-	  statistics, callback fanout, and shell diagnostics. Product-specific
-	  register mirrors and health events should live in app code.
-
-choice IMU_MODEL
-	prompt "IMU model"
-	default IMU_MODEL_WIT_STANDARD_PRECISION
-	depends on IMU_SAMPLE_SERVICE
-
-config IMU_MODEL_WIT_STANDARD_PRECISION
-	bool "WIT standard precision"
-	help
-	  Standard-precision WIT Modbus angle format. Read roll and pitch from
-	  registers 0x003D and 0x003E, converted by raw * 180 / 32768 degrees.
-
-config IMU_MODEL_WIT_HIGH_PRECISION
-	bool "WIT high precision"
-	help
-	  High-precision WIT Modbus angle format. Read registers 0x003D..0x0042
-	  as LRoll/HRoll, LPitch/HPitch and LYaw/HYaw signed 32-bit
-	  millidegrees.
-
-endchoice
-
-config IMU_MODBUS_IFACE_NAME
-	string "IMU Modbus interface name"
-	default "rs485-uart8"
-	depends on IMU_SAMPLE_SERVICE
-
-config IMU_MODBUS_UNIT_ID
-	int "IMU Modbus unit ID"
-	default 80
-	range 1 247
-	depends on IMU_SAMPLE_SERVICE
-
-config IMU_MODBUS_BAUD
-	int "IMU Modbus baud rate"
-	default 9600
-	depends on IMU_SAMPLE_SERVICE
-
-config IMU_MODBUS_RX_TIMEOUT_US
-	int "IMU Modbus RX timeout in microseconds"
-	default 50000
-	depends on IMU_SAMPLE_SERVICE
-
-config IMU_SAMPLE_PERIOD_MS
-	int "IMU sample period in milliseconds"
-	default 50
-	range 20 10000
-	depends on IMU_SAMPLE_SERVICE
+	  Enable a reusable one-channel IMU sampling service. Product code can
+	  create multiple instances, one per IMU channel.
 
 config IMU_SAMPLE_THREAD_STACK_SIZE
 	int "IMU sample thread stack size"
@@ -66,8 +18,8 @@ config IMU_SAMPLE_THREAD_PRIORITY
 	default 7
 	depends on IMU_SAMPLE_SERVICE
 
-config IMU_SAMPLE_SERVICE_MAX_CALLBACKS
-	int "Maximum IMU sample callbacks"
+config IMU_SAMPLE_SERVICE_MAX_INSTANCES
+	int "Maximum IMU sample service instances"
 	default 4
 	range 1 8
 	depends on IMU_SAMPLE_SERVICE
