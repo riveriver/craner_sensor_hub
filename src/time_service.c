@@ -18,15 +18,15 @@
 
 LOG_MODULE_REGISTER(time_service, CONFIG_LOG_DEFAULT_LEVEL);
 
-#define TIME_SERVICE_STACK_SIZE CONFIG_CRANER_TIME_SERVICE_STACK_SIZE
+#define TIME_SERVICE_STACK_SIZE CONFIG_TIME_SERVICE_STACK_SIZE
 #define TIME_SERVICE_PRIORITY 8
-#define NTP_TIMEOUT_MS CONFIG_CRANER_TIME_SERVICE_NTP_TIMEOUT_MS
-#define NTP_RESYNC_INTERVAL_MS (CONFIG_CRANER_TIME_SERVICE_NTP_RESYNC_INTERVAL_S * MSEC_PER_SEC)
-#define NTP_RETRY_INITIAL_MS CONFIG_CRANER_TIME_SERVICE_NTP_RETRY_INITIAL_MS
-#define NTP_RETRY_MAX_MS CONFIG_CRANER_TIME_SERVICE_NTP_RETRY_MAX_MS
-#define RTC_WRITEBACK_THRESHOLD_S CONFIG_CRANER_TIME_SERVICE_RTC_WRITEBACK_THRESHOLD_S
+#define NTP_TIMEOUT_MS CONFIG_TIME_SERVICE_NTP_TIMEOUT_MS
+#define NTP_RESYNC_INTERVAL_MS (CONFIG_TIME_SERVICE_NTP_RESYNC_INTERVAL_S * MSEC_PER_SEC)
+#define NTP_RETRY_INITIAL_MS CONFIG_TIME_SERVICE_NTP_RETRY_INITIAL_MS
+#define NTP_RETRY_MAX_MS CONFIG_TIME_SERVICE_NTP_RETRY_MAX_MS
+#define RTC_WRITEBACK_THRESHOLD_S CONFIG_TIME_SERVICE_RTC_WRITEBACK_THRESHOLD_S
 #define LOCAL_TIME_OFFSET_SECONDS \
-	((int64_t)CONFIG_CRANER_LOCAL_TIMEZONE_OFFSET_MINUTES * 60LL)
+	((int64_t)CONFIG_LOCAL_TIMEZONE_OFFSET_MINUTES * 60LL)
 
 static struct time_service_status status = {
 	.active_source = TIME_SERVICE_SOURCE_BOOT_TICK,
@@ -257,7 +257,7 @@ static int sync_ntp_once(void)
 	struct sntp_time sntp_ts;
 	int rc;
 
-	rc = sntp_simple(CONFIG_CRANER_TIME_SERVICE_NTP_SERVER, NTP_TIMEOUT_MS,
+	rc = sntp_simple(CONFIG_TIME_SERVICE_NTP_SERVER, NTP_TIMEOUT_MS,
 			 &sntp_ts);
 	if (rc != 0) {
 		k_mutex_lock(&time_lock, K_FOREVER);
@@ -277,7 +277,7 @@ static int sync_ntp_once(void)
 	}
 
 	LOG_INF("NTP synced from %s: %lld",
-		CONFIG_CRANER_TIME_SERVICE_NTP_SERVER,
+		CONFIG_TIME_SERVICE_NTP_SERVER,
 		(long long)sntp_ts.seconds);
 	return 0;
 }
@@ -345,7 +345,7 @@ int time_service_init(void)
 
 	k_mutex_lock(&time_lock, K_FOREVER);
 	snprintk(status.ntp_server, sizeof(status.ntp_server), "%s",
-		 CONFIG_CRANER_TIME_SERVICE_NTP_SERVER);
+		 CONFIG_TIME_SERVICE_NTP_SERVER);
 	status.uptime_ms = k_uptime_get();
 	status.rtc_available = rtc_time_provider_is_available();
 	status.rtc_valid = rtc_time_provider_is_valid();
@@ -448,7 +448,7 @@ int time_service_format_local_iso8601_from_unix(int64_t unix_time_s,
 {
 	time_t local_time_s;
 	struct tm tm_local;
-	int32_t offset_minutes = CONFIG_CRANER_LOCAL_TIMEZONE_OFFSET_MINUTES;
+	int32_t offset_minutes = CONFIG_LOCAL_TIMEZONE_OFFSET_MINUTES;
 	char offset_sign = '+';
 	uint32_t offset_abs;
 	int written;

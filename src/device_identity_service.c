@@ -1,5 +1,5 @@
 #include "device_identity_service.h"
-#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+#ifdef CONFIG_ENABLE_DEVICE_PARAM_STORE
 #include "device_param_store.h"
 #endif
 
@@ -69,7 +69,7 @@ static void load_identity_text(const char *key, const char *fallback, char *buf,
 {
 	int rc = -ENOENT;
 
-#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+#ifdef CONFIG_ENABLE_DEVICE_PARAM_STORE
 	rc = device_param_store_get(key, buf, len);
 #endif
 	if (rc != 0) {

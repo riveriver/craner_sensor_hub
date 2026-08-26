@@ -9,16 +9,16 @@
 
 LOG_MODULE_REGISTER(power_control_app, CONFIG_LOG_DEFAULT_LEVEL);
 
-#define POWER_3V3_AND_CCTV_NODE DT_ALIAS(power_3v3_and_cctv)
-#define POWER_5V_NODE DT_ALIAS(power_5v)
-#define POWER_NET_BRIGDE_NODE DT_ALIAS(power_net_brigde)
+#define LOAD_SWITCH_3V3_NODE DT_ALIAS(load_switch_3v3)
+#define LOAD_SWITCH_5V_NODE DT_ALIAS(load_switch_5v)
+#define LOAD_SWITCH_NET_BRIDGE_NODE DT_ALIAS(load_switch_net_bridge)
 
-BUILD_ASSERT(DT_NODE_HAS_STATUS(POWER_3V3_AND_CCTV_NODE, okay),
-	     "Missing power-3v3-and-cctv alias");
-BUILD_ASSERT(DT_NODE_HAS_STATUS(POWER_5V_NODE, okay),
-	     "Missing power-5v alias");
-BUILD_ASSERT(DT_NODE_HAS_STATUS(POWER_NET_BRIGDE_NODE, okay),
-	     "Missing power-net-brigde alias");
+BUILD_ASSERT(DT_NODE_HAS_STATUS(LOAD_SWITCH_3V3_NODE, okay),
+	     "Missing load-switch-3v3 alias");
+BUILD_ASSERT(DT_NODE_HAS_STATUS(LOAD_SWITCH_5V_NODE, okay),
+	     "Missing load-switch-5v alias");
+BUILD_ASSERT(DT_NODE_HAS_STATUS(LOAD_SWITCH_NET_BRIDGE_NODE, okay),
+	     "Missing load-switch-net-bridge alias");
 
 struct power_control_gpio {
 	const char *name;
@@ -27,16 +27,16 @@ struct power_control_gpio {
 
 static const struct power_control_gpio power_control_gpios[] = {
 	{
-		.name = "POWER_3V3_AND_CCTV",
-		.gpio = GPIO_DT_SPEC_GET(POWER_3V3_AND_CCTV_NODE, gpios),
+		.name = "LOAD_SWITCH_3V3",
+		.gpio = GPIO_DT_SPEC_GET(LOAD_SWITCH_3V3_NODE, gpios),
 	},
 	{
-		.name = "POWER_5V",
-		.gpio = GPIO_DT_SPEC_GET(POWER_5V_NODE, gpios),
+		.name = "LOAD_SWITCH_5V",
+		.gpio = GPIO_DT_SPEC_GET(LOAD_SWITCH_5V_NODE, gpios),
 	},
 	{
-		.name = "POWER_NET_BRIGDE",
-		.gpio = GPIO_DT_SPEC_GET(POWER_NET_BRIGDE_NODE, gpios),
+		.name = "LOAD_SWITCH_NET_BRIDGE",
+		.gpio = GPIO_DT_SPEC_GET(LOAD_SWITCH_NET_BRIDGE_NODE, gpios),
 	},
 };
 

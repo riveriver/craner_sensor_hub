@@ -13,29 +13,29 @@ LOG_MODULE_REGISTER(modbus_rtu_client_app, CONFIG_LOG_DEFAULT_LEVEL);
 #define MODBUS_ENCODER_STACK_SIZE 2048
 #define MODBUS_ENCODER_PRIORITY 6
 
-#define MODBUS_SLEWING_ENCODER_NODE DT_ALIAS(modbus_slewing_encoder)
-#define MODBUS_LUFFING_ENCODER_NODE DT_ALIAS(modbus_luffing_encoder)
-#define MODBUS_HOISTING_ENCODER_NODE DT_ALIAS(modbus_hook_encoder)
-#define MODBUS_ANEMOMETER_NODE       DT_ALIAS(modbus_anemometer)
+#define SLEWING_ENCODER_RS485_NODE DT_ALIAS(rs485_uart7)
+#define LUFFING_ENCODER_RS485_NODE  DT_ALIAS(rs485_uart8)
+#define HOISTING_ENCODER_RS485_NODE DT_ALIAS(rs485_uart4)
+#define ANEMOMETER_RS485_NODE      DT_ALIAS(rs485_usart6)
 
-#if defined(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD)
-BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_SLEWING_ENCODER_NODE, okay),
-	     "Missing modbus-slewing-encoder alias");
+#if defined(CONFIG_ENABLE_READ_SLEWING_ENCODER_THREAD)
+BUILD_ASSERT(DT_NODE_HAS_STATUS(SLEWING_ENCODER_RS485_NODE, okay),
+	     "Missing rs485-uart7 alias");
 #endif
 
-#if defined(CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD)
-BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_LUFFING_ENCODER_NODE, okay),
-	     "Missing modbus-luffing-encoder alias");
+#if defined(CONFIG_ENABLE_READ_LUFFING_ENCODER_THREAD)
+BUILD_ASSERT(DT_NODE_HAS_STATUS(LUFFING_ENCODER_RS485_NODE, okay),
+	     "Missing rs485-uart8 alias");
 #endif
 
-#if defined(CONFIG_CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD)
-BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_HOISTING_ENCODER_NODE, okay),
-	     "Missing modbus-hook-encoder alias");
+#if defined(CONFIG_ENABLE_READ_HOISTING_ENCODER_THREAD)
+BUILD_ASSERT(DT_NODE_HAS_STATUS(HOISTING_ENCODER_RS485_NODE, okay),
+	     "Missing rs485-uart4 alias");
 #endif
 
-#if defined(CONFIG_CRANER_ENABLE_READ_ANEMOMETER_THREAD)
-BUILD_ASSERT(DT_NODE_HAS_STATUS(MODBUS_ANEMOMETER_NODE, okay),
-	     "Missing modbus-anemometer alias");
+#if defined(CONFIG_ENABLE_READ_ANEMOMETER_THREAD)
+BUILD_ASSERT(DT_NODE_HAS_STATUS(ANEMOMETER_RS485_NODE, okay),
+	     "Missing rs485-usart6 alias");
 #endif
 
 #define MODBUS_SLEWING_ENCODER_UNIT_ID 1
@@ -112,11 +112,11 @@ static const struct modbus_iface_param modbus_anemometer_param = {
 	},
 };
 
-#if defined(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD)
+#if defined(CONFIG_ENABLE_READ_SLEWING_ENCODER_THREAD)
 static struct modbus_encoder_client slewing_encoder = {
 	.name = "slewing encoder",
 	.stats_name = "slewing",
-	.iface_name = DEVICE_DT_NAME(MODBUS_SLEWING_ENCODER_NODE),
+	.iface_name = DEVICE_DT_NAME(SLEWING_ENCODER_RS485_NODE),
 	.unit_id = MODBUS_SLEWING_ENCODER_UNIT_ID,
 	.start_addr = MODBUS_ENCODER_START_ADDR,
 	.register_count = MODBUS_ENCODER_REGISTER_COUNT,
@@ -132,11 +132,11 @@ static struct modbus_encoder_client slewing_encoder = {
 };
 #endif
 
-#if defined(CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD)
+#if defined(CONFIG_ENABLE_READ_LUFFING_ENCODER_THREAD)
 static struct modbus_encoder_client luffing_encoder = {
 	.name = "luffing encoder",
 	.stats_name = "luffing",
-	.iface_name = DEVICE_DT_NAME(MODBUS_LUFFING_ENCODER_NODE),
+	.iface_name = DEVICE_DT_NAME(LUFFING_ENCODER_RS485_NODE),
 	.unit_id = MODBUS_LUFFING_ENCODER_UNIT_ID,
 	.start_addr = MODBUS_ENCODER_START_ADDR,
 	.register_count = MODBUS_ENCODER_REGISTER_COUNT,
@@ -144,19 +144,19 @@ static struct modbus_encoder_client luffing_encoder = {
 	.timestamp_low_name = "REG_LUFFING_TIMESTAMP_L",
 	.error_code_name = "REG_LUFFING_ERROR_CODE",
 	.offline_status_name = "REG_LUFFING_OFFLINE_STATUS",
-	.turn_count_name = "REG_LUFFING_TRUN_CNT",
-	.single_value_name = "REG_LUFFING_SINAGLE_VAL",
+	.turn_count_name = "REG_LUFFING_VALUE_H",
+	.single_value_name = "REG_LUFFING_VALUE_L",
 	.health_event = SYSTEM_HEALTH_READ_LUFFING_ENCODER,
 	.start_delay_ms = 10,
 	.iface = -1,
 };
 #endif
 
-#if defined(CONFIG_CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD)
+#if defined(CONFIG_ENABLE_READ_HOISTING_ENCODER_THREAD)
 static struct modbus_encoder_client hook_encoder = {
 	.name = "hoisting encoder",
 	.stats_name = "hoisting",
-	.iface_name = DEVICE_DT_NAME(MODBUS_HOISTING_ENCODER_NODE),
+	.iface_name = DEVICE_DT_NAME(HOISTING_ENCODER_RS485_NODE),
 	.unit_id = MODBUS_HOISTING_ENCODER_UNIT_ID,
 	.start_addr = MODBUS_ENCODER_START_ADDR,
 	.register_count = MODBUS_ENCODER_REGISTER_COUNT,
@@ -194,11 +194,11 @@ struct modbus_anemometer_client {
 	struct modbus_encoder_stats stats;
 };
 
-#if defined(CONFIG_CRANER_ENABLE_READ_ANEMOMETER_THREAD)
+#if defined(CONFIG_ENABLE_READ_ANEMOMETER_THREAD)
 static struct modbus_anemometer_client anemometer = {
 	.name = "anemometer",
 	.stats_name = "anemometer",
-	.iface_name = DEVICE_DT_NAME(MODBUS_ANEMOMETER_NODE),
+	.iface_name = DEVICE_DT_NAME(ANEMOMETER_RS485_NODE),
 	.unit_id = MODBUS_ANEMOMETER_UNIT_ID,
 	.start_addr = MODBUS_ANEMOMETER_START_ADDR,
 	.register_count = MODBUS_ANEMOMETER_REGISTER_COUNT,
@@ -493,16 +493,16 @@ static int cmd_show_encoder_stats(const struct shell *shell, size_t argc,
 	ARG_UNUSED(argv);
 
 	shell_print(shell, "Modbus RTU stats:");
-#if defined(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD)
+#if defined(CONFIG_ENABLE_READ_SLEWING_ENCODER_THREAD)
 	shell_print_encoder_stats(shell, &slewing_encoder);
 #endif
-#if defined(CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD)
+#if defined(CONFIG_ENABLE_READ_LUFFING_ENCODER_THREAD)
 	shell_print_encoder_stats(shell, &luffing_encoder);
 #endif
-#if defined(CONFIG_CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD)
+#if defined(CONFIG_ENABLE_READ_HOISTING_ENCODER_THREAD)
 	shell_print_encoder_stats(shell, &hook_encoder);
 #endif
-#if defined(CONFIG_CRANER_ENABLE_READ_ANEMOMETER_THREAD)
+#if defined(CONFIG_ENABLE_READ_ANEMOMETER_THREAD)
 	shell_print_anemometer_stats(shell, &anemometer);
 #endif
 
@@ -519,16 +519,16 @@ static int cmd_clear_encoder_stats(const struct shell *shell, size_t argc,
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-#if defined(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD)
+#if defined(CONFIG_ENABLE_READ_SLEWING_ENCODER_THREAD)
 	reset_encoder_stats(&slewing_encoder);
 #endif
-#if defined(CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD)
+#if defined(CONFIG_ENABLE_READ_LUFFING_ENCODER_THREAD)
 	reset_encoder_stats(&luffing_encoder);
 #endif
-#if defined(CONFIG_CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD)
+#if defined(CONFIG_ENABLE_READ_HOISTING_ENCODER_THREAD)
 	reset_encoder_stats(&hook_encoder);
 #endif
-#if defined(CONFIG_CRANER_ENABLE_READ_ANEMOMETER_THREAD)
+#if defined(CONFIG_ENABLE_READ_ANEMOMETER_THREAD)
 	reset_anemometer_stats(&anemometer);
 #endif
 
@@ -693,25 +693,25 @@ static void modbus_encoder_thread(void *p1, void *p2, void *p3)
 	}
 }
 
-#if defined(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD)
+#if defined(CONFIG_ENABLE_READ_SLEWING_ENCODER_THREAD)
 K_THREAD_DEFINE(slewing_encoder_tid, MODBUS_ENCODER_STACK_SIZE,
 		modbus_encoder_thread, &slewing_encoder, NULL, NULL,
 		MODBUS_ENCODER_PRIORITY, 0, 0);
 #endif
 
-#if defined(CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD)
+#if defined(CONFIG_ENABLE_READ_LUFFING_ENCODER_THREAD)
 K_THREAD_DEFINE(luffing_encoder_tid, MODBUS_ENCODER_STACK_SIZE,
 		modbus_encoder_thread, &luffing_encoder, NULL, NULL,
 		MODBUS_ENCODER_PRIORITY, 0, 0);
 #endif
 
-#if defined(CONFIG_CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD)
+#if defined(CONFIG_ENABLE_READ_HOISTING_ENCODER_THREAD)
 K_THREAD_DEFINE(hook_encoder_tid, MODBUS_ENCODER_STACK_SIZE,
 		modbus_encoder_thread, &hook_encoder, NULL, NULL,
 		MODBUS_ENCODER_PRIORITY, 0, 0);
 #endif
 
-#if defined(CONFIG_CRANER_ENABLE_READ_ANEMOMETER_THREAD)
+#if defined(CONFIG_ENABLE_READ_ANEMOMETER_THREAD)
 K_THREAD_DEFINE(anemometer_tid, MODBUS_ENCODER_STACK_SIZE,
 		modbus_anemometer_thread, &anemometer, NULL, NULL,
 		MODBUS_ENCODER_PRIORITY, 0, 0);

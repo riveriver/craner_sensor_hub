@@ -43,7 +43,7 @@ static void unconfirmed_reboot_handler(struct k_work *work)
 
 	if (!boot_is_img_confirmed()) {
 		LOG_WRN("OTA test image was not confirmed in %u second(s), rebooting for rollback",
-			CONFIG_CRANER_OTA_TEST_TIMEOUT_S);
+			CONFIG_OTA_TEST_TIMEOUT_S);
 		sys_reboot(SYS_REBOOT_COLD);
 	}
 }
@@ -81,7 +81,7 @@ static int cmd_ota_show(const struct shell *shell, size_t argc, char **argv)
 	shell_print(shell, "active_area=%u", boot_fetch_active_slot());
 	shell_print(shell, "confirmed=%s", boot_is_img_confirmed() ? "yes" : "no");
 	shell_print(shell, "next_boot_swap=%s (%d)", swap_type_name(swap_type), swap_type);
-	shell_print(shell, "test_timeout=%u s", CONFIG_CRANER_OTA_TEST_TIMEOUT_S);
+	shell_print(shell, "test_timeout=%u s", CONFIG_OTA_TEST_TIMEOUT_S);
 
 	print_bank_info(shell, "primary", PRIMARY_AREA_ID);
 	print_bank_info(shell, "secondary", SECONDARY_AREA_ID);
@@ -191,9 +191,9 @@ static int ota_control_init(void)
 
 	if (!boot_is_img_confirmed()) {
 		LOG_WRN("Running unconfirmed OTA test image, confirm within %u second(s)",
-			CONFIG_CRANER_OTA_TEST_TIMEOUT_S);
+			CONFIG_OTA_TEST_TIMEOUT_S);
 		k_work_schedule(&unconfirmed_reboot_work,
-				K_SECONDS(CONFIG_CRANER_OTA_TEST_TIMEOUT_S));
+				K_SECONDS(CONFIG_OTA_TEST_TIMEOUT_S));
 	}
 
 	return 0;

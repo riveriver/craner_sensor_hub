@@ -1,15 +1,15 @@
 #include "device_identity_service.h"
-#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+#ifdef CONFIG_ENABLE_DEVICE_PARAM_STORE
 #include "device_param_store.h"
 #endif
-#ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
+#ifdef CONFIG_ENABLE_COREDUMP_SERVICE
 #include "coredump_service.h"
 #endif
-#ifdef CONFIG_CRANER_ENABLE_MODBUS_REGISTER_STORE
+#ifdef CONFIG_ENABLE_MODBUS_REGISTER_STORE
 #include "modbus_register_store.h"
 #endif
 #include "network_service.h"
-#ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
+#ifdef CONFIG_ENABLE_STORAGE_SERVICE
 #include "storage_service.h"
 #endif
 #include "shell_app.h"
@@ -24,14 +24,14 @@ int main(void)
 {
 	int rc;
 
-#ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
+#ifdef CONFIG_ENABLE_STORAGE_SERVICE
 	rc = storage_service_init();
 	if (rc != 0) {
 		printk("Storage service init failed: %d\n", rc);
 	}
 #endif
 
-#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+#ifdef CONFIG_ENABLE_DEVICE_PARAM_STORE
 	rc = device_param_store_init();
 	if (rc != 0) {
 		printk("Device parameter store init failed: %d\n", rc);
@@ -48,14 +48,14 @@ int main(void)
 		printk("Shell app init failed: %d\n", rc);
 	}
 
-#ifdef CONFIG_CRANER_ENABLE_MODBUS_REGISTER_STORE
+#ifdef CONFIG_ENABLE_MODBUS_REGISTER_STORE
 	rc = modbus_register_store_init();
 	if (rc != 0) {
 		printk("Modbus register store init failed: %d\n", rc);
 	}
 #endif
 
-#ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
+#ifdef CONFIG_ENABLE_COREDUMP_SERVICE
 	rc = coredump_service_init();
 	if (rc != 0) {
 		printk("Coredump service init failed: %d\n", rc);

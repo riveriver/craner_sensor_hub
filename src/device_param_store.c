@@ -39,7 +39,7 @@ static struct device_param_entry params[] = {
 		.record = {
 			.key = "time/ntp_server",
 			.type = DEVICE_PARAM_TYPE_STRING,
-			.default_value = CONFIG_CRANER_TIME_SERVICE_NTP_SERVER,
+			.default_value = CONFIG_TIME_SERVICE_NTP_SERVER,
 			.range = "1..63 printable chars",
 		},
 	},

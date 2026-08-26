@@ -423,7 +423,7 @@ int modbus_register_store_mark_dirty(void)
 	k_mutex_unlock(&store_lock);
 
 	return k_work_reschedule(&save_work,
-				 K_MSEC(CONFIG_CRANER_MODBUS_REGISTER_STORE_SAVE_DELAY_MS));
+				 K_MSEC(CONFIG_MODBUS_REGISTER_STORE_SAVE_DELAY_MS));
 }
 
 int modbus_register_store_clear(void)

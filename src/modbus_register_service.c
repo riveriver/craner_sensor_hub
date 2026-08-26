@@ -7,7 +7,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/util.h>
 
-#ifdef CONFIG_CRANER_ENABLE_MODBUS_REGISTER_STORE
+#ifdef CONFIG_ENABLE_MODBUS_REGISTER_STORE
 #include "modbus_register_store.h"
 #endif
 
@@ -210,7 +210,7 @@ static int coil_addr_by_name_locked(const char *name, uint16_t *addr)
 
 static void mark_store_dirty_if_persistent(uint32_t flags)
 {
-#ifdef CONFIG_CRANER_ENABLE_MODBUS_REGISTER_STORE
+#ifdef CONFIG_ENABLE_MODBUS_REGISTER_STORE
 	if (reg_is_persistent(flags)) {
 		(void)modbus_register_store_mark_dirty();
 	}

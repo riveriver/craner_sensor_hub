@@ -22,11 +22,11 @@ target_sources(app PRIVATE
 	src/modbus_register_service.c
 )
 
-target_sources_ifdef(CONFIG_CRANER_ENABLE_LOG_SENSOR_THREAD app PRIVATE
+target_sources_ifdef(CONFIG_ENABLE_LOG_SENSOR_THREAD app PRIVATE
 	src/log_app_sensor.c
 )
 
-target_sources_ifdef(CONFIG_CRANER_ENABLE_LOG_COMM_THREAD app PRIVATE
+target_sources_ifdef(CONFIG_ENABLE_LOG_COMM_THREAD app PRIVATE
 	src/log_app_comm.c
 )
 
@@ -34,33 +34,37 @@ target_sources_ifdef(CONFIG_SYS_HEALTH_SERVICE app PRIVATE
 	src/system_health_event_table.c
 )
 
-if(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD OR
-   CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD OR
-   CONFIG_CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD OR
-   CONFIG_CRANER_ENABLE_READ_ANEMOMETER_THREAD)
+target_sources_ifdef(CONFIG_ENABLE_IMU_REGISTER_BRIDGE app PRIVATE
+	src/imu_sample_app.c
+)
+
+if(CONFIG_ENABLE_READ_SLEWING_ENCODER_THREAD OR
+   CONFIG_ENABLE_READ_LUFFING_ENCODER_THREAD OR
+   CONFIG_ENABLE_READ_HOISTING_ENCODER_THREAD OR
+   CONFIG_ENABLE_READ_ANEMOMETER_THREAD)
 	target_sources(app PRIVATE src/modbus_rtu_client_app.c)
 endif()
 
-target_sources_ifdef(CONFIG_CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD app PRIVATE
+target_sources_ifdef(CONFIG_ENABLE_MODBUS_TCP_SERVER_THREAD app PRIVATE
 	src/modbus_tcp_server_app.c
 )
 
-target_sources_ifdef(CONFIG_CRANER_ENABLE_OTA_CONTROL app PRIVATE
+target_sources_ifdef(CONFIG_ENABLE_OTA_CONTROL app PRIVATE
 	src/ota_control_app.c
 )
 
-target_sources_ifdef(CONFIG_CRANER_ENABLE_STORAGE_SERVICE app PRIVATE
+target_sources_ifdef(CONFIG_ENABLE_STORAGE_SERVICE app PRIVATE
 	src/storage_service.c
 )
 
-target_sources_ifdef(CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE app PRIVATE
+target_sources_ifdef(CONFIG_ENABLE_DEVICE_PARAM_STORE app PRIVATE
 	src/device_param_store.c
 )
 
-target_sources_ifdef(CONFIG_CRANER_ENABLE_MODBUS_REGISTER_STORE app PRIVATE
+target_sources_ifdef(CONFIG_ENABLE_MODBUS_REGISTER_STORE app PRIVATE
 	src/modbus_register_store.c
 )
 
-target_sources_ifdef(CONFIG_CRANER_ENABLE_COREDUMP_SERVICE app PRIVATE
+target_sources_ifdef(CONFIG_ENABLE_COREDUMP_SERVICE app PRIVATE
 	src/coredump_service.c
 )

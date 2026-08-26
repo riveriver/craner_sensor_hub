@@ -20,33 +20,33 @@
 	};
 
 	aliases {
-		power-3v3-and-cctv = &power_3v3_and_cctv;
-		power-5v = &power_5v;
-		power-net-brigde = &power_net_brigde;
-		modbus-slewing-encoder = &modbus_slewing_encoder;
-		modbus-luffing-encoder = &modbus_luffing_encoder;
-		modbus-hook-encoder = &modbus_hook_encoder;
-		modbus-anemometer = &modbus_anemometer;
+		load-switch-3v3 = &load_switch_3v3;
+		load-switch-5v = &load_switch_5v;
+		load-switch-net-bridge = &load_switch_net_bridge;
+		rs485-usart6 = &rs485_usart6;
+		rs485-uart7 = &rs485_uart7;
+		rs485-uart8 = &rs485_uart8;
+		rs485-uart4 = &rs485_uart4;
 		heartbeat-led = &heartbeat_led;
 		watchdog0 = &iwdg;
 	};
 
-	power_control {
+	load_switches {
 		compatible = "gpio-leds";
 
-		power_3v3_and_cctv: power_3v3_and_cctv {
+		load_switch_3v3: load-switch-3v3 {
 			gpios = <&gpioe 6 GPIO_ACTIVE_HIGH>;
-			label = "POWER_3V3_AND_CCTV";
+			label = "LOAD_SWITCH_3V3";
 		};
 
-		power_5v: power_5v {
+		load_switch_5v: load-switch-5v {
 			gpios = <&gpioc 13 GPIO_ACTIVE_HIGH>;
-			label = "POWER_5V";
+			label = "LOAD_SWITCH_5V";
 		};
 
-		power_net_brigde: power_net_brigde {
+		load_switch_net_bridge: load-switch-net-bridge {
 			gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>;
-			label = "POWER_NET_BRIGDE";
+			label = "LOAD_SWITCH_NET_BRIDGE";
 		};
 	};
 
@@ -148,7 +148,7 @@
 	current-speed = <9600>;
 	status = "okay";
 
-	modbus_anemometer: modbus-anemometer {
+	rs485_usart6: rs485-usart6 {
 		compatible = "zephyr,modbus-serial";
 		status = "okay";
 	};
@@ -160,7 +160,7 @@
 	current-speed = <9600>;
 	status = "okay";
 
-	modbus_slewing_encoder: modbus-slewing-encoder {
+	rs485_uart7: rs485-uart7 {
 		compatible = "zephyr,modbus-serial";
 		status = "okay";
 	};
@@ -172,7 +172,7 @@
 	current-speed = <9600>;
 	status = "okay";
 
-	modbus_luffing_encoder: modbus-luffing-encoder {
+	rs485_uart8: rs485-uart8 {
 		compatible = "zephyr,modbus-serial";
 		status = "okay";
 	};
@@ -184,7 +184,7 @@
 	current-speed = <9600>;
 	status = "okay";
 
-	modbus_hook_encoder: modbus-hook-encoder {
+	rs485_uart4: rs485-uart4 {
 		compatible = "zephyr,modbus-serial";
 		status = "okay";
 	};

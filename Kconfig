@@ -1,10 +1,11 @@
 source "Kconfig.zephyr"
 
 rsource "module/system_health_service/Kconfig"
+rsource "module/imu_sample_service/Kconfig"
 
 menu "Craner Encoder Hub application"
 
-config CRANER_LOCAL_TIMEZONE_OFFSET_MINUTES
+config LOCAL_TIMEZONE_OFFSET_MINUTES
 	int "Local timezone offset in minutes"
 	default 480
 	range -720 840
@@ -12,52 +13,136 @@ config CRANER_LOCAL_TIMEZONE_OFFSET_MINUTES
 	  Local timezone offset used for human-readable logs, shell status, and
 	  local maintenance schedules. The default is UTC+8.
 
-config CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD
+choice TOWER_TYPE
+	prompt "Tower crane type"
+	default TOWER_TYPE_FLAT_TOP
+
+config TOWER_TYPE_FLAT_TOP
+	bool "Flat-top tower crane"
+	help
+	  Flat-top tower crane with slewing, luffing and hoisting encoders.
+
+config TOWER_TYPE_LUFFING_JIB
+	bool "Luffing-jib tower crane"
+	select WIT_IMU_MODBUS
+	help
+	  Luffing-jib tower crane with the luffing encoder replaced by a
+	  WIT Modbus RTU IMU.
+
+endchoice
+
+config ENABLE_MODBUS_TCP_SERVER_THREAD
 	bool "Enable Modbus TCP server thread"
 	default y
 	depends on MODBUS && NET_TCP && NET_SOCKETS && POSIX_API
 	help
 	  Enable the Modbus TCP server thread on TCP port 502.
 
-config CRANER_MODBUS_TCP_MAX_CLIENTS
+config MODBUS_TCP_MAX_CLIENTS
 	int "Maximum simultaneous Modbus TCP clients"
 	default 4
 	range 1 8
-	depends on CRANER_ENABLE_MODBUS_TCP_SERVER_THREAD
+	depends on ENABLE_MODBUS_TCP_SERVER_THREAD
 	help
 	  Maximum number of Modbus TCP clients served at the same time. The
 	  server uses a fixed poll-based client pool, so this value should be
 	  matched with NET_MAX_CONTEXTS, NET_MAX_CONN, and ZVFS_POLL_MAX.
 
-config CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD
+config ENABLE_READ_SLEWING_ENCODER_THREAD
 	bool "Enable slewing encoder Modbus RTU thread"
 	default y
 	depends on MODBUS
 	help
 	  Enable the Modbus RTU client thread for the slewing encoder.
 
-config CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD
+config ENABLE_READ_LUFFING_ENCODER_THREAD
 	bool "Enable luffing encoder Modbus RTU thread"
-	default y
+	default y if TOWER_TYPE_FLAT_TOP
 	depends on MODBUS
+	depends on !TOWER_TYPE_LUFFING_JIB
 	help
 	  Enable the Modbus RTU client thread for the luffing encoder.
 
-config CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD
+config ENABLE_IMU_REGISTER_BRIDGE
+	bool "Enable project IMU sampling and register bridge"
+	default y if TOWER_TYPE_LUFFING_JIB
+	select WIT_IMU_MODBUS
+	help
+	  Enable this project's IMU sampling thread, shell diagnostics, health
+	  event update, and Modbus TCP input register mirror.
+
+choice IMU_MODEL
+	prompt "Project IMU model"
+	default IMU_MODEL_WIT_STANDARD_PRECISION
+	depends on ENABLE_IMU_REGISTER_BRIDGE
+
+config IMU_MODEL_WIT_STANDARD_PRECISION
+	bool "WIT standard precision"
+	help
+	  Standard-precision WIT Modbus angle format. Read roll and pitch from
+	  registers 0x003D and 0x003E, converted by raw * 180 / 32768 degrees.
+
+config IMU_MODEL_WIT_HIGH_PRECISION
+	bool "WIT high precision"
+	help
+	  High-precision WIT Modbus angle format. Read registers 0x003D..0x0042
+	  as LRoll/HRoll, LPitch/HPitch and LYaw/HYaw signed 32-bit
+	  millidegrees.
+
+endchoice
+
+config IMU_MODBUS_IFACE_NAME
+	string "Project IMU Modbus interface name"
+	default "rs485-uart8"
+	depends on ENABLE_IMU_REGISTER_BRIDGE
+
+config IMU_MODBUS_UNIT_ID
+	int "Project IMU Modbus unit ID"
+	default 80
+	range 1 247
+	depends on ENABLE_IMU_REGISTER_BRIDGE
+
+config IMU_MODBUS_BAUD
+	int "Project IMU Modbus baud rate"
+	default 9600
+	depends on ENABLE_IMU_REGISTER_BRIDGE
+
+config IMU_MODBUS_RX_TIMEOUT_US
+	int "Project IMU Modbus RX timeout in microseconds"
+	default 50000
+	depends on ENABLE_IMU_REGISTER_BRIDGE
+
+config IMU_SAMPLE_PERIOD_MS
+	int "Project IMU sample period in milliseconds"
+	default 50
+	range 20 10000
+	depends on ENABLE_IMU_REGISTER_BRIDGE
+
+config IMU_SAMPLE_THREAD_STACK_SIZE
+	int "Project IMU sample thread stack size"
+	default 2048
+	depends on ENABLE_IMU_REGISTER_BRIDGE
+
+config IMU_SAMPLE_THREAD_PRIORITY
+	int "Project IMU sample thread priority"
+	default 7
+	depends on ENABLE_IMU_REGISTER_BRIDGE
+
+config ENABLE_READ_HOISTING_ENCODER_THREAD
 	bool "Enable hook encoder Modbus RTU thread"
 	default y
 	depends on MODBUS
 	help
 	  Enable the Modbus RTU client thread for the hook encoder.
 
-config CRANER_ENABLE_READ_ANEMOMETER_THREAD
+config ENABLE_READ_ANEMOMETER_THREAD
 	bool "Enable anemometer Modbus RTU thread"
 	default y
 	depends on MODBUS
 	help
 	  Enable the Modbus RTU client thread for the anemometer (wind speed sensor).
 
-config CRANER_ENABLE_OTA_CONTROL
+config ENABLE_OTA_CONTROL
 	bool "Enable MCUboot swap OTA control shell"
 	default y
 	depends on SHELL && FLASH && FLASH_MAP && IMG_MANAGER && MCUBOOT_IMG_MANAGER
@@ -65,7 +150,7 @@ config CRANER_ENABLE_OTA_CONTROL
 	  Enable shell commands that drive MCUboot's standard swap-based OTA
 	  state machine.
 
-config CRANER_ENABLE_STORAGE_SERVICE
+config ENABLE_STORAGE_SERVICE
 	bool "Enable persistent storage service skeleton"
 	default y
 	depends on FLASH && FLASH_MAP
@@ -74,55 +159,55 @@ config CRANER_ENABLE_STORAGE_SERVICE
 	  implementation only probes internal flash partitions and exposes
 	  their status through shell diagnostics.
 
-config CRANER_ENABLE_COREDUMP_SERVICE
+config ENABLE_COREDUMP_SERVICE
 	bool "Enable coredump diagnostic service"
 	default y
-	depends on CRANER_ENABLE_STORAGE_SERVICE
+	depends on ENABLE_STORAGE_SERVICE
 	depends on DEBUG_COREDUMP && DEBUG_COREDUMP_BACKEND_FLASH_PARTITION
 	help
 	  Enable project-level coredump diagnostics. This wraps Zephyr's
 	  coredump flash backend with simple status and clear APIs for shell
 	  and future remote diagnostics.
 
-config CRANER_ENABLE_DEVICE_PARAM_STORE
+config ENABLE_DEVICE_PARAM_STORE
 	bool "Enable device parameter store"
 	default y
-	depends on CRANER_ENABLE_STORAGE_SERVICE && SETTINGS && SETTINGS_NVS
+	depends on ENABLE_STORAGE_SERVICE && SETTINGS && SETTINGS_NVS
 	depends on NET_HOSTNAME_ENABLE
 	help
 	  Enable the device parameter service backed by Zephyr settings/NVS.
 	  It owns the device parameter schema and exposes controlled get, set,
 	  save, and factory reset APIs for shell and remote maintenance.
 
-config CRANER_ENABLE_MODBUS_REGISTER_STORE
+config ENABLE_MODBUS_REGISTER_STORE
 	bool "Enable Modbus register persistent store"
 	default y
-	depends on CRANER_ENABLE_STORAGE_SERVICE && FLASH && FLASH_MAP
+	depends on ENABLE_STORAGE_SERVICE && FLASH && FLASH_MAP
 	help
 	  Enable persistent storage for selected Modbus coils and holding
 	  registers. The v1 backend stores address-based TLV records in the
 	  external W25Q64 modbus-store partition with dual-bank CRC protection.
 
-config CRANER_MODBUS_REGISTER_STORE_SAVE_DELAY_MS
+config MODBUS_REGISTER_STORE_SAVE_DELAY_MS
 	int "Modbus register store delayed save time in milliseconds"
 	default 3000
 	range 100 60000
-	depends on CRANER_ENABLE_MODBUS_REGISTER_STORE
+	depends on ENABLE_MODBUS_REGISTER_STORE
 	help
 	  Delay used to merge frequent Modbus writes before saving persistent
 	  registers to external flash.
 
-config CRANER_COREDUMP_EXPORT_CHUNK_BYTES
+config COREDUMP_EXPORT_CHUNK_BYTES
 	int "Coredump export chunk size in bytes"
 	default 128
 	range 32 256
-	depends on CRANER_ENABLE_COREDUMP_SERVICE
+	depends on ENABLE_COREDUMP_SERVICE
 	help
 	  Number of raw coredump bytes read per export chunk. The exported
 	  payload is hex encoded, so each shell chunk is about twice this size
 	  plus the #CD: prefix.
 
-config CRANER_ENABLE_FAULT_INJECTION_SHELL
+config ENABLE_FAULT_INJECTION_SHELL
 	bool "Enable fault injection shell commands"
 	default n
 	depends on SHELL
@@ -130,7 +215,7 @@ config CRANER_ENABLE_FAULT_INJECTION_SHELL
 	  Enable local shell commands that deliberately trigger fatal errors
 	  for coredump validation. Keep this disabled in production builds.
 
-config CRANER_NETWORK_DHCP_RETRY_INITIAL_MS
+config NETWORK_DHCP_RETRY_INITIAL_MS
 	int "Initial DHCP retry delay in milliseconds"
 	default 5000
 	range 1000 60000
@@ -138,22 +223,22 @@ config CRANER_NETWORK_DHCP_RETRY_INITIAL_MS
 	  Delay used for the first DHCP retry after startup DHCP timeout or
 	  address loss.
 
-config CRANER_NETWORK_DHCP_RETRY_MAX_MS
+config NETWORK_DHCP_RETRY_MAX_MS
 	int "Maximum DHCP retry delay in milliseconds"
 	default 60000
 	range 5000 600000
 	help
 	  Maximum delay used by the DHCP exponential backoff retry loop.
 
-config CRANER_OTA_TEST_TIMEOUT_S
+config OTA_TEST_TIMEOUT_S
 	int "OTA test image confirmation timeout in seconds"
 	default 3600
-	depends on CRANER_ENABLE_OTA_CONTROL
+	depends on ENABLE_OTA_CONTROL
 	help
 	  Time allowed for an unconfirmed test image to call ota confirm before
 	  the application reboots and lets MCUboot roll back.
 
-config CRANER_TIME_SERVICE_STACK_SIZE
+config TIME_SERVICE_STACK_SIZE
 	int "Time service thread stack size"
 	default 4096
 	range 2048 8192
@@ -161,48 +246,48 @@ config CRANER_TIME_SERVICE_STACK_SIZE
 	  Stack size for the time service thread. The thread performs blocking
 	  SNTP/DNS operations and updates Zephyr realtime clock.
 
-config CRANER_TIME_SERVICE_NTP_SERVER
+config TIME_SERVICE_NTP_SERVER
 	string "NTP server hostname"
 	default "pool.ntp.org"
 	help
 	  NTP/SNTP server used by the time service after DHCP succeeds.
 
-config CRANER_TIME_SERVICE_NTP_TIMEOUT_MS
+config TIME_SERVICE_NTP_TIMEOUT_MS
 	int "NTP query timeout in milliseconds"
 	default 5000
 	range 1000 30000
 	help
 	  Timeout used for a single SNTP request.
 
-config CRANER_TIME_SERVICE_NTP_RETRY_INITIAL_MS
+config TIME_SERVICE_NTP_RETRY_INITIAL_MS
 	int "Initial NTP retry delay in milliseconds"
 	default 10000
 	range 1000 60000
 	help
 	  Delay used for the first NTP retry after a sync failure.
 
-config CRANER_TIME_SERVICE_NTP_RETRY_MAX_MS
+config TIME_SERVICE_NTP_RETRY_MAX_MS
 	int "Maximum NTP retry delay in milliseconds"
 	default 300000
 	range 10000 3600000
 	help
 	  Maximum delay used by the NTP exponential backoff retry loop.
 
-config CRANER_TIME_SERVICE_NTP_RESYNC_INTERVAL_S
+config TIME_SERVICE_NTP_RESYNC_INTERVAL_S
 	int "NTP resync interval in seconds"
 	default 3600
 	range 60 86400
 	help
 	  Periodic resync interval after a successful NTP sync.
 
-config CRANER_TIME_SERVICE_RTC_MIN_VALID_UNIX_TIME
+config TIME_SERVICE_RTC_MIN_VALID_UNIX_TIME
 	int "Minimum valid RTC Unix time"
 	default 1767225600
 	help
 	  Minimum Unix timestamp accepted as a valid RTC time. The default is
 	  2026-01-01T00:00:00Z.
 
-config CRANER_TIME_SERVICE_RTC_WRITEBACK_THRESHOLD_S
+config TIME_SERVICE_RTC_WRITEBACK_THRESHOLD_S
 	int "RTC writeback threshold in seconds"
 	default 2
 	range 0 3600

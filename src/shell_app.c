@@ -1,16 +1,16 @@
-#ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
+#ifdef CONFIG_ENABLE_COREDUMP_SERVICE
 #include "coredump_service.h"
 #endif
 #include "shell_app.h"
-#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+#ifdef CONFIG_ENABLE_DEVICE_PARAM_STORE
 #include "device_param_store.h"
 #endif
-#ifdef CONFIG_CRANER_ENABLE_MODBUS_REGISTER_STORE
+#ifdef CONFIG_ENABLE_MODBUS_REGISTER_STORE
 #include "modbus_register_store.h"
 #endif
 #include "network_service.h"
 #include "rtc_time_provider.h"
-#ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
+#ifdef CONFIG_ENABLE_STORAGE_SERVICE
 #include "storage_service.h"
 #endif
 #ifdef CONFIG_SYS_HEALTH_STACK_USAGE_CHECK
@@ -24,7 +24,7 @@
 #include <string.h>
 #include <time.h>
 
-#ifdef CONFIG_CRANER_ENABLE_FAULT_INJECTION_SHELL
+#ifdef CONFIG_ENABLE_FAULT_INJECTION_SHELL
 #include <zephyr/kernel.h>
 #endif
 #include <zephyr/shell/shell.h>
@@ -38,7 +38,7 @@ static bool shell_output_json;
 
 static int shell_output_format_refresh(void)
 {
-#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+#ifdef CONFIG_ENABLE_DEVICE_PARAM_STORE
 	char value[16];
 	int rc;
 
@@ -246,7 +246,7 @@ static int cmd_net_status(const struct shell *shell, size_t argc, char **argv)
 SHELL_CMD_REGISTER(net_status, NULL, "Show managed network status.",
 		   cmd_net_status);
 
-#ifdef CONFIG_CRANER_ENABLE_STORAGE_SERVICE
+#ifdef CONFIG_ENABLE_STORAGE_SERVICE
 static const char *storage_shell_str(const char *value)
 {
 	return value != NULL ? value : "";
@@ -388,7 +388,7 @@ SHELL_CMD_REGISTER(storage_status, NULL, "Show persistent storage status.",
 		   cmd_storage_status);
 #endif
 
-#ifdef CONFIG_CRANER_ENABLE_DEVICE_PARAM_STORE
+#ifdef CONFIG_ENABLE_DEVICE_PARAM_STORE
 static int print_param_pairs(const struct shell *shell, bool json_output)
 {
 	char json[768];
@@ -614,7 +614,7 @@ SHELL_CMD_REGISTER(param_factory_reset, NULL,
 		   cmd_param_factory_reset);
 #endif
 
-#ifdef CONFIG_CRANER_ENABLE_MODBUS_REGISTER_STORE
+#ifdef CONFIG_ENABLE_MODBUS_REGISTER_STORE
 static int cmd_modbus_store_status(const struct shell *shell, size_t argc,
 				   char **argv)
 {
@@ -734,7 +734,7 @@ SHELL_CMD_REGISTER(modbus_store_clear, NULL,
 		   cmd_modbus_store_clear);
 #endif
 
-#ifdef CONFIG_CRANER_ENABLE_COREDUMP_SERVICE
+#ifdef CONFIG_ENABLE_COREDUMP_SERVICE
 static int cmd_coredump_status(const struct shell *shell, size_t argc,
 			       char **argv)
 {
@@ -812,8 +812,8 @@ SHELL_CMD_REGISTER(coredump_report, NULL,
 static int cmd_coredump_export(const struct shell *shell, size_t argc,
 			       char **argv)
 {
-	uint8_t chunk[CONFIG_CRANER_COREDUMP_EXPORT_CHUNK_BYTES];
-	char line[(CONFIG_CRANER_COREDUMP_EXPORT_CHUNK_BYTES * 2U) + 5U];
+	uint8_t chunk[CONFIG_COREDUMP_EXPORT_CHUNK_BYTES];
+	char line[(CONFIG_COREDUMP_EXPORT_CHUNK_BYTES * 2U) + 5U];
 	struct coredump_service_status status;
 	size_t remaining;
 	off_t offset = 0;
@@ -877,7 +877,7 @@ SHELL_CMD_REGISTER(coredump_export, NULL,
 		   cmd_coredump_export);
 #endif
 
-#ifdef CONFIG_CRANER_ENABLE_FAULT_INJECTION_SHELL
+#ifdef CONFIG_ENABLE_FAULT_INJECTION_SHELL
 static int cmd_fault_oops(const struct shell *shell, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
