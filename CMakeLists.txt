@@ -6,9 +6,12 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(craner_encoder_hub)
 
 add_subdirectory(driver/wit_imu_modbus)
+add_subdirectory(driver/idecoder_encoder_modbus)
 add_subdirectory(module/system_health_service)
 add_subdirectory(module/imu_sample_service)
+add_subdirectory(module/encoder_sample_service)
 add_subdirectory(app/luffing_imu_app)
+add_subdirectory(app/crane_encoder_app)
 
 target_include_directories(app PRIVATE include src)
 
@@ -37,12 +40,9 @@ target_sources_ifdef(CONFIG_SYS_HEALTH_SERVICE app PRIVATE
 	src/system_health_event_table.c
 )
 
-if(CONFIG_ENABLE_READ_SLEWING_ENCODER_THREAD OR
-   CONFIG_ENABLE_READ_LUFFING_ENCODER_THREAD OR
-   CONFIG_ENABLE_READ_HOISTING_ENCODER_THREAD OR
-   CONFIG_ENABLE_READ_ANEMOMETER_THREAD)
-	target_sources(app PRIVATE src/modbus_rtu_client_app.c)
-endif()
+target_sources_ifdef(CONFIG_ENABLE_READ_ANEMOMETER_THREAD app PRIVATE
+	src/modbus_rtu_client_app.c
+)
 
 target_sources_ifdef(CONFIG_ENABLE_MODBUS_TCP_SERVER_THREAD app PRIVATE
 	src/modbus_tcp_server_app.c
@@ -70,5 +70,7 @@ target_sources_ifdef(CONFIG_ENABLE_COREDUMP_SERVICE app PRIVATE
 
 target_link_libraries(app PRIVATE
 	wit_imu_modbus
+	idecoder_encoder_modbus
 	imu_sample_service
+	encoder_sample_service
 )

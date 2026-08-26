@@ -1,0 +1,6 @@
+config IDECODER_ENCODER_MODBUS
+	bool "IDECODER encoder Modbus helper"
+	depends on MODBUS
+	help
+	  Enable the IDECODER encoder Modbus RTU helper. This layer only knows
+	  how to initialize a Modbus RTU client and fetch one raw encoder sample.

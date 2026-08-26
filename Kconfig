@@ -1,9 +1,12 @@
 source "Kconfig.zephyr"
 
 rsource "driver/wit_imu_modbus/Kconfig"
+rsource "driver/idecoder_encoder_modbus/Kconfig"
 rsource "module/system_health_service/Kconfig"
 rsource "module/imu_sample_service/Kconfig"
+rsource "module/encoder_sample_service/Kconfig"
 rsource "app/luffing_imu_app/Kconfig"
+rsource "app/crane_encoder_app/Kconfig"
 
 menu "Craner Encoder Hub application"
 
@@ -49,28 +52,6 @@ config MODBUS_TCP_MAX_CLIENTS
 	  Maximum number of Modbus TCP clients served at the same time. The
 	  server uses a fixed poll-based client pool, so this value should be
 	  matched with NET_MAX_CONTEXTS, NET_MAX_CONN, and ZVFS_POLL_MAX.
-
-config ENABLE_READ_SLEWING_ENCODER_THREAD
-	bool "Enable slewing encoder Modbus RTU thread"
-	default y
-	depends on MODBUS
-	help
-	  Enable the Modbus RTU client thread for the slewing encoder.
-
-config ENABLE_READ_LUFFING_ENCODER_THREAD
-	bool "Enable luffing encoder Modbus RTU thread"
-	default y if TOWER_TYPE_FLAT_TOP
-	depends on MODBUS
-	depends on !TOWER_TYPE_LUFFING_JIB
-	help
-	  Enable the Modbus RTU client thread for the luffing encoder.
-
-config ENABLE_READ_HOISTING_ENCODER_THREAD
-	bool "Enable hook encoder Modbus RTU thread"
-	default y
-	depends on MODBUS
-	help
-	  Enable the Modbus RTU client thread for the hook encoder.
 
 config ENABLE_READ_ANEMOMETER_THREAD
 	bool "Enable anemometer Modbus RTU thread"

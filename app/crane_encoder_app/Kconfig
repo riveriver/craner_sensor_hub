@@ -1,0 +1,61 @@
+config ENABLE_CRANE_ENCODER_APP
+	bool "Enable crane encoder application"
+	default y
+	depends on ENCODER_SAMPLE_SERVICE
+	help
+	  Enable product-level encoder sampling bindings. This layer decides
+	  which encoder channels are used and where their samples are published.
+
+if ENABLE_CRANE_ENCODER_APP
+
+config CRANE_ENCODER_USE_SLEWING
+	bool "Use slewing encoder"
+	default y
+
+config CRANE_ENCODER_USE_LUFFING
+	bool "Use luffing encoder"
+	default y if TOWER_TYPE_FLAT_TOP
+	depends on !TOWER_TYPE_LUFFING_JIB
+
+config CRANE_ENCODER_USE_HOISTING
+	bool "Use hoisting encoder"
+	default y
+
+config CRANE_ENCODER_SLEWING_IFACE_NAME
+	string "Slewing encoder RS485 interface name"
+	default "rs485-uart7"
+	depends on CRANE_ENCODER_USE_SLEWING
+
+config CRANE_ENCODER_LUFFING_IFACE_NAME
+	string "Luffing encoder RS485 interface name"
+	default "rs485-uart8"
+	depends on CRANE_ENCODER_USE_LUFFING
+
+config CRANE_ENCODER_HOISTING_IFACE_NAME
+	string "Hoisting encoder RS485 interface name"
+	default "rs485-uart4"
+	depends on CRANE_ENCODER_USE_HOISTING
+
+config CRANE_ENCODER_MODBUS_UNIT_ID
+	int "Encoder Modbus unit id"
+	default 1
+	range 1 247
+
+config CRANE_ENCODER_MODBUS_BAUD
+	int "Encoder Modbus baud rate"
+	default 9600
+
+config CRANE_ENCODER_MODBUS_RX_TIMEOUT_US
+	int "Encoder Modbus RX timeout in microseconds"
+	default 30000
+
+config CRANE_ENCODER_SAMPLE_PERIOD_MS
+	int "Encoder sample period in milliseconds"
+	default 50
+	range 10 10000
+
+config CRANE_ENCODER_MODBUS_START_ADDR
+	hex "Encoder Modbus holding register start address"
+	default 0x0002
+
+endif

@@ -1,0 +1,25 @@
+config ENCODER_SAMPLE_SERVICE
+	bool "Encoder sample service"
+	depends on MODBUS
+	select IDECODER_ENCODER_MODBUS
+	help
+	  Enable the reusable one-channel encoder sampling service.
+
+if ENCODER_SAMPLE_SERVICE
+
+config ENCODER_SAMPLE_SERVICE_THREAD_STACK_SIZE
+	int "Encoder sample service thread stack size"
+	default 2048
+	range 1024 4096
+
+config ENCODER_SAMPLE_SERVICE_THREAD_PRIORITY
+	int "Encoder sample service thread priority"
+	default 6
+	range 0 15
+
+config ENCODER_SAMPLE_SERVICE_MAX_INSTANCES
+	int "Maximum encoder sample service instances"
+	default 4
+	range 1 8
+
+endif
