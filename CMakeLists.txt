@@ -5,9 +5,12 @@ list(APPEND BOARD_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(craner_encoder_hub)
 
+add_subdirectory(driver/wit_imu_modbus)
 add_subdirectory(module/system_health_service)
+add_subdirectory(module/imu_sample_service)
+add_subdirectory(app/luffing_imu_app)
 
-target_include_directories(app PRIVATE include)
+target_include_directories(app PRIVATE include src)
 
 target_sources(app PRIVATE
 	src/main.c
@@ -32,10 +35,6 @@ target_sources_ifdef(CONFIG_ENABLE_LOG_COMM_THREAD app PRIVATE
 
 target_sources_ifdef(CONFIG_SYS_HEALTH_SERVICE app PRIVATE
 	src/system_health_event_table.c
-)
-
-target_sources_ifdef(CONFIG_ENABLE_IMU_REGISTER_BRIDGE app PRIVATE
-	src/imu_sample_app.c
 )
 
 if(CONFIG_ENABLE_READ_SLEWING_ENCODER_THREAD OR
@@ -67,4 +66,9 @@ target_sources_ifdef(CONFIG_ENABLE_MODBUS_REGISTER_STORE app PRIVATE
 
 target_sources_ifdef(CONFIG_ENABLE_COREDUMP_SERVICE app PRIVATE
 	src/coredump_service.c
+)
+
+target_link_libraries(app PRIVATE
+	wit_imu_modbus
+	imu_sample_service
 )

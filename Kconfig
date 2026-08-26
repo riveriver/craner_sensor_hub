@@ -1,7 +1,9 @@
 source "Kconfig.zephyr"
 
+rsource "driver/wit_imu_modbus/Kconfig"
 rsource "module/system_health_service/Kconfig"
 rsource "module/imu_sample_service/Kconfig"
+rsource "app/luffing_imu_app/Kconfig"
 
 menu "Craner Encoder Hub application"
 
@@ -62,71 +64,6 @@ config ENABLE_READ_LUFFING_ENCODER_THREAD
 	depends on !TOWER_TYPE_LUFFING_JIB
 	help
 	  Enable the Modbus RTU client thread for the luffing encoder.
-
-config ENABLE_IMU_REGISTER_BRIDGE
-	bool "Enable project IMU sampling and register bridge"
-	default y if TOWER_TYPE_LUFFING_JIB
-	select WIT_IMU_MODBUS
-	help
-	  Enable this project's IMU sampling thread, shell diagnostics, health
-	  event update, and Modbus TCP input register mirror.
-
-choice IMU_MODEL
-	prompt "Project IMU model"
-	default IMU_MODEL_WIT_STANDARD_PRECISION
-	depends on ENABLE_IMU_REGISTER_BRIDGE
-
-config IMU_MODEL_WIT_STANDARD_PRECISION
-	bool "WIT standard precision"
-	help
-	  Standard-precision WIT Modbus angle format. Read roll and pitch from
-	  registers 0x003D and 0x003E, converted by raw * 180 / 32768 degrees.
-
-config IMU_MODEL_WIT_HIGH_PRECISION
-	bool "WIT high precision"
-	help
-	  High-precision WIT Modbus angle format. Read registers 0x003D..0x0042
-	  as LRoll/HRoll, LPitch/HPitch and LYaw/HYaw signed 32-bit
-	  millidegrees.
-
-endchoice
-
-config IMU_MODBUS_IFACE_NAME
-	string "Project IMU Modbus interface name"
-	default "rs485-uart8"
-	depends on ENABLE_IMU_REGISTER_BRIDGE
-
-config IMU_MODBUS_UNIT_ID
-	int "Project IMU Modbus unit ID"
-	default 80
-	range 1 247
-	depends on ENABLE_IMU_REGISTER_BRIDGE
-
-config IMU_MODBUS_BAUD
-	int "Project IMU Modbus baud rate"
-	default 9600
-	depends on ENABLE_IMU_REGISTER_BRIDGE
-
-config IMU_MODBUS_RX_TIMEOUT_US
-	int "Project IMU Modbus RX timeout in microseconds"
-	default 50000
-	depends on ENABLE_IMU_REGISTER_BRIDGE
-
-config IMU_SAMPLE_PERIOD_MS
-	int "Project IMU sample period in milliseconds"
-	default 50
-	range 20 10000
-	depends on ENABLE_IMU_REGISTER_BRIDGE
-
-config IMU_SAMPLE_THREAD_STACK_SIZE
-	int "Project IMU sample thread stack size"
-	default 2048
-	depends on ENABLE_IMU_REGISTER_BRIDGE
-
-config IMU_SAMPLE_THREAD_PRIORITY
-	int "Project IMU sample thread priority"
-	default 7
-	depends on ENABLE_IMU_REGISTER_BRIDGE
 
 config ENABLE_READ_HOISTING_ENCODER_THREAD
 	bool "Enable hook encoder Modbus RTU thread"

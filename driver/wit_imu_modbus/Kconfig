@@ -1,0 +1,12 @@
+menu "WIT IMU Modbus helper"
+
+config WIT_IMU_MODBUS
+	bool "Enable WIT IMU Modbus helper"
+	default n
+	depends on MODBUS && MODBUS_CLIENT && MODBUS_SERIAL
+	help
+	  Enable reusable helpers for reading WIT IMU angle registers over
+	  Modbus RTU. This helper does not create sampling threads, shell
+	  commands, health events, power sequencing, or product register mirrors.
+
+endmenu

@@ -1,0 +1,11 @@
+menu "Luffing IMU application"
+
+config ENABLE_LUFFING_IMU_APP
+	bool "Enable luffing IMU register bridge application"
+	default y if TOWER_TYPE_LUFFING_JIB
+	depends on IMU_SAMPLE_SERVICE
+	help
+	  Bridge the reusable IMU sample service into this product's luffing
+	  IMU Modbus TCP input registers and luffing health event.
+
+endmenu
