@@ -53,7 +53,7 @@ const struct sys_health_event system_health_event_table[] = {
 	{
 		.event = SYSTEM_HEALTH_READ_SLEWING_ENCODER,
 		.name = "slewing_encoder",
-		.enable = IS_ENABLED(CONFIG_CRANER_ENABLE_READ_SLEWING_ENCODER_THREAD),
+		.enable = IS_ENABLED(CONFIG_ENABLE_READ_SLEWING_ENCODER_THREAD),
 		.priority = 3,
 		.offline_timeout_ms = 3000,
 		.offline_first_func = log_offline_event,
@@ -62,7 +62,8 @@ const struct sys_health_event system_health_event_table[] = {
 	{
 		.event = SYSTEM_HEALTH_READ_LUFFING_ENCODER,
 		.name = "luffing_encoder",
-		.enable = IS_ENABLED(CONFIG_CRANER_ENABLE_READ_LUFFING_ENCODER_THREAD),
+		.enable = IS_ENABLED(CONFIG_ENABLE_READ_LUFFING_ENCODER_THREAD) ||
+			  IS_ENABLED(CONFIG_ENABLE_IMU_REGISTER_BRIDGE),
 		.priority = 4,
 		.offline_timeout_ms = 3000,
 		.offline_first_func = log_offline_event,
@@ -71,7 +72,7 @@ const struct sys_health_event system_health_event_table[] = {
 	{
 		.event = SYSTEM_HEALTH_READ_HOISTING_ENCODER,
 		.name = "hoisting_encoder",
-		.enable = IS_ENABLED(CONFIG_CRANER_ENABLE_READ_HOISTING_ENCODER_THREAD),
+		.enable = IS_ENABLED(CONFIG_ENABLE_READ_HOISTING_ENCODER_THREAD),
 		.priority = 5,
 		.offline_timeout_ms = 3000,
 		.offline_first_func = log_offline_event,
@@ -80,7 +81,7 @@ const struct sys_health_event system_health_event_table[] = {
 	{
 		.event = SYSTEM_HEALTH_READ_ANEMOMETER,
 		.name = "anemometer",
-		.enable = IS_ENABLED(CONFIG_CRANER_ENABLE_READ_ANEMOMETER_THREAD),
+		.enable = IS_ENABLED(CONFIG_ENABLE_READ_ANEMOMETER_THREAD),
 		.priority = 6,
 		.offline_timeout_ms = 3000,
 		.offline_first_func = log_offline_event,
