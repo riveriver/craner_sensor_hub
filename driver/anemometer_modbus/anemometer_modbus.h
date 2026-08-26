@@ -29,6 +29,9 @@ struct anemometer_modbus_sample {
 	uint16_t wind_direction;
 };
 
+struct anemometer_sample_backend;
+extern const struct anemometer_sample_backend anemometer_modbus_backend;
+
 int anemometer_modbus_init(struct anemometer_modbus_client *client,
 			   const struct anemometer_modbus_config *config);
 int anemometer_modbus_fetch(struct anemometer_modbus_client *client,

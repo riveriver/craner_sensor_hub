@@ -10,9 +10,20 @@ config ENABLE_LUFFING_IMU_APP
 
 if ENABLE_LUFFING_IMU_APP
 
+choice LUFFING_IMU_BACKEND
+	prompt "Luffing IMU backend"
+	default LUFFING_IMU_BACKEND_WIT_MODBUS
+
+config LUFFING_IMU_BACKEND_WIT_MODBUS
+	bool "WIT IMU Modbus"
+	select WIT_IMU_MODBUS
+
+endchoice
+
 choice LUFFING_IMU_MODEL
 	prompt "Luffing IMU model"
 	default LUFFING_IMU_MODEL_WIT_STANDARD_PRECISION
+	depends on LUFFING_IMU_BACKEND_WIT_MODBUS
 
 config LUFFING_IMU_MODEL_WIT_STANDARD_PRECISION
 	bool "WIT standard precision"

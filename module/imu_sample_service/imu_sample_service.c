@@ -33,7 +33,7 @@ static const char *imu_sample_service_name(
 
 static void imu_sample_service_copy_raw_regs(
 	struct imu_sample_service_sample *dst,
-	const struct wit_imu_modbus_sample *src)
+	const struct imu_sample_service_sample *src)
 {
 	dst->raw_reg_count = src->raw_reg_count;
 	for (uint8_t i = 0U;
@@ -45,7 +45,7 @@ static void imu_sample_service_copy_raw_regs(
 
 static void imu_sample_service_update_success(
 	struct imu_sample_service *service,
-	const struct wit_imu_modbus_sample *sample,
+	const struct imu_sample_service_sample *sample,
 	uint32_t read_duration_us,
 	struct imu_sample_service_sample *notify_sample)
 {
@@ -132,15 +132,16 @@ static void imu_sample_service_thread(void *arg1, void *arg2, void *arg3)
 	}
 
 	while (true) {
-		struct wit_imu_modbus_sample sample;
+		struct imu_sample_service_sample sample;
 		struct imu_sample_service_sample notify_sample;
 		uint32_t start_cycles;
 		uint32_t elapsed_cycles;
 		uint32_t read_duration_us;
 
 		if (!service->client_ready) {
-			err = wit_imu_modbus_init(&service->modbus_client,
-						  &service->modbus_config);
+			err = service->config->backend->init(
+				service->config->backend_client,
+				service->config->backend_config);
 			if (err != 0) {
 				imu_sample_service_update_error(service, err);
 				imu_sample_service_notify(service, err, NULL);
@@ -152,15 +153,16 @@ static void imu_sample_service_thread(void *arg1, void *arg2, void *arg3)
 			}
 
 			service->client_ready = true;
-			LOG_INF("%s sampling started: model=%s iface=%s period=%u ms",
+			LOG_INF("%s sampling started: backend=%s iface=%s period=%u ms",
 				imu_sample_service_name(service),
-				wit_imu_modbus_model_name(service->modbus_config.model),
+				service->config->backend->name,
 				service->config->iface_name,
 				service->config->period_ms);
 		}
 
 		start_cycles = k_cycle_get_32();
-		err = wit_imu_modbus_fetch(&service->modbus_client, &sample);
+		err = service->config->backend->fetch(
+			service->config->backend_client, &sample);
 		elapsed_cycles = k_cycle_get_32() - start_cycles;
 		read_duration_us = (uint32_t)k_cyc_to_us_floor64(elapsed_cycles);
 
@@ -176,7 +178,10 @@ static void imu_sample_service_thread(void *arg1, void *arg2, void *arg3)
 					   imu_sample_service_name(service),
 					   err);
 			if (err == -ENODEV) {
-				wit_imu_modbus_reset(&service->modbus_client);
+				if (service->config->backend->reset != NULL) {
+					service->config->backend->reset(
+						service->config->backend_client);
+				}
 				service->client_ready = false;
 			}
 		}
@@ -210,7 +215,11 @@ int imu_sample_service_start(struct imu_sample_service *service,
 	int err;
 
 	if (service == NULL || config == NULL || config->name == NULL ||
-	    config->iface_name == NULL || config->period_ms == 0U) {
+	    config->iface_name == NULL || config->period_ms == 0U ||
+	    config->backend == NULL || config->backend->init == NULL ||
+	    config->backend->fetch == NULL ||
+	    config->backend_client == NULL ||
+	    config->backend_config == NULL) {
 		return -EINVAL;
 	}
 
@@ -220,12 +229,6 @@ int imu_sample_service_start(struct imu_sample_service *service,
 
 	memset(service, 0, sizeof(*service));
 	service->config = config;
-	service->modbus_config.iface_name = config->iface_name;
-	service->modbus_config.model = config->model;
-	service->modbus_config.unit_id = config->unit_id;
-	service->modbus_config.baud = config->baud;
-	service->modbus_config.rx_timeout_us = config->rx_timeout_us;
-	service->modbus_client.iface = -1;
 	service->callback = callback;
 	service->user_data = user_data;
 

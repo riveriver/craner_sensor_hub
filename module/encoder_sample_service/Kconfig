@@ -1,7 +1,5 @@
 config ENCODER_SAMPLE_SERVICE
 	bool "Encoder sample service"
-	depends on MODBUS
-	select IDECODER_ENCODER_MODBUS
 	help
 	  Enable the reusable one-channel encoder sampling service.
 

@@ -1,18 +1,20 @@
-# IDECODER Encoder Modbus Helper
+# IDECODER 编码器 Modbus Helper
 
-This helper wraps the Modbus RTU access pattern for one IDECODER encoder.
+`idecoder_encoder_modbus` 只负责 IDECODER 编码器的 Modbus RTU 访问和数据解析。
 
-It owns:
+## 负责范围
 
-- Modbus client initialization on one configured RS485/Modbus interface.
-- Reading the encoder holding registers.
-- Returning the raw turn count and single-turn value.
+- 在指定 RS485/Modbus 接口上初始化 Zephyr Modbus RTU client。
+- 读取 IDECODER 编码器保持寄存器。
+- 解析圈数和单圈值。
+- 导出 `idecoder_encoder_modbus_backend`，供 `encoder_sample_service` 调用。
 
-It deliberately does not own:
+## 不负责范围
 
-- Product channel names such as slewing, luffing, or hoisting.
-- Modbus TCP register mapping.
-- System health events.
-- Sampling threads or retry policy.
+- 不决定回转、变幅、起升等业务通道名称。
+- 不创建采样线程。
+- 不维护采样统计或失败重试策略。
+- 不写 Modbus TCP 寄存器。
+- 不更新系统健康事件。
 
-Enable it with `CONFIG_IDECODER_ENCODER_MODBUS`.
+启用配置：`CONFIG_IDECODER_ENCODER_MODBUS`。

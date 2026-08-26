@@ -8,6 +8,16 @@ config ENABLE_ENCODER_APP
 
 if ENABLE_ENCODER_APP
 
+choice ENCODER_MODEL
+	prompt "Encoder backend model"
+	default ENCODER_MODEL_IDECODER_MODBUS
+
+config ENCODER_MODEL_IDECODER_MODBUS
+	bool "IDECODER Modbus encoder"
+	select IDECODER_ENCODER_MODBUS
+
+endchoice
+
 config ENCODER_USE_SLEWING
 	bool "Use slewing encoder"
 	default y

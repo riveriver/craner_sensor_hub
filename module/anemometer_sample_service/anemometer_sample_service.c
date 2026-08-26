@@ -33,7 +33,7 @@ static const char *anemometer_sample_service_name(
 
 static void anemometer_sample_service_update_success(
 	struct anemometer_sample_service *service,
-	const struct anemometer_modbus_sample *sample,
+	const struct anemometer_sample_service_sample *sample,
 	uint32_t read_duration_us,
 	struct anemometer_sample_service_sample *notify_sample)
 {
@@ -129,15 +129,16 @@ static void anemometer_sample_service_thread(
 	}
 
 	while (true) {
-		struct anemometer_modbus_sample sample;
+		struct anemometer_sample_service_sample sample;
 		struct anemometer_sample_service_sample notify_sample;
 		uint32_t start_cycles;
 		uint32_t elapsed_cycles;
 		uint32_t read_duration_us;
 
 		if (!service->client_ready) {
-			err = anemometer_modbus_init(&service->modbus_client,
-						     &service->modbus_config);
+			err = service->config->backend->init(
+				service->config->backend_client,
+				service->config->backend_config);
 			if (err != 0) {
 				anemometer_sample_service_update_error(
 					service, err);
@@ -151,14 +152,16 @@ static void anemometer_sample_service_thread(
 			}
 
 			service->client_ready = true;
-			LOG_INF("%s sampling started: iface=%s period=%u ms",
+			LOG_INF("%s sampling started: backend=%s iface=%s period=%u ms",
 				anemometer_sample_service_name(service),
+				service->config->backend->name,
 				service->config->iface_name,
 				service->config->period_ms);
 		}
 
 		start_cycles = k_cycle_get_32();
-		err = anemometer_modbus_fetch(&service->modbus_client, &sample);
+		err = service->config->backend->fetch(
+			service->config->backend_client, &sample);
 		elapsed_cycles = k_cycle_get_32() - start_cycles;
 		read_duration_us = (uint32_t)k_cyc_to_us_floor64(elapsed_cycles);
 
@@ -174,7 +177,10 @@ static void anemometer_sample_service_thread(
 			LOG_WRN_RATELIMIT("%s read failed: %d",
 				anemometer_sample_service_name(service), err);
 			if (err == -ENODEV) {
-				anemometer_modbus_reset(&service->modbus_client);
+				if (service->config->backend->reset != NULL) {
+					service->config->backend->reset(
+						service->config->backend_client);
+				}
 				service->client_ready = false;
 			}
 		}
@@ -208,7 +214,11 @@ int anemometer_sample_service_start(
 	int err;
 
 	if (service == NULL || config == NULL || config->name == NULL ||
-	    config->iface_name == NULL || config->period_ms == 0U) {
+	    config->iface_name == NULL || config->period_ms == 0U ||
+	    config->backend == NULL || config->backend->init == NULL ||
+	    config->backend->fetch == NULL ||
+	    config->backend_client == NULL ||
+	    config->backend_config == NULL) {
 		return -EINVAL;
 	}
 
@@ -218,13 +228,6 @@ int anemometer_sample_service_start(
 
 	memset(service, 0, sizeof(*service));
 	service->config = config;
-	service->modbus_config.iface_name = config->iface_name;
-	service->modbus_config.unit_id = config->unit_id;
-	service->modbus_config.baud = config->baud;
-	service->modbus_config.rx_timeout_us = config->rx_timeout_us;
-	service->modbus_config.start_addr = config->start_addr;
-	service->modbus_config.register_count = config->register_count;
-	service->modbus_client.iface = -1;
 	service->callback = callback;
 	service->user_data = user_data;
 

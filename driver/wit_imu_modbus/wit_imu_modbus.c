@@ -9,6 +9,8 @@
 #include <zephyr/modbus/modbus.h>
 #include <zephyr/sys/util.h>
 
+#include "imu_sample_backend.h"
+
 LOG_MODULE_REGISTER(wit_imu_modbus, LOG_LEVEL_INF);
 
 #define WIT_ANGLE_REG_START 0x003d
@@ -195,3 +197,51 @@ void wit_imu_modbus_reset(struct wit_imu_modbus_client *client)
 	client->iface = -1;
 	client->ready = false;
 }
+
+static int wit_imu_backend_init(void *client, const void *config)
+{
+	return wit_imu_modbus_init(client, config);
+}
+
+static int wit_imu_backend_fetch(
+	void *client, struct imu_sample_service_sample *sample)
+{
+	struct wit_imu_modbus_sample raw_sample;
+	int ret;
+
+	if (sample == NULL) {
+		return -EINVAL;
+	}
+
+	ret = wit_imu_modbus_fetch(client, &raw_sample);
+	if (ret != 0) {
+		return ret;
+	}
+
+	sample->raw_reg_count = raw_sample.raw_reg_count;
+	for (uint8_t i = 0U;
+	     i < raw_sample.raw_reg_count && i < ARRAY_SIZE(sample->raw_regs);
+	     i++) {
+		sample->raw_regs[i] = raw_sample.raw_regs[i];
+	}
+	sample->roll_raw = raw_sample.roll_raw;
+	sample->pitch_raw = raw_sample.pitch_raw;
+	sample->yaw_raw = raw_sample.yaw_raw;
+	sample->roll_mdeg = raw_sample.roll_mdeg;
+	sample->pitch_mdeg = raw_sample.pitch_mdeg;
+	sample->yaw_mdeg = raw_sample.yaw_mdeg;
+
+	return 0;
+}
+
+static void wit_imu_backend_reset(void *client)
+{
+	wit_imu_modbus_reset(client);
+}
+
+const struct imu_sample_backend wit_imu_modbus_backend = {
+	.name = "wit_imu_modbus",
+	.init = wit_imu_backend_init,
+	.fetch = wit_imu_backend_fetch,
+	.reset = wit_imu_backend_reset,
+};

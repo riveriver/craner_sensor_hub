@@ -7,7 +7,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/util.h>
 
-#include "idecoder_encoder_modbus.h"
+#include "encoder_sample_backend.h"
 
 enum encoder_sample_service_status {
 	ENCODER_SAMPLE_SERVICE_STATUS_ONLINE = BIT(0),
@@ -16,25 +16,11 @@ enum encoder_sample_service_status {
 struct encoder_sample_service_config {
 	const char *name;
 	const char *iface_name;
-	uint8_t unit_id;
-	uint32_t baud;
-	uint32_t rx_timeout_us;
 	uint32_t period_ms;
 	uint32_t start_delay_ms;
-	uint16_t start_addr;
-};
-
-struct encoder_sample_service_sample {
-	bool online;
-	uint32_t seq;
-	uint32_t status;
-	uint16_t raw_regs[2];
-	uint8_t raw_reg_count;
-	uint16_t turn_count;
-	uint16_t single_value;
-	int64_t sample_uptime_ms;
-	uint32_t read_duration_us;
-	int last_error;
+	const struct encoder_sample_backend *backend;
+	void *backend_client;
+	const void *backend_config;
 };
 
 struct encoder_sample_service_stats {
@@ -59,8 +45,6 @@ typedef void (*encoder_sample_service_callback_t)(
 
 struct encoder_sample_service {
 	const struct encoder_sample_service_config *config;
-	struct idecoder_encoder_modbus_config modbus_config;
-	struct idecoder_encoder_modbus_client modbus_client;
 	struct encoder_sample_service_sample latest_sample;
 	struct encoder_sample_service_stats latest_stats;
 	struct k_spinlock lock;

@@ -7,6 +7,8 @@
 #include <zephyr/modbus/modbus.h>
 #include <zephyr/sys/util.h>
 
+#include "encoder_sample_backend.h"
+
 LOG_MODULE_REGISTER(idecoder_encoder_modbus, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define IDECODER_ENCODER_REG_COUNT 2U
@@ -100,3 +102,44 @@ void idecoder_encoder_modbus_reset(
 	client->iface = -1;
 	client->ready = false;
 }
+
+static int idecoder_encoder_backend_init(void *client, const void *config)
+{
+	return idecoder_encoder_modbus_init(client, config);
+}
+
+static int idecoder_encoder_backend_fetch(
+	void *client, struct encoder_sample_service_sample *sample)
+{
+	struct idecoder_encoder_modbus_sample raw_sample;
+	int ret;
+
+	if (sample == NULL) {
+		return -EINVAL;
+	}
+
+	ret = idecoder_encoder_modbus_fetch(client, &raw_sample);
+	if (ret != 0) {
+		return ret;
+	}
+
+	sample->raw_reg_count = raw_sample.raw_reg_count;
+	sample->raw_regs[0] = raw_sample.raw_regs[0];
+	sample->raw_regs[1] = raw_sample.raw_regs[1];
+	sample->turn_count = raw_sample.turn_count;
+	sample->single_value = raw_sample.single_value;
+
+	return 0;
+}
+
+static void idecoder_encoder_backend_reset(void *client)
+{
+	idecoder_encoder_modbus_reset(client);
+}
+
+const struct encoder_sample_backend idecoder_encoder_modbus_backend = {
+	.name = "idecoder_encoder_modbus",
+	.init = idecoder_encoder_backend_init,
+	.fetch = idecoder_encoder_backend_fetch,
+	.reset = idecoder_encoder_backend_reset,
+};

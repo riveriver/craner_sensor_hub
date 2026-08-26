@@ -9,13 +9,15 @@
 #include "imu_sample_service.h"
 #include "modbus_register_service.h"
 #include "system_health_app.h"
+#include "wit_imu_modbus.h"
 
 LOG_MODULE_REGISTER(luffing_imu_app, CONFIG_LOG_DEFAULT_LEVEL);
 
 static struct imu_sample_service luffing_imu_service;
-
-static const struct imu_sample_service_config luffing_imu_config = {
-	.name = "luffing_imu",
+static struct wit_imu_modbus_client luffing_imu_client = {
+	.iface = -1,
+};
+static const struct wit_imu_modbus_config luffing_imu_backend_config = {
 	.iface_name = CONFIG_LUFFING_IMU_IFACE_NAME,
 #if defined(CONFIG_LUFFING_IMU_MODEL_WIT_HIGH_PRECISION)
 	.model = WIT_IMU_MODBUS_MODEL_HIGH_PRECISION,
@@ -25,8 +27,16 @@ static const struct imu_sample_service_config luffing_imu_config = {
 	.unit_id = CONFIG_LUFFING_IMU_MODBUS_UNIT_ID,
 	.baud = CONFIG_LUFFING_IMU_MODBUS_BAUD,
 	.rx_timeout_us = CONFIG_LUFFING_IMU_MODBUS_RX_TIMEOUT_US,
+};
+
+static const struct imu_sample_service_config luffing_imu_config = {
+	.name = "luffing_imu",
+	.iface_name = CONFIG_LUFFING_IMU_IFACE_NAME,
 	.period_ms = CONFIG_LUFFING_IMU_SAMPLE_PERIOD_MS,
 	.start_delay_ms = 0U,
+	.backend = &wit_imu_modbus_backend,
+	.backend_client = &luffing_imu_client,
+	.backend_config = &luffing_imu_backend_config,
 };
 
 static uint16_t error_code_to_reg(int err)

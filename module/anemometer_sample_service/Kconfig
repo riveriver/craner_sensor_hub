@@ -1,7 +1,5 @@
 config ANEMOMETER_SAMPLE_SERVICE
 	bool "Anemometer sample service"
-	depends on MODBUS
-	select ANEMOMETER_MODBUS
 	help
 	  Enable the reusable one-channel anemometer sampling service.
 

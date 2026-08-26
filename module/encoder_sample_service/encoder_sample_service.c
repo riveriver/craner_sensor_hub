@@ -33,7 +33,7 @@ static const char *encoder_sample_service_name(
 
 static void encoder_sample_service_update_success(
 	struct encoder_sample_service *service,
-	const struct idecoder_encoder_modbus_sample *sample,
+	const struct encoder_sample_service_sample *sample,
 	uint32_t read_duration_us,
 	struct encoder_sample_service_sample *notify_sample)
 {
@@ -59,8 +59,12 @@ static void encoder_sample_service_update_success(
 	service->latest_sample.seq++;
 	service->latest_sample.status = ENCODER_SAMPLE_SERVICE_STATUS_ONLINE;
 	service->latest_sample.raw_reg_count = sample->raw_reg_count;
-	service->latest_sample.raw_regs[0] = sample->raw_regs[0];
-	service->latest_sample.raw_regs[1] = sample->raw_regs[1];
+	for (uint8_t i = 0U;
+	     i < sample->raw_reg_count &&
+	     i < ARRAY_SIZE(service->latest_sample.raw_regs);
+	     i++) {
+		service->latest_sample.raw_regs[i] = sample->raw_regs[i];
+	}
 	service->latest_sample.turn_count = sample->turn_count;
 	service->latest_sample.single_value = sample->single_value;
 	service->latest_sample.sample_uptime_ms =
@@ -119,15 +123,16 @@ static void encoder_sample_service_thread(void *arg1, void *arg2, void *arg3)
 	}
 
 	while (true) {
-		struct idecoder_encoder_modbus_sample sample;
+		struct encoder_sample_service_sample sample;
 		struct encoder_sample_service_sample notify_sample;
 		uint32_t start_cycles;
 		uint32_t elapsed_cycles;
 		uint32_t read_duration_us;
 
 		if (!service->client_ready) {
-			err = idecoder_encoder_modbus_init(&service->modbus_client,
-							   &service->modbus_config);
+			err = service->config->backend->init(
+				service->config->backend_client,
+				service->config->backend_config);
 			if (err != 0) {
 				encoder_sample_service_update_error(service, err);
 				encoder_sample_service_notify(service, err, NULL);
@@ -139,15 +144,16 @@ static void encoder_sample_service_thread(void *arg1, void *arg2, void *arg3)
 			}
 
 			service->client_ready = true;
-			LOG_INF("%s sampling started: iface=%s period=%u ms",
+			LOG_INF("%s sampling started: backend=%s iface=%s period=%u ms",
 				encoder_sample_service_name(service),
+				service->config->backend->name,
 				service->config->iface_name,
 				service->config->period_ms);
 		}
 
 		start_cycles = k_cycle_get_32();
-		err = idecoder_encoder_modbus_fetch(&service->modbus_client,
-						    &sample);
+		err = service->config->backend->fetch(
+			service->config->backend_client, &sample);
 		elapsed_cycles = k_cycle_get_32() - start_cycles;
 		read_duration_us = (uint32_t)k_cyc_to_us_floor64(elapsed_cycles);
 
@@ -163,8 +169,10 @@ static void encoder_sample_service_thread(void *arg1, void *arg2, void *arg3)
 					   encoder_sample_service_name(service),
 					   err);
 			if (err == -ENODEV) {
-				idecoder_encoder_modbus_reset(
-					&service->modbus_client);
+				if (service->config->backend->reset != NULL) {
+					service->config->backend->reset(
+						service->config->backend_client);
+				}
 				service->client_ready = false;
 			}
 		}
@@ -198,7 +206,11 @@ int encoder_sample_service_start(
 	int err;
 
 	if (service == NULL || config == NULL || config->name == NULL ||
-	    config->iface_name == NULL || config->period_ms == 0U) {
+	    config->iface_name == NULL || config->period_ms == 0U ||
+	    config->backend == NULL || config->backend->init == NULL ||
+	    config->backend->fetch == NULL ||
+	    config->backend_client == NULL ||
+	    config->backend_config == NULL) {
 		return -EINVAL;
 	}
 
@@ -208,12 +220,6 @@ int encoder_sample_service_start(
 
 	memset(service, 0, sizeof(*service));
 	service->config = config;
-	service->modbus_config.iface_name = config->iface_name;
-	service->modbus_config.unit_id = config->unit_id;
-	service->modbus_config.baud = config->baud;
-	service->modbus_config.rx_timeout_us = config->rx_timeout_us;
-	service->modbus_config.start_addr = config->start_addr;
-	service->modbus_client.iface = -1;
 	service->callback = callback;
 	service->user_data = user_data;
 

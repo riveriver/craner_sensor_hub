@@ -34,6 +34,9 @@ struct wit_imu_modbus_sample {
 	int32_t yaw_mdeg;
 };
 
+struct imu_sample_backend;
+extern const struct imu_sample_backend wit_imu_modbus_backend;
+
 const char *wit_imu_modbus_model_name(enum wit_imu_modbus_model model);
 int wit_imu_modbus_init(struct wit_imu_modbus_client *client,
 			const struct wit_imu_modbus_config *config);

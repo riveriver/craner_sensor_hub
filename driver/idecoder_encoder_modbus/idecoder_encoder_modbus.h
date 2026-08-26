@@ -25,6 +25,9 @@ struct idecoder_encoder_modbus_sample {
 	uint16_t single_value;
 };
 
+struct encoder_sample_backend;
+extern const struct encoder_sample_backend idecoder_encoder_modbus_backend;
+
 int idecoder_encoder_modbus_init(
 	struct idecoder_encoder_modbus_client *client,
 	const struct idecoder_encoder_modbus_config *config);

@@ -7,6 +7,16 @@ config ENABLE_ANEMOMETER_APP
 
 if ENABLE_ANEMOMETER_APP
 
+choice ANEMOMETER_MODEL
+	prompt "Anemometer backend model"
+	default ANEMOMETER_MODEL_MODBUS
+
+config ANEMOMETER_MODEL_MODBUS
+	bool "Modbus anemometer"
+	select ANEMOMETER_MODBUS
+
+endchoice
+
 config ANEMOMETER_IFACE_NAME
 	string "Anemometer RS485 interface name"
 	default "rs485-usart6"

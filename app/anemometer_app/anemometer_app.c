@@ -6,23 +6,33 @@
 #include <zephyr/sys/util.h>
 
 #include "anemometer_sample_service.h"
+#include "anemometer_modbus.h"
 #include "modbus_register_service.h"
 #include "system_health_app.h"
 
 LOG_MODULE_REGISTER(anemometer_app, CONFIG_LOG_DEFAULT_LEVEL);
 
 static struct anemometer_sample_service anemometer_service;
-
-static const struct anemometer_sample_service_config anemometer_config = {
-	.name = "anemometer",
+static struct anemometer_modbus_client anemometer_client = {
+	.iface = -1,
+};
+static const struct anemometer_modbus_config anemometer_backend_config = {
 	.iface_name = CONFIG_ANEMOMETER_IFACE_NAME,
 	.unit_id = CONFIG_ANEMOMETER_MODBUS_UNIT_ID,
 	.baud = CONFIG_ANEMOMETER_MODBUS_BAUD,
 	.rx_timeout_us = CONFIG_ANEMOMETER_MODBUS_RX_TIMEOUT_US,
-	.period_ms = CONFIG_ANEMOMETER_SAMPLE_PERIOD_MS,
-	.start_delay_ms = 35U,
 	.start_addr = CONFIG_ANEMOMETER_MODBUS_START_ADDR,
 	.register_count = CONFIG_ANEMOMETER_MODBUS_REGISTER_COUNT,
+};
+
+static const struct anemometer_sample_service_config anemometer_config = {
+	.name = "anemometer",
+	.iface_name = CONFIG_ANEMOMETER_IFACE_NAME,
+	.period_ms = CONFIG_ANEMOMETER_SAMPLE_PERIOD_MS,
+	.start_delay_ms = 35U,
+	.backend = &anemometer_modbus_backend,
+	.backend_client = &anemometer_client,
+	.backend_config = &anemometer_backend_config,
 };
 
 static uint16_t error_code_to_reg(int err)

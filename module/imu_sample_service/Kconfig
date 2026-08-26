@@ -3,7 +3,6 @@ menu "IMU sample service"
 config IMU_SAMPLE_SERVICE
 	bool "Enable IMU sample service"
 	default y if TOWER_TYPE_LUFFING_JIB
-	depends on WIT_IMU_MODBUS
 	help
 	  Enable a reusable one-channel IMU sampling service. Product code can
 	  create multiple instances, one per IMU channel.

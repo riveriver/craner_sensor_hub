@@ -5,8 +5,8 @@ config WIT_IMU_MODBUS
 	default n
 	depends on MODBUS && MODBUS_CLIENT && MODBUS_SERIAL
 	help
-	  Enable reusable helpers for reading WIT IMU angle registers over
-	  Modbus RTU. This helper does not create sampling threads, shell
-	  commands, health events, power sequencing, or product register mirrors.
+	  启用用于读取 WIT IMU 角度寄存器的 Modbus RTU helper。该层只负责
+	  具体型号的协议访问和解析，不创建采样线程，不注册 shell 命令，
+	  不处理健康事件、供电时序或产品寄存器镜像。
 
 endmenu

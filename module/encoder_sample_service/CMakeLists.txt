@@ -3,7 +3,6 @@ add_library(encoder_sample_service INTERFACE)
 target_include_directories(encoder_sample_service INTERFACE .)
 target_link_libraries(encoder_sample_service INTERFACE
 	zephyr_interface
-	idecoder_encoder_modbus
 )
 
 if(CONFIG_ENCODER_SAMPLE_SERVICE)
@@ -11,7 +10,6 @@ if(CONFIG_ENCODER_SAMPLE_SERVICE)
 	target_include_directories(encoder_sample_service_impl PUBLIC .)
 	target_link_libraries(encoder_sample_service_impl PUBLIC
 		zephyr_interface
-		idecoder_encoder_modbus
 	)
 	target_sources(encoder_sample_service_impl PRIVATE encoder_sample_service.c)
 	target_link_libraries(encoder_sample_service INTERFACE encoder_sample_service_impl)

@@ -7,6 +7,8 @@
 #include <zephyr/modbus/modbus.h>
 #include <zephyr/sys/util.h>
 
+#include "anemometer_sample_backend.h"
+
 LOG_MODULE_REGISTER(anemometer_modbus, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define ANEMOMETER_MODBUS_MAX_REGISTER_COUNT 5U
@@ -107,3 +109,50 @@ void anemometer_modbus_reset(struct anemometer_modbus_client *client)
 	client->iface = -1;
 	client->ready = false;
 }
+
+static int anemometer_backend_init(void *client, const void *config)
+{
+	return anemometer_modbus_init(client, config);
+}
+
+static int anemometer_backend_fetch(
+	void *client, struct anemometer_sample_service_sample *sample)
+{
+	struct anemometer_modbus_sample raw_sample;
+	int ret;
+
+	if (sample == NULL) {
+		return -EINVAL;
+	}
+
+	ret = anemometer_modbus_fetch(client, &raw_sample);
+	if (ret != 0) {
+		return ret;
+	}
+
+	sample->raw_reg_count = raw_sample.raw_reg_count;
+	for (uint8_t i = 0U;
+	     i < raw_sample.raw_reg_count && i < ARRAY_SIZE(sample->raw_regs);
+	     i++) {
+		sample->raw_regs[i] = raw_sample.raw_regs[i];
+	}
+	sample->temperature = raw_sample.temperature;
+	sample->humidity = raw_sample.humidity;
+	sample->pressure = raw_sample.pressure;
+	sample->wind_speed = raw_sample.wind_speed;
+	sample->wind_direction = raw_sample.wind_direction;
+
+	return 0;
+}
+
+static void anemometer_backend_reset(void *client)
+{
+	anemometer_modbus_reset(client);
+}
+
+const struct anemometer_sample_backend anemometer_modbus_backend = {
+	.name = "anemometer_modbus",
+	.init = anemometer_backend_init,
+	.fetch = anemometer_backend_fetch,
+	.reset = anemometer_backend_reset,
+};

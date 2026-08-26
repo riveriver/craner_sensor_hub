@@ -7,6 +7,7 @@
 #include <zephyr/sys/util.h>
 
 #include "encoder_sample_service.h"
+#include "idecoder_encoder_modbus.h"
 #include "modbus_register_service.h"
 #include "system_health_app.h"
 
@@ -91,15 +92,24 @@ static void encoder_sample_cb(
 
 #if defined(CONFIG_ENCODER_USE_SLEWING)
 static struct encoder_sample_service slewing_encoder_service;
-static const struct encoder_sample_service_config slewing_encoder_config = {
-	.name = "slewing",
+static struct idecoder_encoder_modbus_client slewing_encoder_client = {
+	.iface = -1,
+};
+static const struct idecoder_encoder_modbus_config slewing_encoder_backend_config = {
 	.iface_name = CONFIG_ENCODER_SLEWING_IFACE_NAME,
 	.unit_id = CONFIG_ENCODER_MODBUS_UNIT_ID,
 	.baud = CONFIG_ENCODER_MODBUS_BAUD,
 	.rx_timeout_us = CONFIG_ENCODER_MODBUS_RX_TIMEOUT_US,
+	.start_addr = CONFIG_ENCODER_MODBUS_START_ADDR,
+};
+static const struct encoder_sample_service_config slewing_encoder_config = {
+	.name = "slewing",
+	.iface_name = CONFIG_ENCODER_SLEWING_IFACE_NAME,
 	.period_ms = CONFIG_ENCODER_SAMPLE_PERIOD_MS,
 	.start_delay_ms = 0U,
-	.start_addr = CONFIG_ENCODER_MODBUS_START_ADDR,
+	.backend = &idecoder_encoder_modbus_backend,
+	.backend_client = &slewing_encoder_client,
+	.backend_config = &slewing_encoder_backend_config,
 };
 static const struct encoder_binding slewing_encoder_binding = {
 	.name = "slewing encoder",
@@ -111,15 +121,24 @@ static const struct encoder_binding slewing_encoder_binding = {
 
 #if defined(CONFIG_ENCODER_USE_LUFFING)
 static struct encoder_sample_service luffing_encoder_service;
-static const struct encoder_sample_service_config luffing_encoder_config = {
-	.name = "luffing",
+static struct idecoder_encoder_modbus_client luffing_encoder_client = {
+	.iface = -1,
+};
+static const struct idecoder_encoder_modbus_config luffing_encoder_backend_config = {
 	.iface_name = CONFIG_ENCODER_LUFFING_IFACE_NAME,
 	.unit_id = CONFIG_ENCODER_MODBUS_UNIT_ID,
 	.baud = CONFIG_ENCODER_MODBUS_BAUD,
 	.rx_timeout_us = CONFIG_ENCODER_MODBUS_RX_TIMEOUT_US,
+	.start_addr = CONFIG_ENCODER_MODBUS_START_ADDR,
+};
+static const struct encoder_sample_service_config luffing_encoder_config = {
+	.name = "luffing",
+	.iface_name = CONFIG_ENCODER_LUFFING_IFACE_NAME,
 	.period_ms = CONFIG_ENCODER_SAMPLE_PERIOD_MS,
 	.start_delay_ms = 10U,
-	.start_addr = CONFIG_ENCODER_MODBUS_START_ADDR,
+	.backend = &idecoder_encoder_modbus_backend,
+	.backend_client = &luffing_encoder_client,
+	.backend_config = &luffing_encoder_backend_config,
 };
 static const struct encoder_binding luffing_encoder_binding = {
 	.name = "luffing encoder",
@@ -131,15 +150,24 @@ static const struct encoder_binding luffing_encoder_binding = {
 
 #if defined(CONFIG_ENCODER_USE_HOISTING)
 static struct encoder_sample_service hoisting_encoder_service;
-static const struct encoder_sample_service_config hoisting_encoder_config = {
-	.name = "hoisting",
+static struct idecoder_encoder_modbus_client hoisting_encoder_client = {
+	.iface = -1,
+};
+static const struct idecoder_encoder_modbus_config hoisting_encoder_backend_config = {
 	.iface_name = CONFIG_ENCODER_HOISTING_IFACE_NAME,
 	.unit_id = CONFIG_ENCODER_MODBUS_UNIT_ID,
 	.baud = CONFIG_ENCODER_MODBUS_BAUD,
 	.rx_timeout_us = CONFIG_ENCODER_MODBUS_RX_TIMEOUT_US,
+	.start_addr = CONFIG_ENCODER_MODBUS_START_ADDR,
+};
+static const struct encoder_sample_service_config hoisting_encoder_config = {
+	.name = "hoisting",
+	.iface_name = CONFIG_ENCODER_HOISTING_IFACE_NAME,
 	.period_ms = CONFIG_ENCODER_SAMPLE_PERIOD_MS,
 	.start_delay_ms = 20U,
-	.start_addr = CONFIG_ENCODER_MODBUS_START_ADDR,
+	.backend = &idecoder_encoder_modbus_backend,
+	.backend_client = &hoisting_encoder_client,
+	.backend_config = &hoisting_encoder_backend_config,
 };
 static const struct encoder_binding hoisting_encoder_binding = {
 	.name = "hoisting encoder",

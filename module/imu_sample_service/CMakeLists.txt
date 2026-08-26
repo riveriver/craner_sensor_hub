@@ -1,12 +1,12 @@
 add_library(imu_sample_service INTERFACE)
 
 target_include_directories(imu_sample_service INTERFACE .)
-target_link_libraries(imu_sample_service INTERFACE zephyr_interface wit_imu_modbus)
+target_link_libraries(imu_sample_service INTERFACE zephyr_interface)
 
 if(CONFIG_IMU_SAMPLE_SERVICE)
 	add_library(imu_sample_service_impl STATIC)
 	target_include_directories(imu_sample_service_impl PUBLIC .)
-	target_link_libraries(imu_sample_service_impl PUBLIC zephyr_interface wit_imu_modbus)
+	target_link_libraries(imu_sample_service_impl PUBLIC zephyr_interface)
 	target_sources(imu_sample_service_impl PRIVATE imu_sample_service.c)
 	target_link_libraries(imu_sample_service INTERFACE imu_sample_service_impl)
 endif()
