@@ -8,8 +8,8 @@ rsource "module/imu_sample_service/Kconfig"
 rsource "module/encoder_sample_service/Kconfig"
 rsource "module/anemometer_sample_service/Kconfig"
 rsource "app/luffing_imu_app/Kconfig"
-rsource "app/crane_encoder_app/Kconfig"
-rsource "app/crane_anemometer_app/Kconfig"
+rsource "app/encoder_app/Kconfig"
+rsource "app/anemometer_app/Kconfig"
 
 menu "Craner Encoder Hub application"
 

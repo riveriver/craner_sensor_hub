@@ -53,7 +53,7 @@ const struct sys_health_event system_health_event_table[] = {
 	{
 		.event = SYSTEM_HEALTH_READ_SLEWING_ENCODER,
 		.name = "slewing_encoder",
-		.enable = IS_ENABLED(CONFIG_CRANE_ENCODER_USE_SLEWING),
+		.enable = IS_ENABLED(CONFIG_ENCODER_USE_SLEWING),
 		.priority = 3,
 		.offline_timeout_ms = 3000,
 		.offline_first_func = log_offline_event,
@@ -62,7 +62,7 @@ const struct sys_health_event system_health_event_table[] = {
 	{
 		.event = SYSTEM_HEALTH_READ_LUFFING_ENCODER,
 		.name = "luffing_encoder",
-		.enable = IS_ENABLED(CONFIG_CRANE_ENCODER_USE_LUFFING) ||
+		.enable = IS_ENABLED(CONFIG_ENCODER_USE_LUFFING) ||
 			  IS_ENABLED(CONFIG_ENABLE_LUFFING_IMU_APP),
 		.priority = 4,
 		.offline_timeout_ms = 3000,
@@ -72,7 +72,7 @@ const struct sys_health_event system_health_event_table[] = {
 	{
 		.event = SYSTEM_HEALTH_READ_HOISTING_ENCODER,
 		.name = "hoisting_encoder",
-		.enable = IS_ENABLED(CONFIG_CRANE_ENCODER_USE_HOISTING),
+		.enable = IS_ENABLED(CONFIG_ENCODER_USE_HOISTING),
 		.priority = 5,
 		.offline_timeout_ms = 3000,
 		.offline_first_func = log_offline_event,
@@ -81,7 +81,7 @@ const struct sys_health_event system_health_event_table[] = {
 	{
 		.event = SYSTEM_HEALTH_READ_ANEMOMETER,
 		.name = "anemometer",
-		.enable = IS_ENABLED(CONFIG_ENABLE_CRANE_ANEMOMETER_APP),
+		.enable = IS_ENABLED(CONFIG_ENABLE_ANEMOMETER_APP),
 		.priority = 6,
 		.offline_timeout_ms = 3000,
 		.offline_first_func = log_offline_event,

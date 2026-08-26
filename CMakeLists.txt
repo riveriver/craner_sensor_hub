@@ -13,8 +13,8 @@ add_subdirectory(module/imu_sample_service)
 add_subdirectory(module/encoder_sample_service)
 add_subdirectory(module/anemometer_sample_service)
 add_subdirectory(app/luffing_imu_app)
-add_subdirectory(app/crane_encoder_app)
-add_subdirectory(app/crane_anemometer_app)
+add_subdirectory(app/encoder_app)
+add_subdirectory(app/anemometer_app)
 
 target_include_directories(app PRIVATE include src)
 
