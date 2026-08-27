@@ -1,8 +1,5 @@
 source "Kconfig.zephyr"
 
-rsource "driver/wit_imu_modbus/Kconfig"
-rsource "driver/idecoder_encoder_modbus/Kconfig"
-rsource "driver/anemometer_modbus/Kconfig"
 rsource "module/system_health_service/Kconfig"
 rsource "module/imu_sample_service/Kconfig"
 rsource "module/encoder_sample_service/Kconfig"

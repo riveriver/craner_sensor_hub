@@ -5,21 +5,20 @@
 ## 总体分层
 
 ```text
-driver/<model>_<sensor>_<bus>/
-  具体型号和协议
-
 module/<sensor>_sample_service/
   一路通用采样服务
+  backends/<model>_<sensor>_<bus>/
+    具体型号和协议插件
 
 app/<business>_app/
   产品业务装配
 ```
 
-核心原则是：`driver/helper` 提供采样能力，`sample_service` 执行一路采样，`app` 决定业务实例和结果去向。
+核心原则是：`backend plugin` 提供具体型号采样能力，`sample_service` 执行一路采样，`app` 决定业务实例和结果去向。后端插件随 sample service 子模块一起分发，方便多个项目复用同一套服务和型号支持。
 
-## driver/helper 层
+## backend plugin 层
 
-driver/helper 放在 `driver/<model>_<sensor>_<bus>/`。
+backend plugin 放在 `module/<sensor>_sample_service/backends/<model>_<sensor>_<bus>/`。
 
 负责：
 
@@ -27,6 +26,7 @@ driver/helper 放在 `driver/<model>_<sensor>_<bus>/`。
 - 读取具体型号的寄存器或数据帧。
 - 解析型号专属数据格式、比例系数和精度模式。
 - 导出该类传感器的 backend 实例。
+- 随同类 `sample_service` 子模块一起进入其他项目。
 
 不负责：
 
@@ -61,12 +61,18 @@ module/encoder_sample_service/
   encoder_sample_service.c
   encoder_sample_service_stats.c
   encoder_sample_service_shell.c
+  backends/
+    idecoder_encoder_modbus/
+      idecoder_encoder_modbus.c
+      idecoder_encoder_modbus.h
+      Kconfig
+      README.md
 ```
 
 职责：
 
 - `*_sample_service.h`：对 app 暴露 public API。
-- `*_sample_backend.h`：对 driver/helper 暴露 backend ops 和通用 sample 结构。
+- `*_sample_backend.h`：对 backend plugin 暴露 backend ops 和通用 sample 结构。
 - `*_sample_service_internal.h`：service 内部 `.c` 文件共享声明，外部不要 include。
 - `*_sample_service.c`：模块入口、`start()`、`get_latest()`、`get_stats()`、采样线程和 backend 调度。
 - `*_sample_service_stats.c`：成功/失败状态更新、latest sample 缓存、可选统计累计。
@@ -83,7 +89,7 @@ struct encoder_sample_backend {
 };
 ```
 
-service 不知道具体品牌、型号、寄存器表、业务通道或健康事件。
+service core 不知道具体品牌、型号、寄存器表、业务通道或健康事件。service CMake 负责 `add_subdirectory(backends/...)` 并把可选后端 target 作为 `INTERFACE` 依赖传递给产品 app。
 
 ## app 层
 
@@ -151,7 +157,7 @@ CONFIG_ANEMOMETER_SAMPLE_SERVICE_REINIT_ON_ENODEV
 编码器：
 
 ```text
-driver/idecoder_encoder_modbus/
+module/encoder_sample_service/backends/idecoder_encoder_modbus/
   idecoder_encoder_modbus_backend
 
 module/encoder_sample_service/
@@ -168,7 +174,7 @@ app/encoder_app/
 IMU：
 
 ```text
-driver/wit_imu_modbus/
+module/imu_sample_service/backends/wit_imu_modbus/
   wit_imu_modbus_backend
 
 module/imu_sample_service/
@@ -185,7 +191,7 @@ app/luffing_imu_app/
 风速计：
 
 ```text
-driver/anemometer_modbus/
+module/anemometer_sample_service/backends/anemometer_modbus/
   anemometer_modbus_backend
 
 module/anemometer_sample_service/
@@ -203,26 +209,27 @@ app/anemometer_app/
 
 以新增第二种编码器为例：
 
-1. 新增 `driver/xxx_encoder_modbus/`。
+1. 新增 `module/encoder_sample_service/backends/xxx_encoder_modbus/`。
 2. 实现 `xxx_encoder_modbus_init()`、`xxx_encoder_modbus_fetch()`、`xxx_encoder_modbus_reset()`。
 3. 导出 `xxx_encoder_modbus_backend`。
-4. 在 `app/encoder_app/Kconfig` 的 backend choice 中新增型号选项，并 `select XXX_ENCODER_MODBUS`。
-5. 在 `app/encoder_app/encoder_app.c` 中准备对应 client/config。
-6. 将目标通道的 service config 指向 `.backend = &xxx_encoder_modbus_backend`。
-7. 不修改 `module/encoder_sample_service/`。
+4. 在 `module/encoder_sample_service/Kconfig` 中 `rsource` 新后端 Kconfig。
+5. 在 `app/encoder_app/Kconfig` 的 backend choice 中新增型号选项，并 `select XXX_ENCODER_MODBUS`。
+6. 在 `app/encoder_app/encoder_app.c` 中准备对应 client/config。
+7. 将目标通道的 service config 指向 `.backend = &xxx_encoder_modbus_backend`。
+8. 不修改 `module/encoder_sample_service/` 的核心 `.c` 文件。
 
-IMU 和风速计同理：新增具体 driver/helper，导出该类 backend，在 app 中选择并装配，service 保持不变。
+IMU 和风速计同理：在对应 service 的 `backends/` 下新增具体插件，导出该类 backend，在 app 中选择并装配，service core 保持不变。
 
 ## 命名约定
 
-- `driver/<model>_<sensor>_<bus>/`：具体型号和协议，例如 `idecoder_encoder_modbus`。
+- `module/<sensor>_sample_service/backends/<model>_<sensor>_<bus>/`：具体型号和协议插件，例如 `idecoder_encoder_modbus`。
 - `module/<sensor>_sample_service/`：某一类传感器的一路采样服务，例如 `encoder_sample_service`。
 - `app/<business>_app/`：产品业务装配，例如 `encoder_app`、`luffing_imu_app`。
 - DTS 外设节点优先按硬件能力命名，例如 `rs485-uart8`，不要把 Modbus、传感器用途或业务含义写死到硬件节点名里。
 
 ## 判断代码该放哪里
 
-- 只和传感器型号、协议解析有关：放 `driver/`。
+- 只和传感器型号、协议解析有关：放对应 sample service 的 `backends/`。
 - 和一路采样线程、统计、回调、shell 诊断有关：放 `module/<sensor>_sample_service/`。
 - 和产品通道、寄存器表、健康事件、业务启用策略有关：放 `app/`。
 - 和全局寄存器表、系统健康事件定义等产品公共能力有关：保留在产品公共代码中。

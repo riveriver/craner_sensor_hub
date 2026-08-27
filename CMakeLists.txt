@@ -5,9 +5,6 @@ list(APPEND BOARD_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(craner_encoder_hub)
 
-add_subdirectory(driver/wit_imu_modbus)
-add_subdirectory(driver/idecoder_encoder_modbus)
-add_subdirectory(driver/anemometer_modbus)
 add_subdirectory(module/system_health_service)
 add_subdirectory(module/imu_sample_service)
 add_subdirectory(module/encoder_sample_service)
@@ -68,9 +65,7 @@ target_sources_ifdef(CONFIG_ENABLE_COREDUMP_SERVICE app PRIVATE
 )
 
 target_link_libraries(app PRIVATE
-	wit_imu_modbus
-	idecoder_encoder_modbus
-	anemometer_modbus
+	system_health_service
 	imu_sample_service
 	encoder_sample_service
 	anemometer_sample_service

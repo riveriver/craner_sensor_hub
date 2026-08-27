@@ -12,14 +12,34 @@
 - 根据超时时间判断事件离线。
 - 记录离线、恢复、持续时间等诊断信息。
 - 触发降级、重启、停止喂狗等动作请求。
-- 提供 shell 诊断接口。
+- 提供可选 shell 诊断接口。
 
 产品负责：
 
 - 定义自己的健康事件 ID。
 - 注册事件表。
 - 在业务成功时调用 `sys_health_event_report()` 报活。
-- 选择是否启用 LED、watchdog、ICMP probe、计划重启等可选后端。
+- 选择是否启用 LED、watchdog、ICMP probe、计划重启等可选能力。
+
+## 当前模块文件结构
+
+```text
+module/system_health_service/
+  system_health_service.h
+  system_health_service_internal.h
+  system_health_service.c
+  system_health_event.c
+  system_health_action.c
+  system_health_state.c
+  system_health_shell.c
+```
+
+核心拆分原则：
+
+- `event`：事件注册、报活、启停、查询和遍历。
+- `state`：全局状态、离线状态机、系统保护内置事件和周期线程。
+- `action`：动作锁存、action callback、action handler、重启/降级/停止喂狗请求。
+- `shell`：诊断命令，可通过 `CONFIG_SYS_HEALTH_SERVICE_SHELL` 裁剪。
 
 ## 移植步骤
 
@@ -30,7 +50,7 @@
 add_subdirectory(module/system_health_service)
 
 target_link_libraries(app PRIVATE
-	system_health_service
+    system_health_service
 )
 ```
 
@@ -41,14 +61,14 @@ target_link_libraries(app PRIVATE
 CONFIG_SYS_HEALTH_SERVICE=y
 ```
 
-5. 产品侧新增一个公共头，例如 `include/system_health_app.h`，定义产品事件 ID。
+5. 产品侧新增公共头，例如 `include/system_health_app.h`，定义产品事件 ID。
 6. 产品侧新增事件表，例如 `src/system_health_event_table.c`。
 7. 系统初始化时调用：
 
 ```c
 sys_health_init(system_health_event_table,
-		system_health_event_table_size,
-		&time_provider);
+                system_health_event_table_size,
+                &time_provider);
 ```
 
 8. 各业务模块在成功完成关键动作时调用：
@@ -63,14 +83,14 @@ sys_health_event_report(event_id);
 
 ```c
 enum system_health_event {
-	SYSTEM_HEALTH_NONE = 0,
-	SYSTEM_HEALTH_SYSTEM_OFFLINE = SYS_HEALTH_EVENT_SYSTEM_PROTECT,
-	SYSTEM_HEALTH_ETHERNET = 2,
-	SYSTEM_HEALTH_READ_SLEWING_ENCODER = 100,
+    SYSTEM_HEALTH_NONE = 0,
+    SYSTEM_HEALTH_SYSTEM_OFFLINE = SYS_HEALTH_EVENT_SYSTEM_PROTECT,
+    SYSTEM_HEALTH_ETHERNET = 2,
+    SYSTEM_HEALTH_READ_SLEWING_ENCODER = 100,
 };
 ```
 
-建议按业务域预留 ID 段，例如：
+建议按业务域预留 ID 段：
 
 - `1`：系统保护内置事件。
 - `2-99`：网络、电源、存储等平台事件。
@@ -79,19 +99,17 @@ enum system_health_event {
 
 ## 事件表字段
 
-常用字段：
-
 ```c
 {
-	.event = SYSTEM_HEALTH_READ_SLEWING_ENCODER,
-	.name = "slewing_encoder",
-	.enable = IS_ENABLED(CONFIG_ENCODER_USE_SLEWING),
-	.priority = 3,
-	.offline_timeout_ms = 3000,
-	.action_mask = SYS_HEALTH_ACTION_LOG,
-	.action_delay_ms = 0,
-	.offline_first_func = log_offline_event,
-	.online_first_func = log_online_event,
+    .event = SYSTEM_HEALTH_READ_SLEWING_ENCODER,
+    .name = "slewing_encoder",
+    .enable = IS_ENABLED(CONFIG_ENCODER_USE_SLEWING),
+    .priority = 3,
+    .offline_timeout_ms = 3000,
+    .action_mask = SYS_HEALTH_ACTION_LOG,
+    .action_delay_ms = 0,
+    .offline_first_func = log_offline_event,
+    .online_first_func = log_online_event,
 }
 ```
 
@@ -109,21 +127,13 @@ enum system_health_event {
 
 ## 报活模型
 
-推荐模型是“成功报活，失败不报活”。
-
-也就是说，业务模块只有在一次关键动作成功时调用：
+推荐模型是“成功报活，失败不报活”。业务模块只在关键动作成功时调用：
 
 ```c
 sys_health_event_report(event_id);
 ```
 
 如果业务连续失败，不需要每次失败都调用健康服务。健康服务会根据最后一次成功报活时间和 `offline_timeout_ms` 统一判断离线。
-
-这样做的好处是：
-
-- 离线判定集中在健康服务。
-- 业务代码只表达成功事实。
-- 短暂失败不会立刻把系统打成离线。
 
 ## 动作模型
 
@@ -139,21 +149,14 @@ SYS_HEALTH_ACTION_STOP_WATCHDOG_FEED
 
 动作请求由核心锁存，具体执行由可选后端决定。
 
-例如：
-
-- 只想记录日志：使用 `SYS_HEALTH_ACTION_LOG`。
-- 想进入降级态：使用 `SYS_HEALTH_ACTION_SET_DEGRADED`。
-- 想触发重启：启用 `CONFIG_SYS_HEALTH_REBOOT_ACTION_BACKEND` 并使用 `SYS_HEALTH_ACTION_REQUEST_REBOOT`。
-- 想让 watchdog 超时复位：启用 `CONFIG_SYS_HEALTH_WATCHDOG_FEED_BACKEND` 并使用 `SYS_HEALTH_ACTION_STOP_WATCHDOG_FEED`。
-
 ## DTS 需求
 
 如果启用 LED 或 watchdog 后端，板级 DTS 需要提供：
 
 ```dts
 aliases {
-	heartbeat-led = &heartbeat_led;
-	watchdog0 = &iwdg;
+    heartbeat-led = &heartbeat_led;
+    watchdog0 = &iwdg;
 };
 ```
 
@@ -169,10 +172,11 @@ CONFIG_SYS_HEALTH_MAX_EVENTS=16
 CONFIG_SYS_HEALTH_CHECK_INTERVAL_MS=100
 ```
 
-开发期建议打开 shell：
+开发期 shell：
 
 ```conf
 CONFIG_SHELL=y
+CONFIG_SYS_HEALTH_SERVICE_SHELL=y
 ```
 
 需要 LED 状态显示：
@@ -199,31 +203,10 @@ CONFIG_SYS_HEALTH_ICMP_PROBE_EVENT_ID=2
 CONFIG_SYS_HEALTH_ICMP_PROBE_TARGET_GATEWAY=y
 ```
 
-## 调试命令
-
-```text
-health status
-health events
-health event <id>
-health stats
-health enable <id>
-health disable <id>
-health protect
-health probes
-```
-
-LED 后端命令：
-
-```text
-health_led status
-health_led on
-health_led off
-health_led auto
-```
-
 ## 移植检查清单
 
 - `module/system_health_service` 已加入 CMake。
+- 主工程链接了 `system_health_service` target。
 - Kconfig 能看到 `SYS_HEALTH_SERVICE`。
 - `CONFIG_SYS_HEALTH_MAX_EVENTS` 大于产品事件数量。
 - 产品事件 ID 没有重复。

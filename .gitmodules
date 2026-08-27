@@ -1,3 +1,15 @@
 [submodule "zephyr-dev-workflow"]
 	path = zephyr-dev-workflow
 	url = https://github.com/HKCRC/zephyr-dev-workflow.git
+[submodule "module/anemometer_sample_service"]
+	path = module/anemometer_sample_service
+	url = https://github.com/HKCRC/anemometer_sample_service.git
+[submodule "module/imu_sample_service"]
+	path = module/imu_sample_service
+	url = https://github.com/HKCRC/imu_sample_service.git
+[submodule "module/encoder_sample_service"]
+	path = module/encoder_sample_service
+	url = https://github.com/HKCRC/encoder_sample_service.git
+[submodule "module/system_health_service"]
+	path = module/system_health_service
+	url = https://github.com/HKCRC/system_health_service.git
