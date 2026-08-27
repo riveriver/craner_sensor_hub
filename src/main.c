@@ -9,7 +9,7 @@
 #endif
 #include "shell_app.h"
 #ifdef CONFIG_SYS_HEALTH_SERVICE
-#include "system_health_event_table.h"
+#include "system_health_app.h"
 #endif
 
 #include <zephyr/kernel.h>
@@ -46,11 +46,11 @@ int main(void)
 
 #ifdef CONFIG_SYS_HEALTH_SERVICE
 	static const struct sys_health_time_provider health_time_provider = {
-		.get_unix_time_s = system_health_event_table_get_unix_time_s,
+		.get_unix_time_s = system_health_app_get_unix_time_s,
 	};
 
-	rc = sys_health_init(system_health_event_table,
-					system_health_event_table_size,
+	rc = sys_health_init(system_health_app_event_table,
+					system_health_app_event_table_size,
 					&health_time_provider);
 	if (rc != 0) {
 		printk("System health service init failed: %d\n", rc);
