@@ -1,14 +1,15 @@
 menu "Luffing IMU application"
 
-config ENABLE_LUFFING_IMU_APP
+config ENABLE_LUFFING_IMU
 	bool "Enable luffing IMU register bridge application"
 	default y if TOWER_TYPE_LUFFING_JIB
 	depends on IMU_SAMPLE_SERVICE
+	depends on TOWER_TYPE_LUFFING_JIB
 	help
 	  Bridge the reusable IMU sample service into this product's luffing
 	  IMU Modbus TCP input registers and luffing health event.
 
-if ENABLE_LUFFING_IMU_APP
+if ENABLE_LUFFING_IMU
 
 choice LUFFING_IMU_BACKEND
 	prompt "Luffing IMU backend"
@@ -50,9 +51,9 @@ config LUFFING_IMU_MODBUS_BAUD
 	int "Luffing IMU Modbus baud rate"
 	default 9600
 
-config LUFFING_IMU_MODBUS_RX_TIMEOUT_US
-	int "Luffing IMU Modbus RX timeout in microseconds"
-	default 50000
+config LUFFING_IMU_MODBUS_RX_TIMEOUT_MS
+	int "Luffing IMU Modbus RX timeout in milliseconds"
+	default 50
 
 config LUFFING_IMU_SAMPLE_PERIOD_MS
 	int "Luffing IMU sample period in milliseconds"

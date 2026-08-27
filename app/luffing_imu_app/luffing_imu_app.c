@@ -26,7 +26,7 @@ static const struct wit_imu_modbus_config luffing_imu_backend_config = {
 #endif
 	.unit_id = CONFIG_LUFFING_IMU_MODBUS_UNIT_ID,
 	.baud = CONFIG_LUFFING_IMU_MODBUS_BAUD,
-	.rx_timeout_us = CONFIG_LUFFING_IMU_MODBUS_RX_TIMEOUT_US,
+	.rx_timeout_us = CONFIG_LUFFING_IMU_MODBUS_RX_TIMEOUT_MS * 1000U,
 };
 
 static const struct imu_sample_service_config luffing_imu_config = {

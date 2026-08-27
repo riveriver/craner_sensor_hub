@@ -1,12 +1,5 @@
-config ENABLE_ENCODER_APP
-	bool "Enable encoder application"
-	default y
+menu "Encoder application"
 	depends on ENCODER_SAMPLE_SERVICE
-	help
-	  Enable product-level encoder sampling bindings. This layer decides
-	  which encoder channels are used and where their samples are published.
-
-if ENABLE_ENCODER_APP
 
 choice ENCODER_MODEL
 	prompt "Encoder backend model"
@@ -18,33 +11,33 @@ config ENCODER_MODEL_IDECODER_MODBUS
 
 endchoice
 
-config ENCODER_USE_SLEWING
-	bool "Use slewing encoder"
+config ENABLE_SLEWING_ENCODER
+	bool "Enable slewing encoder"
 	default y
 
-config ENCODER_USE_LUFFING
-	bool "Use luffing encoder"
+config ENABLE_LUFFING_ENCODER
+	bool "Enable luffing encoder"
 	default y if TOWER_TYPE_FLAT_TOP
 	depends on !TOWER_TYPE_LUFFING_JIB
 
-config ENCODER_USE_HOISTING
-	bool "Use hoisting encoder"
+config ENABLE_HOISTING_ENCODER
+	bool "Enable hoisting encoder"
 	default y
 
 config ENCODER_SLEWING_IFACE_NAME
 	string "Slewing encoder RS485 interface name"
 	default "rs485-uart7"
-	depends on ENCODER_USE_SLEWING
+	depends on ENABLE_SLEWING_ENCODER
 
 config ENCODER_LUFFING_IFACE_NAME
 	string "Luffing encoder RS485 interface name"
 	default "rs485-uart8"
-	depends on ENCODER_USE_LUFFING
+	depends on ENABLE_LUFFING_ENCODER
 
 config ENCODER_HOISTING_IFACE_NAME
 	string "Hoisting encoder RS485 interface name"
 	default "rs485-uart4"
-	depends on ENCODER_USE_HOISTING
+	depends on ENABLE_HOISTING_ENCODER
 
 config ENCODER_MODBUS_UNIT_ID
 	int "Encoder Modbus unit id"
@@ -55,9 +48,9 @@ config ENCODER_MODBUS_BAUD
 	int "Encoder Modbus baud rate"
 	default 9600
 
-config ENCODER_MODBUS_RX_TIMEOUT_US
-	int "Encoder Modbus RX timeout in microseconds"
-	default 30000
+config ENCODER_MODBUS_RX_TIMEOUT_MS
+	int "Encoder Modbus RX timeout in milliseconds"
+	default 30
 
 config ENCODER_SAMPLE_PERIOD_MS
 	int "Encoder sample period in milliseconds"
@@ -68,4 +61,4 @@ config ENCODER_MODBUS_START_ADDR
 	hex "Encoder Modbus holding register start address"
 	default 0x0002
 
-endif
+endmenu

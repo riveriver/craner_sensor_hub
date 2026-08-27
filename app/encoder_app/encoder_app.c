@@ -90,7 +90,7 @@ static void encoder_sample_cb(
 	}
 }
 
-#if defined(CONFIG_ENCODER_USE_SLEWING)
+#if defined(CONFIG_ENABLE_SLEWING_ENCODER)
 static struct encoder_sample_service slewing_encoder_service;
 static struct idecoder_encoder_modbus_client slewing_encoder_client = {
 	.iface = -1,
@@ -99,7 +99,7 @@ static const struct idecoder_encoder_modbus_config slewing_encoder_backend_confi
 	.iface_name = CONFIG_ENCODER_SLEWING_IFACE_NAME,
 	.unit_id = CONFIG_ENCODER_MODBUS_UNIT_ID,
 	.baud = CONFIG_ENCODER_MODBUS_BAUD,
-	.rx_timeout_us = CONFIG_ENCODER_MODBUS_RX_TIMEOUT_US,
+	.rx_timeout_us = CONFIG_ENCODER_MODBUS_RX_TIMEOUT_MS * 1000U,
 	.start_addr = CONFIG_ENCODER_MODBUS_START_ADDR,
 };
 static const struct encoder_sample_service_config slewing_encoder_config = {
@@ -119,7 +119,7 @@ static const struct encoder_binding slewing_encoder_binding = {
 };
 #endif
 
-#if defined(CONFIG_ENCODER_USE_LUFFING)
+#if defined(CONFIG_ENABLE_LUFFING_ENCODER)
 static struct encoder_sample_service luffing_encoder_service;
 static struct idecoder_encoder_modbus_client luffing_encoder_client = {
 	.iface = -1,
@@ -128,7 +128,7 @@ static const struct idecoder_encoder_modbus_config luffing_encoder_backend_confi
 	.iface_name = CONFIG_ENCODER_LUFFING_IFACE_NAME,
 	.unit_id = CONFIG_ENCODER_MODBUS_UNIT_ID,
 	.baud = CONFIG_ENCODER_MODBUS_BAUD,
-	.rx_timeout_us = CONFIG_ENCODER_MODBUS_RX_TIMEOUT_US,
+	.rx_timeout_us = CONFIG_ENCODER_MODBUS_RX_TIMEOUT_MS * 1000U,
 	.start_addr = CONFIG_ENCODER_MODBUS_START_ADDR,
 };
 static const struct encoder_sample_service_config luffing_encoder_config = {
@@ -148,7 +148,7 @@ static const struct encoder_binding luffing_encoder_binding = {
 };
 #endif
 
-#if defined(CONFIG_ENCODER_USE_HOISTING)
+#if defined(CONFIG_ENABLE_HOISTING_ENCODER)
 static struct encoder_sample_service hoisting_encoder_service;
 static struct idecoder_encoder_modbus_client hoisting_encoder_client = {
 	.iface = -1,
@@ -157,7 +157,7 @@ static const struct idecoder_encoder_modbus_config hoisting_encoder_backend_conf
 	.iface_name = CONFIG_ENCODER_HOISTING_IFACE_NAME,
 	.unit_id = CONFIG_ENCODER_MODBUS_UNIT_ID,
 	.baud = CONFIG_ENCODER_MODBUS_BAUD,
-	.rx_timeout_us = CONFIG_ENCODER_MODBUS_RX_TIMEOUT_US,
+	.rx_timeout_us = CONFIG_ENCODER_MODBUS_RX_TIMEOUT_MS * 1000U,
 	.start_addr = CONFIG_ENCODER_MODBUS_START_ADDR,
 };
 static const struct encoder_sample_service_config hoisting_encoder_config = {
@@ -181,7 +181,7 @@ static int encoder_app_init(void)
 {
 	int err;
 
-#if defined(CONFIG_ENCODER_USE_SLEWING)
+#if defined(CONFIG_ENABLE_SLEWING_ENCODER)
 	err = encoder_sample_service_start(&slewing_encoder_service,
 					   &slewing_encoder_config,
 					   encoder_sample_cb,
@@ -192,7 +192,7 @@ static int encoder_app_init(void)
 	}
 #endif
 
-#if defined(CONFIG_ENCODER_USE_LUFFING)
+#if defined(CONFIG_ENABLE_LUFFING_ENCODER)
 	err = encoder_sample_service_start(&luffing_encoder_service,
 					   &luffing_encoder_config,
 					   encoder_sample_cb,
@@ -203,7 +203,7 @@ static int encoder_app_init(void)
 	}
 #endif
 
-#if defined(CONFIG_ENCODER_USE_HOISTING)
+#if defined(CONFIG_ENABLE_HOISTING_ENCODER)
 	err = encoder_sample_service_start(&hoisting_encoder_service,
 					   &hoisting_encoder_config,
 					   encoder_sample_cb,

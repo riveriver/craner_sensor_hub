@@ -20,7 +20,7 @@ static const struct anemometer_modbus_config anemometer_backend_config = {
 	.iface_name = CONFIG_ANEMOMETER_IFACE_NAME,
 	.unit_id = CONFIG_ANEMOMETER_MODBUS_UNIT_ID,
 	.baud = CONFIG_ANEMOMETER_MODBUS_BAUD,
-	.rx_timeout_us = CONFIG_ANEMOMETER_MODBUS_RX_TIMEOUT_US,
+	.rx_timeout_us = CONFIG_ANEMOMETER_MODBUS_RX_TIMEOUT_MS * 1000U,
 	.start_addr = CONFIG_ANEMOMETER_MODBUS_START_ADDR,
 	.register_count = CONFIG_ANEMOMETER_MODBUS_REGISTER_COUNT,
 };

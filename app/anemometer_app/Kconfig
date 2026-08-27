@@ -1,11 +1,11 @@
-config ENABLE_ANEMOMETER_APP
+config ENABLE_ANEMOMETER_SENSOR
 	bool "Enable anemometer application"
 	default y
 	depends on ANEMOMETER_SAMPLE_SERVICE
 	help
 	  Enable product-level anemometer sampling bindings.
 
-if ENABLE_ANEMOMETER_APP
+if ENABLE_ANEMOMETER_SENSOR
 
 choice ANEMOMETER_MODEL
 	prompt "Anemometer backend model"
@@ -30,9 +30,9 @@ config ANEMOMETER_MODBUS_BAUD
 	int "Anemometer Modbus baud rate"
 	default 115200
 
-config ANEMOMETER_MODBUS_RX_TIMEOUT_US
-	int "Anemometer Modbus RX timeout in microseconds"
-	default 100000
+config ANEMOMETER_MODBUS_RX_TIMEOUT_MS
+	int "Anemometer Modbus RX timeout in milliseconds"
+	default 100
 
 config ANEMOMETER_SAMPLE_PERIOD_MS
 	int "Anemometer sample period in milliseconds"

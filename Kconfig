@@ -72,4 +72,12 @@ config ENABLE_FAULT_INJECTION_SHELL
 	  Enable local shell commands that deliberately trigger fatal errors
 	  for coredump validation. Keep this disabled in production builds.
 
+config ENABLE_READ_LOAD_SENSOR
+	bool "Enable load sensor application"
+	default n
+	help
+	  Enable product-level load sensor sampling when a load sensor
+	  application is available. Current code uses this symbol to publish
+	  the product capability bit.
+
 endmenu
