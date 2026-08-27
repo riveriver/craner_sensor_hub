@@ -7,3 +7,4 @@ docs/
 *.map
 *.uf2
 project_config.json
+architecture/
