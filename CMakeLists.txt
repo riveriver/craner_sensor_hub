@@ -9,6 +9,8 @@ add_subdirectory(module/system_health_service)
 add_subdirectory(module/network_manager_service)
 add_subdirectory(module/time_manager_service)
 add_subdirectory(module/ota_manager_service)
+add_subdirectory(module/device_param_server)
+add_subdirectory(module/device_identity_service)
 add_subdirectory(module/modbus_register_service)
 add_subdirectory(module/modbus_tcp_server_service)
 add_subdirectory(module/imu_sample_service)
@@ -22,7 +24,6 @@ target_include_directories(app PRIVATE include src)
 
 target_sources(app PRIVATE
 	src/main.c
-	src/device_identity_service.c
 	src/power_control_app.c
 	src/shell_app.c
 	src/modbus_register_map.c
@@ -44,10 +45,6 @@ target_sources_ifdef(CONFIG_ENABLE_STORAGE_SERVICE app PRIVATE
 	src/storage_service.c
 )
 
-target_sources_ifdef(CONFIG_ENABLE_DEVICE_PARAM_STORE app PRIVATE
-	src/device_param_store.c
-)
-
 target_sources_ifdef(CONFIG_ENABLE_COREDUMP_SERVICE app PRIVATE
 	src/coredump_service.c
 )
@@ -57,6 +54,8 @@ target_link_libraries(app PRIVATE
 	network_manager_service
 	time_manager_service
 	ota_manager_service
+	device_param_server
+	device_identity_service
 	modbus_register_service
 	modbus_tcp_server_service
 	imu_sample_service

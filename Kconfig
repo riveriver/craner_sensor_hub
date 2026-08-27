@@ -4,6 +4,8 @@ rsource "module/system_health_service/Kconfig"
 rsource "module/network_manager_service/Kconfig"
 rsource "module/time_manager_service/Kconfig"
 rsource "module/ota_manager_service/Kconfig"
+rsource "module/device_param_server/Kconfig"
+rsource "module/device_identity_service/Kconfig"
 rsource "module/modbus_register_service/Kconfig"
 rsource "module/modbus_tcp_server_service/Kconfig"
 rsource "module/imu_sample_service/Kconfig"
@@ -51,16 +53,6 @@ config ENABLE_COREDUMP_SERVICE
 	  Enable project-level coredump diagnostics. This wraps Zephyr's
 	  coredump flash backend with simple status and clear APIs for shell
 	  and future remote diagnostics.
-
-config ENABLE_DEVICE_PARAM_STORE
-	bool "Enable device parameter store"
-	default y
-	depends on ENABLE_STORAGE_SERVICE && SETTINGS && SETTINGS_NVS
-	depends on NET_HOSTNAME_ENABLE
-	help
-	  Enable the device parameter service backed by Zephyr settings/NVS.
-	  It owns the device parameter schema and exposes controlled get, set,
-	  save, and factory reset APIs for shell and remote maintenance.
 
 config COREDUMP_EXPORT_CHUNK_BYTES
 	int "Coredump export chunk size in bytes"
