@@ -28,23 +28,6 @@ struct device_param_entry {
 static struct device_param_entry params[] = {
 	{
 		.record = {
-			.key = "time/sync_mode",
-			.type = DEVICE_PARAM_TYPE_ENUM,
-			.default_value = "auto",
-			.range = "auto|manual",
-		},
-		.enum_values = "auto|manual",
-	},
-	{
-		.record = {
-			.key = "time/ntp_server",
-			.type = DEVICE_PARAM_TYPE_STRING,
-			.default_value = CONFIG_TIME_SERVICE_NTP_SERVER,
-			.range = "1..63 printable chars",
-		},
-	},
-	{
-		.record = {
 			.key = "device/project",
 			.type = DEVICE_PARAM_TYPE_STRING,
 			.default_value = "project",

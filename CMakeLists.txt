@@ -6,6 +6,9 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(craner_encoder_hub)
 
 add_subdirectory(module/system_health_service)
+add_subdirectory(module/network_manager_service)
+add_subdirectory(module/time_manager_service)
+add_subdirectory(module/ota_manager_service)
 add_subdirectory(module/modbus_register_service)
 add_subdirectory(module/modbus_tcp_server_service)
 add_subdirectory(module/imu_sample_service)
@@ -20,10 +23,6 @@ target_include_directories(app PRIVATE include src)
 target_sources(app PRIVATE
 	src/main.c
 	src/device_identity_service.c
-	src/network_service.c
-	src/time_service.c
-	src/rtc_trust_store.c
-	src/rtc_time_provider.c
 	src/power_control_app.c
 	src/shell_app.c
 	src/modbus_register_map.c
@@ -41,10 +40,6 @@ target_sources_ifdef(CONFIG_SYS_HEALTH_SERVICE app PRIVATE
 	src/system_health_event_table.c
 )
 
-target_sources_ifdef(CONFIG_ENABLE_OTA_CONTROL app PRIVATE
-	src/ota_control_app.c
-)
-
 target_sources_ifdef(CONFIG_ENABLE_STORAGE_SERVICE app PRIVATE
 	src/storage_service.c
 )
@@ -59,6 +54,9 @@ target_sources_ifdef(CONFIG_ENABLE_COREDUMP_SERVICE app PRIVATE
 
 target_link_libraries(app PRIVATE
 	system_health_service
+	network_manager_service
+	time_manager_service
+	ota_manager_service
 	modbus_register_service
 	modbus_tcp_server_service
 	imu_sample_service

@@ -13,3 +13,12 @@
 [submodule "module/system_health_service"]
 	path = module/system_health_service
 	url = https://github.com/HKCRC/system_health_service.git
+[submodule "module/ota_manager_service"]
+	path = module/ota_manager_service
+	url = https://github.com/HKCRC/ota_manager_service.git
+[submodule "module/network_manager_service"]
+	path = module/network_manager_service
+	url = https://github.com/HKCRC/network_manager_service.git
+[submodule "module/time_manager_service"]
+	path = module/time_manager_service
+	url = https://github.com/HKCRC/time_manager_service.git

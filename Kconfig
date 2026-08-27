@@ -1,6 +1,9 @@
 source "Kconfig.zephyr"
 
 rsource "module/system_health_service/Kconfig"
+rsource "module/network_manager_service/Kconfig"
+rsource "module/time_manager_service/Kconfig"
+rsource "module/ota_manager_service/Kconfig"
 rsource "module/modbus_register_service/Kconfig"
 rsource "module/modbus_tcp_server_service/Kconfig"
 rsource "module/imu_sample_service/Kconfig"
@@ -11,14 +14,6 @@ rsource "app/encoder_app/Kconfig"
 rsource "app/anemometer_app/Kconfig"
 
 menu "Craner Encoder Hub application"
-
-config LOCAL_TIMEZONE_OFFSET_MINUTES
-	int "Local timezone offset in minutes"
-	default 480
-	range -720 840
-	help
-	  Local timezone offset used for human-readable logs, shell status, and
-	  local maintenance schedules. The default is UTC+8.
 
 choice TOWER_TYPE
 	prompt "Tower crane type"
@@ -37,14 +32,6 @@ config TOWER_TYPE_LUFFING_JIB
 	  WIT Modbus RTU IMU.
 
 endchoice
-
-config ENABLE_OTA_CONTROL
-	bool "Enable MCUboot swap OTA control shell"
-	default y
-	depends on SHELL && FLASH && FLASH_MAP && IMG_MANAGER && MCUBOOT_IMG_MANAGER
-	help
-	  Enable shell commands that drive MCUboot's standard swap-based OTA
-	  state machine.
 
 config ENABLE_STORAGE_SERVICE
 	bool "Enable persistent storage service skeleton"
@@ -92,85 +79,5 @@ config ENABLE_FAULT_INJECTION_SHELL
 	help
 	  Enable local shell commands that deliberately trigger fatal errors
 	  for coredump validation. Keep this disabled in production builds.
-
-config NETWORK_DHCP_RETRY_INITIAL_MS
-	int "Initial DHCP retry delay in milliseconds"
-	default 5000
-	range 1000 60000
-	help
-	  Delay used for the first DHCP retry after startup DHCP timeout or
-	  address loss.
-
-config NETWORK_DHCP_RETRY_MAX_MS
-	int "Maximum DHCP retry delay in milliseconds"
-	default 60000
-	range 5000 600000
-	help
-	  Maximum delay used by the DHCP exponential backoff retry loop.
-
-config OTA_TEST_TIMEOUT_S
-	int "OTA test image confirmation timeout in seconds"
-	default 3600
-	depends on ENABLE_OTA_CONTROL
-	help
-	  Time allowed for an unconfirmed test image to call ota confirm before
-	  the application reboots and lets MCUboot roll back.
-
-config TIME_SERVICE_STACK_SIZE
-	int "Time service thread stack size"
-	default 4096
-	range 2048 8192
-	help
-	  Stack size for the time service thread. The thread performs blocking
-	  SNTP/DNS operations and updates Zephyr realtime clock.
-
-config TIME_SERVICE_NTP_SERVER
-	string "NTP server hostname"
-	default "pool.ntp.org"
-	help
-	  NTP/SNTP server used by the time service after DHCP succeeds.
-
-config TIME_SERVICE_NTP_TIMEOUT_MS
-	int "NTP query timeout in milliseconds"
-	default 5000
-	range 1000 30000
-	help
-	  Timeout used for a single SNTP request.
-
-config TIME_SERVICE_NTP_RETRY_INITIAL_MS
-	int "Initial NTP retry delay in milliseconds"
-	default 10000
-	range 1000 60000
-	help
-	  Delay used for the first NTP retry after a sync failure.
-
-config TIME_SERVICE_NTP_RETRY_MAX_MS
-	int "Maximum NTP retry delay in milliseconds"
-	default 300000
-	range 10000 3600000
-	help
-	  Maximum delay used by the NTP exponential backoff retry loop.
-
-config TIME_SERVICE_NTP_RESYNC_INTERVAL_S
-	int "NTP resync interval in seconds"
-	default 3600
-	range 60 86400
-	help
-	  Periodic resync interval after a successful NTP sync.
-
-config TIME_SERVICE_RTC_MIN_VALID_UNIX_TIME
-	int "Minimum valid RTC Unix time"
-	default 1767225600
-	help
-	  Minimum Unix timestamp accepted as a valid RTC time. The default is
-	  2026-01-01T00:00:00Z.
-
-config TIME_SERVICE_RTC_WRITEBACK_THRESHOLD_S
-	int "RTC writeback threshold in seconds"
-	default 2
-	range 0 3600
-	help
-	  Write a synchronized time source back to RTC only when the absolute
-	  difference from the current RTC value is at least this many seconds.
 
 endmenu

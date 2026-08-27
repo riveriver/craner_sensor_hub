@@ -8,7 +8,6 @@
 #ifdef CONFIG_MODBUS_REGISTER_STORE
 #include "modbus_register_store.h"
 #endif
-#include "network_service.h"
 #ifdef CONFIG_ENABLE_STORAGE_SERVICE
 #include "storage_service.h"
 #endif
@@ -16,7 +15,6 @@
 #ifdef CONFIG_SYS_HEALTH_SERVICE
 #include "system_health_event_table.h"
 #endif
-#include "time_service.h"
 
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
@@ -62,16 +60,6 @@ int main(void)
 	}
 #endif
 
-	rc = network_service_init();
-	if (rc != 0) {
-		printk("Network service init failed: %d\n", rc);
-	}
-
-	rc = time_service_init();
-	if (rc != 0) {
-		printk("Time service init failed: %d\n", rc);
-	}
-
 #ifdef CONFIG_SYS_HEALTH_SERVICE
 	static const struct sys_health_time_provider health_time_provider = {
 		.get_unix_time_s = system_health_event_table_get_unix_time_s,
@@ -84,11 +72,6 @@ int main(void)
 		printk("System health service init failed: %d\n", rc);
 	}
 #endif
-
-	rc = network_service_start();
-	if (rc != 0) {
-		printk("Network startup did not get DHCP yet: %d\n", rc);
-	}
 
 	while (1) {
 		k_sleep(K_SECONDS(1));

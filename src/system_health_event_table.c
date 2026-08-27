@@ -1,5 +1,5 @@
 #include "system_health_event_table.h"
-#include "time_service.h"
+#include "time_manager_service.h"
 
 #include <errno.h>
 
@@ -95,7 +95,8 @@ const int system_health_event_table_size =
 int system_health_event_table_get_unix_time_s(int64_t *unix_time_s,
 	void *user_data)
 {
-	struct time_service_status status;
+	int64_t utc_ms;
+	int ret;
 
 	ARG_UNUSED(user_data);
 
@@ -103,12 +104,11 @@ int system_health_event_table_get_unix_time_s(int64_t *unix_time_s,
 		return -EINVAL;
 	}
 
-	time_service_get_status(&status);
-	if (!status.wall_time_valid ||
-	    status.quality < TIME_SERVICE_QUALITY_ESTIMATED) {
-		return -ENODATA;
+	ret = time_manager_get_utc_ms(&utc_ms);
+	if (ret != 0) {
+		return ret;
 	}
 
-	*unix_time_s = status.unix_time_s;
+	*unix_time_s = utc_ms / 1000LL;
 	return 0;
 }
