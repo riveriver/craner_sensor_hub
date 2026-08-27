@@ -202,7 +202,7 @@
 &usart6 {
 	pinctrl-0 = <&usart6_tx_pc6 &usart6_rx_pc7>;
 	pinctrl-names = "default";
-	current-speed = <115200>;
+	current-speed = <9600>;
 	status = "okay";
 
 	rs485_usart6: rs485-usart6 {
