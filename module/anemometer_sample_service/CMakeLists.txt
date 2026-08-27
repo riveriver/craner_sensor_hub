@@ -13,6 +13,11 @@ if(CONFIG_ANEMOMETER_SAMPLE_SERVICE)
 	)
 	target_sources(anemometer_sample_service_impl PRIVATE
 		anemometer_sample_service.c
+		anemometer_sample_service_stats.c
+	)
+	target_sources_ifdef(CONFIG_ANEMOMETER_SAMPLE_SERVICE_SHELL
+		anemometer_sample_service_impl PRIVATE
+		anemometer_sample_service_shell.c
 	)
 	target_link_libraries(anemometer_sample_service INTERFACE
 		anemometer_sample_service_impl

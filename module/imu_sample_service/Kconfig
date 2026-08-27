@@ -23,4 +23,27 @@ config IMU_SAMPLE_SERVICE_MAX_INSTANCES
 	range 1 8
 	depends on IMU_SAMPLE_SERVICE
 
+config IMU_SAMPLE_SERVICE_STATS
+	bool "Enable IMU sample statistics"
+	default y
+	depends on IMU_SAMPLE_SERVICE
+	help
+	  Enable success and error counters, consecutive error statistics, and
+	  read duration statistics.
+
+config IMU_SAMPLE_SERVICE_SHELL
+	bool "Enable IMU sample shell commands"
+	default y
+	depends on IMU_SAMPLE_SERVICE && SHELL && IMU_SAMPLE_SERVICE_STATS
+	help
+	  Enable IMU sample service shell diagnostics.
+
+config IMU_SAMPLE_SERVICE_REINIT_ON_ENODEV
+	bool "Reinitialize IMU backend when ENODEV is returned"
+	default y
+	depends on IMU_SAMPLE_SERVICE
+	help
+	  Reset the backend client and run backend init again before the next
+	  sample when a fetch returns -ENODEV.
+
 endmenu

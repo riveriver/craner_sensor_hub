@@ -7,6 +7,13 @@ if(CONFIG_IMU_SAMPLE_SERVICE)
 	add_library(imu_sample_service_impl STATIC)
 	target_include_directories(imu_sample_service_impl PUBLIC .)
 	target_link_libraries(imu_sample_service_impl PUBLIC zephyr_interface)
-	target_sources(imu_sample_service_impl PRIVATE imu_sample_service.c)
+	target_sources(imu_sample_service_impl PRIVATE
+		imu_sample_service.c
+		imu_sample_service_stats.c
+	)
+	target_sources_ifdef(CONFIG_IMU_SAMPLE_SERVICE_SHELL
+		imu_sample_service_impl PRIVATE
+		imu_sample_service_shell.c
+	)
 	target_link_libraries(imu_sample_service INTERFACE imu_sample_service_impl)
 endif()

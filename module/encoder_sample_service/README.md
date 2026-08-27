@@ -50,3 +50,25 @@ static const struct encoder_sample_service_config slewing_config = {
 ```
 
 以后新增第二种编码器时，新增 driver/helper 并导出新的 `encoder_sample_backend`，`encoder_sample_service` 不需要修改。
+
+## 文件结构
+
+```text
+encoder_sample_backend.h
+encoder_sample_service.h
+encoder_sample_service_internal.h
+encoder_sample_service.c
+encoder_sample_service_stats.c
+encoder_sample_service_shell.c
+```
+
+- `encoder_sample_service.c`：模块入口、采样线程、backend 调度和 public API。
+- `encoder_sample_service_stats.c`：latest sample 缓存和可选统计更新。
+- `encoder_sample_service_shell.c`：`encoder stats` shell 命令，依赖统计功能，可裁剪。
+- `encoder_sample_service_internal.h`：service 内部共享声明，外部不要 include。
+
+## 可裁剪配置
+
+- `CONFIG_ENCODER_SAMPLE_SERVICE_SHELL`：是否编译 shell 诊断命令。
+- `CONFIG_ENCODER_SAMPLE_SERVICE_STATS`：是否累计成功/失败次数、连续失败次数和读耗时统计。
+- `CONFIG_ENCODER_SAMPLE_SERVICE_REINIT_ON_ENODEV`：backend 返回 `-ENODEV` 时，是否 reset backend 并在下一轮重新初始化。

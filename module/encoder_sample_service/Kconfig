@@ -20,4 +20,25 @@ config ENCODER_SAMPLE_SERVICE_MAX_INSTANCES
 	default 4
 	range 1 8
 
+config ENCODER_SAMPLE_SERVICE_STATS
+	bool "Enable encoder sample statistics"
+	default y
+	help
+	  Enable success and error counters, consecutive error statistics, and
+	  read duration statistics.
+
+config ENCODER_SAMPLE_SERVICE_SHELL
+	bool "Enable encoder sample shell commands"
+	default y
+	depends on SHELL && ENCODER_SAMPLE_SERVICE_STATS
+	help
+	  Enable encoder sample service shell diagnostics.
+
+config ENCODER_SAMPLE_SERVICE_REINIT_ON_ENODEV
+	bool "Reinitialize encoder backend when ENODEV is returned"
+	default y
+	help
+	  Reset the backend client and run backend init again before the next
+	  sample when a fetch returns -ENODEV.
+
 endif
