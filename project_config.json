@@ -1,26 +1,34 @@
 {
-  "Version": "3.0.0",
-  "BoardName": "craner_general_stm32h743vit6",
-  "ProjectName": "craner_encoder_hub",
-  "ProductId": "craner_encoder_hub",
-  "DeviceId": "",
-  "OtaTarget": "192.168.18.32",
-  "Port": 1337,
-  "ConnType": "udp",
-  "McuMgr": "mcumgr",
-  "ImagePath": "",
-  "FlashRunner": "stm32cubeprogrammer",
-  "FlashConnection": "port=SWD",
-  "FlashProgrammer": "STM32_Programmer_CLI",
-  "ZephyrBase": "../zephyrproject/zephyr",
-  "ZephyrSdkInstallDir": "../zephyr-sdk-1.0.1/zephyr-sdk-1.0.1",
-  "BuildDir": "build/{BoardName}",
-  "ExtraConf": "",
-  "BootloaderHexPath": "{BuildDir}/mcuboot/zephyr/zephyr.hex",
-  "AppConfirmedHexPath": "{BuildDir}/{ProjectName}/zephyr/zephyr.signed.confirmed.hex",
-  "AppSignedBinPath": "{BuildDir}/{ProjectName}/zephyr/zephyr.signed.bin",
-  "AppSignedHexPath": "{BuildDir}/{ProjectName}/zephyr/zephyr.signed.hex",
-  "OtaOutputDir": "{BuildDir}/ota_images",
-  "OtaUpdateBinPath": "{OtaOutputDir}/app_update_signed.bin",
-  "OtaUpdateHexPath": "{OtaOutputDir}/app_update_signed.hex"
+  "Version": "4.0.0",
+  "Base": {
+    "BoardName": "craner_general_stm32h743vit6",
+    "ProjectName": "craner_encoder_hub",
+    "ProductId": 18,
+    "DeviceId": 32,
+    "OtaTarget": "192.168.18.32",
+    "ZephyrBase": "../zephyrproject/zephyr",
+    "ZephyrSdkInstallDir": "../zephyr-sdk-1.0.1/zephyr-sdk-1.0.1"
+  },
+  "Build": {
+    "BuildDir": "build/{BoardName}",
+    "ExtraConf": "config/product_{ProductId}.conf"
+  },
+  "Flash": {
+    "FlashRunner": "stm32cubeprogrammer",
+    "FlashConnection": "port=SWD",
+    "FlashProgrammer": "STM32_Programmer_CLI",
+    "BootloaderHexPath": "{BuildDir}/mcuboot/zephyr/zephyr.hex",
+    "AppConfirmedHexPath": "{BuildDir}/{ProjectName}/zephyr/zephyr.signed.confirmed.hex"
+  },
+  "Ota": {
+    "Port": 1337,
+    "ConnType": "udp",
+    "McuMgr": "mcumgr",
+    "ImagePath": "",
+    "AppSignedBinPath": "{BuildDir}/{ProjectName}/zephyr/zephyr.signed.bin",
+    "AppSignedHexPath": "{BuildDir}/{ProjectName}/zephyr/zephyr.signed.hex",
+    "OtaOutputDir": "{BuildDir}/ota_images",
+    "OtaUpdateBinPath": "{OtaOutputDir}/app_update_signed.bin",
+    "OtaUpdateHexPath": "{OtaOutputDir}/app_update_signed.hex"
+  }
 }
