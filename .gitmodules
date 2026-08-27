@@ -28,3 +28,6 @@
 [submodule "module/device_identity_service"]
 	path = module/device_identity_service
 	url = https://github.com/HKCRC/device_identity_service.git
+[submodule "module/modbus_tcp_server"]
+	path = module/modbus_tcp_server
+	url = https://github.com/HKCRC/modbus_tcp_server.git

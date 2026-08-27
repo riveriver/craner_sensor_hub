@@ -12,7 +12,7 @@ add_subdirectory(module/ota_manager_service)
 add_subdirectory(module/device_param_server)
 add_subdirectory(module/device_identity_service)
 add_subdirectory(module/modbus_register_service)
-add_subdirectory(module/modbus_tcp_server_service)
+add_subdirectory(module/modbus_tcp_server)
 add_subdirectory(module/imu_sample_service)
 add_subdirectory(module/encoder_sample_service)
 add_subdirectory(module/anemometer_sample_service)
@@ -29,6 +29,10 @@ target_sources(app PRIVATE
 	src/modbus_register_map.c
 )
 
+target_sources_ifdef(CONFIG_MODBUS_TCP_SERVER app PRIVATE
+	src/modbus_tcp_register_adapter.c
+)
+
 target_sources_ifdef(CONFIG_ENABLE_LOG_SENSOR_THREAD app PRIVATE
 	src/log_app_sensor.c
 )
@@ -38,7 +42,7 @@ target_sources_ifdef(CONFIG_ENABLE_LOG_COMM_THREAD app PRIVATE
 )
 
 target_sources_ifdef(CONFIG_SYS_HEALTH_SERVICE app PRIVATE
-	src/system_health_event_table.c
+	src/system_health_app.c
 )
 
 target_sources_ifdef(CONFIG_ENABLE_STORAGE_SERVICE app PRIVATE
@@ -57,7 +61,7 @@ target_link_libraries(app PRIVATE
 	device_param_server
 	device_identity_service
 	modbus_register_service
-	modbus_tcp_server_service
+	modbus_tcp_server
 	imu_sample_service
 	encoder_sample_service
 	anemometer_sample_service
