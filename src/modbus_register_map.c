@@ -15,7 +15,7 @@ LOG_MODULE_REGISTER(modbus_register_map, CONFIG_LOG_DEFAULT_LEVEL);
 #define MODBUS_INPUT_ADDRESS_SIZE 100U
 #define MODBUS_HOLDING_ADDRESS_SIZE 10U
 
-#define MODBUS_PROTOCOL_VERSION_BCD 0x3000U
+#define MODBUS_PROTOCOL_VERSION_BCD 0x3100U
 #define TOWER_TYPE_FLAT_TOP 1U
 #define TOWER_TYPE_LUFFING_JIB 2U
 
@@ -183,30 +183,31 @@ static struct modbus_register_input input_register_table[] = {
 	{ .name = "REG_ANEMOMETER_PRESSURE", .addr = 0x0028, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_ANEMOMETER_WIND_SPEED", .addr = 0x0029, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_ANEMOMETER_WIND_DIRECTION", .addr = 0x002A, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_RESERVED_002B", .addr = 0x002B, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 
-	{ .name = "REG_LOAD_TIMESTAMP_H", .addr = 0x002B, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_TIMESTAMP_L", .addr = 0x002C, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_ERROR_CODE", .addr = 0x002D, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_OFFLINE_STATUS", .addr = 0x002E, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LIFTING_MOMENT_H", .addr = 0x002F, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LIFTING_MOMENT_L", .addr = 0x0030, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LIFTING_MOMENT_PCT_H", .addr = 0x0031, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LIFTING_MOMENT_PCT_L", .addr = 0x0032, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_WEIGHT_H", .addr = 0x0033, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_WEIGHT_L", .addr = 0x0034, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_WEIGHT_PCT_H", .addr = 0x0035, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_WEIGHT_PCT_L", .addr = 0x0036, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_TIMESTAMP_H", .addr = 0x002C, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_TIMESTAMP_L", .addr = 0x002D, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_ERROR_CODE", .addr = 0x002E, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_OFFLINE_STATUS", .addr = 0x002F, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LIFTING_MOMENT_H", .addr = 0x0030, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LIFTING_MOMENT_L", .addr = 0x0031, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LIFTING_MOMENT_PCT_H", .addr = 0x0032, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LIFTING_MOMENT_PCT_L", .addr = 0x0033, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_WEIGHT_H", .addr = 0x0034, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_WEIGHT_L", .addr = 0x0035, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_WEIGHT_PCT_H", .addr = 0x0036, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_WEIGHT_PCT_L", .addr = 0x0037, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 
-	{ .name = "REG_LUFFING_IMU_TIMESTAMP_H", .addr = 0x0037, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_TIMESTAMP_L", .addr = 0x0038, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_ERROR_CODE", .addr = 0x0039, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_OFFLINE_STATUS", .addr = 0x003A, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_ROLL_H", .addr = 0x003B, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_ROLL_L", .addr = 0x003C, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_PITCH_H", .addr = 0x003D, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_PITCH_L", .addr = 0x003E, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_YAW_H", .addr = 0x003F, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_YAW_L", .addr = 0x0040, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_TIMESTAMP_H", .addr = 0x0038, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_TIMESTAMP_L", .addr = 0x0039, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_ERROR_CODE", .addr = 0x003A, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_OFFLINE_STATUS", .addr = 0x003B, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_ROLL_H", .addr = 0x003C, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_ROLL_L", .addr = 0x003D, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_PITCH_H", .addr = 0x003E, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_PITCH_L", .addr = 0x003F, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_YAW_H", .addr = 0x0040, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_YAW_L", .addr = 0x0041, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 };
 
 static struct modbus_register_map app_register_map = {
