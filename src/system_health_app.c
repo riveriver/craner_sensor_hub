@@ -1,4 +1,4 @@
-#include "system_health_event_table.h"
+#include "system_health_app.h"
 #include "time_manager_service.h"
 
 #include <errno.h>
@@ -6,7 +6,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/util.h>
 
-LOG_MODULE_REGISTER(system_health_event_table, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(system_health_app, CONFIG_LOG_DEFAULT_LEVEL);
 
 static void log_offline_event(
 	const struct sys_health_event_status *status)
@@ -30,7 +30,7 @@ static void log_online_event(
 		status->max_offline_duration_ms);
 }
 
-const struct sys_health_event system_health_event_table[] = {
+const struct sys_health_event system_health_app_event_table[] = {
 #ifdef CONFIG_SYS_HEALTH_ICMP_PROBE
 	{
 		.event = SYSTEM_HEALTH_ETHERNET,
@@ -40,12 +40,11 @@ const struct sys_health_event system_health_event_table[] = {
 		.offline_timeout_ms =
 			(CONFIG_SYS_HEALTH_ICMP_PROBE_PERIOD_MS *
 			 CONFIG_SYS_HEALTH_ICMP_PROBE_MAX_CONSECUTIVE_FAILURES) +
-			CONFIG_SYS_HEALTH_ICMP_PROBE_TIMEOUT_MS +
-			1000U,
+			CONFIG_SYS_HEALTH_ICMP_PROBE_TIMEOUT_MS,
 		.action_mask = SYS_HEALTH_ACTION_LOG |
 			       SYS_HEALTH_ACTION_SET_DEGRADED |
 			       SYS_HEALTH_ACTION_STOP_WATCHDOG_FEED,
-		.action_delay_ms = 0,
+		.action_delay_ms = 60000,
 		.offline_first_func = log_offline_event,
 		.online_first_func = log_online_event,
 	},
@@ -89,11 +88,10 @@ const struct sys_health_event system_health_event_table[] = {
 	},
 };
 
-const int system_health_event_table_size =
-	ARRAY_SIZE(system_health_event_table);
+const int system_health_app_event_table_size =
+	ARRAY_SIZE(system_health_app_event_table);
 
-int system_health_event_table_get_unix_time_s(int64_t *unix_time_s,
-	void *user_data)
+int system_health_app_get_unix_time_s(int64_t *unix_time_s, void *user_data)
 {
 	int64_t utc_ms;
 	int ret;

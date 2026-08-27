@@ -37,4 +37,9 @@ static inline bool system_health_is_event_offline(enum system_health_event event
 	return sys_health_event_is_offline((uint16_t)event);
 }
 
+extern const struct sys_health_event system_health_app_event_table[];
+extern const int system_health_app_event_table_size;
+
+int system_health_app_get_unix_time_s(int64_t *unix_time_s, void *user_data);
+
 #endif /* SYSTEM_HEALTH_APP_H */
