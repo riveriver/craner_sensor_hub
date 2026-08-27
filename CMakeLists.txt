@@ -6,6 +6,8 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(craner_encoder_hub)
 
 add_subdirectory(module/system_health_service)
+add_subdirectory(module/modbus_register_service)
+add_subdirectory(module/modbus_tcp_server_service)
 add_subdirectory(module/imu_sample_service)
 add_subdirectory(module/encoder_sample_service)
 add_subdirectory(module/anemometer_sample_service)
@@ -25,7 +27,6 @@ target_sources(app PRIVATE
 	src/power_control_app.c
 	src/shell_app.c
 	src/modbus_register_map.c
-	src/modbus_register_service.c
 )
 
 target_sources_ifdef(CONFIG_ENABLE_LOG_SENSOR_THREAD app PRIVATE
@@ -40,10 +41,6 @@ target_sources_ifdef(CONFIG_SYS_HEALTH_SERVICE app PRIVATE
 	src/system_health_event_table.c
 )
 
-target_sources_ifdef(CONFIG_ENABLE_MODBUS_TCP_SERVER_THREAD app PRIVATE
-	src/modbus_tcp_server_app.c
-)
-
 target_sources_ifdef(CONFIG_ENABLE_OTA_CONTROL app PRIVATE
 	src/ota_control_app.c
 )
@@ -56,16 +53,14 @@ target_sources_ifdef(CONFIG_ENABLE_DEVICE_PARAM_STORE app PRIVATE
 	src/device_param_store.c
 )
 
-target_sources_ifdef(CONFIG_ENABLE_MODBUS_REGISTER_STORE app PRIVATE
-	src/modbus_register_store.c
-)
-
 target_sources_ifdef(CONFIG_ENABLE_COREDUMP_SERVICE app PRIVATE
 	src/coredump_service.c
 )
 
 target_link_libraries(app PRIVATE
 	system_health_service
+	modbus_register_service
+	modbus_tcp_server_service
 	imu_sample_service
 	encoder_sample_service
 	anemometer_sample_service

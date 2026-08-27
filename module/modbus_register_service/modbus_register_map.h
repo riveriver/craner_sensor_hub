@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <zephyr/sys/util.h>
+
 #define MODBUS_REG_F_READABLE BIT(0)
 #define MODBUS_REG_F_WRITABLE BIT(1)
 #define MODBUS_REG_F_PERSISTENT BIT(2)
@@ -50,7 +52,5 @@ struct modbus_register_map {
 	size_t holding_count;
 	size_t holding_address_size;
 };
-
-struct modbus_register_map *modbus_register_map_get(void);
 
 #endif

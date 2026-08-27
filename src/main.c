@@ -5,7 +5,7 @@
 #ifdef CONFIG_ENABLE_COREDUMP_SERVICE
 #include "coredump_service.h"
 #endif
-#ifdef CONFIG_ENABLE_MODBUS_REGISTER_STORE
+#ifdef CONFIG_MODBUS_REGISTER_STORE
 #include "modbus_register_store.h"
 #endif
 #include "network_service.h"
@@ -48,7 +48,7 @@ int main(void)
 		printk("Shell app init failed: %d\n", rc);
 	}
 
-#ifdef CONFIG_ENABLE_MODBUS_REGISTER_STORE
+#ifdef CONFIG_MODBUS_REGISTER_STORE
 	rc = modbus_register_store_init();
 	if (rc != 0) {
 		printk("Modbus register store init failed: %d\n", rc);

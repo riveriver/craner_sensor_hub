@@ -5,7 +5,7 @@
 #ifdef CONFIG_ENABLE_DEVICE_PARAM_STORE
 #include "device_param_store.h"
 #endif
-#ifdef CONFIG_ENABLE_MODBUS_REGISTER_STORE
+#ifdef CONFIG_MODBUS_REGISTER_STORE
 #include "modbus_register_store.h"
 #endif
 #include "network_service.h"
@@ -614,7 +614,7 @@ SHELL_CMD_REGISTER(param_factory_reset, NULL,
 		   cmd_param_factory_reset);
 #endif
 
-#ifdef CONFIG_ENABLE_MODBUS_REGISTER_STORE
+#ifdef CONFIG_MODBUS_REGISTER_STORE
 static int cmd_modbus_store_status(const struct shell *shell, size_t argc,
 				   char **argv)
 {

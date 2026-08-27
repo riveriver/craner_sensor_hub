@@ -25,16 +25,13 @@
 #include "modbus_register_service.h"
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(tcp_modbus, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(modbus_tcp_server_service, CONFIG_LOG_DEFAULT_LEVEL);
 
-#define MODBUS_TCP_SERVER_STACK_SIZE 3072
-#define MODBUS_TCP_SERVER_PRIORITY 8
-#define MODBUS_TCP_PORT 502
-#define MODBUS_TCP_MAX_CLIENTS CONFIG_MODBUS_TCP_MAX_CLIENTS
-#define MODBUS_TCP_POLL_FD_COUNT (MODBUS_TCP_MAX_CLIENTS + 1)
-#define MODBUS_TCP_LISTEN_BACKLOG MODBUS_TCP_MAX_CLIENTS
-#define MODBUS_TCP_RECV_TIMEOUT_MS 1000
+#define MODBUS_TCP_POLL_FD_COUNT \
+	(CONFIG_MODBUS_TCP_SERVER_MAX_CLIENTS + 1)
+#define MODBUS_TCP_LISTEN_BACKLOG CONFIG_MODBUS_TCP_SERVER_MAX_CLIENTS
 
+#ifdef CONFIG_MODBUS_TCP_SERVER_CUSTOM_FC_EXAMPLE
 static int custom_read_count;
 
 static bool custom_handler(const int iface,
@@ -62,7 +59,8 @@ static bool custom_handler(const int iface,
 	subfunc = rx_adu->data[0];
 	data_len = rx_adu->data[1];
 
-	LOG_INF("Custom function called with subfunc=%u, data_len=%u", subfunc, data_len);
+	LOG_INF("Custom function called with subfunc=%u, data_len=%u",
+		subfunc, data_len);
 	(*read_counter)++;
 	sys_put_be16(0x5555, tx_adu->data);
 	sys_put_be16(0xAAAA, &tx_adu->data[2]);
@@ -73,6 +71,7 @@ static bool custom_handler(const int iface,
 }
 
 MODBUS_CUSTOM_FC_DEFINE(custom, custom_handler, 101, &custom_read_count);
+#endif
 
 static int coil_rd(uint16_t addr, bool *state)
 {
@@ -185,7 +184,7 @@ const static struct modbus_iface_param server_param = {
 
 static int init_modbus_server(void)
 {
-	char iface_name[] = "RAW_0";
+	char iface_name[] = CONFIG_MODBUS_TCP_SERVER_RAW_IFACE_NAME;
 	int err;
 
 	server_iface = modbus_iface_get_by_name(iface_name);
@@ -201,7 +200,11 @@ static int init_modbus_server(void)
 		return err;
 	}
 
+#ifdef CONFIG_MODBUS_TCP_SERVER_CUSTOM_FC_EXAMPLE
 	return modbus_register_user_fc(server_iface, &modbus_cfg_custom);
+#else
+	return 0;
+#endif
 }
 
 static int modbus_tcp_reply(int client, struct modbus_adu *adu)
@@ -231,7 +234,7 @@ static int modbus_tcp_recv_exact(int client, uint8_t *buf, size_t len)
 		};
 		int rc;
 
-		rc = poll(&pfd, 1, MODBUS_TCP_RECV_TIMEOUT_MS);
+		rc = poll(&pfd, 1, CONFIG_MODBUS_TCP_SERVER_RECV_TIMEOUT_MS);
 		if (rc == 0) {
 			return -ETIMEDOUT;
 		}
@@ -394,7 +397,7 @@ static void modbus_tcp_server_thread(void)
 
 	bind_addr.sin_family = AF_INET;
 	bind_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	bind_addr.sin_port = htons(MODBUS_TCP_PORT);
+	bind_addr.sin_port = htons(CONFIG_MODBUS_TCP_SERVER_PORT);
 
 	if (bind(serv, (struct sockaddr *)&bind_addr, sizeof(bind_addr)) < 0) {
 		LOG_ERR("error: bind: %d", errno);
@@ -419,7 +422,8 @@ static void modbus_tcp_server_thread(void)
 	client_order[0] = 0U;
 
 	LOG_INF("Started MODBUS TCP server on port %d, max_clients=%d",
-		MODBUS_TCP_PORT, MODBUS_TCP_MAX_CLIENTS);
+		CONFIG_MODBUS_TCP_SERVER_PORT,
+		CONFIG_MODBUS_TCP_SERVER_MAX_CLIENTS);
 
 	while (1) {
 		int rc;
@@ -487,6 +491,6 @@ static void modbus_tcp_server_thread(void)
 	}
 }
 
-K_THREAD_DEFINE(modbus_tcp_server_tid, MODBUS_TCP_SERVER_STACK_SIZE,
+K_THREAD_DEFINE(modbus_tcp_server_tid, CONFIG_MODBUS_TCP_SERVER_STACK_SIZE,
 		modbus_tcp_server_thread, NULL, NULL, NULL,
-		MODBUS_TCP_SERVER_PRIORITY, 0, 0);
+		CONFIG_MODBUS_TCP_SERVER_PRIORITY, 0, 0);
