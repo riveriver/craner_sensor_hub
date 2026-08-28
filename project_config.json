@@ -3,7 +3,7 @@
   "Base": {
     "BoardName": "craner_general_stm32h743vit6",
     "ProjectName": "craner_encoder_hub",
-    "ProductId": 18,
+    "ProductId": 101,
     "DeviceId": 32,
     "OtaTarget": "192.168.18.32",
     "ZephyrBase": "../zephyrproject/zephyr",
