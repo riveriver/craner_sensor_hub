@@ -1,6 +1,3 @@
-#ifdef CONFIG_ENABLE_COREDUMP_SERVICE
-#include "coredump_service.h"
-#endif
 #ifdef CONFIG_MODBUS_REGISTER_STORE
 #include "modbus_register_store.h"
 #endif
@@ -34,13 +31,6 @@ int main(void)
 	rc = modbus_register_store_init();
 	if (rc != 0) {
 		printk("Modbus register store init failed: %d\n", rc);
-	}
-#endif
-
-#ifdef CONFIG_ENABLE_COREDUMP_SERVICE
-	rc = coredump_service_init();
-	if (rc != 0) {
-		printk("Coredump service init failed: %d\n", rc);
 	}
 #endif
 

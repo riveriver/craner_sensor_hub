@@ -11,6 +11,7 @@ add_subdirectory(module/time_manager_service)
 add_subdirectory(module/ota_manager_service)
 add_subdirectory(module/device_param_server)
 add_subdirectory(module/device_identity_service)
+add_subdirectory(module/fault_dump_service)
 add_subdirectory(module/modbus_register_service)
 add_subdirectory(module/modbus_tcp_server)
 add_subdirectory(module/imu_sample_service)
@@ -49,10 +50,6 @@ target_sources_ifdef(CONFIG_ENABLE_STORAGE_SERVICE app PRIVATE
 	src/storage_service.c
 )
 
-target_sources_ifdef(CONFIG_ENABLE_COREDUMP_SERVICE app PRIVATE
-	src/coredump_service.c
-)
-
 target_link_libraries(app PRIVATE
 	system_health_service
 	network_manager_service
@@ -60,6 +57,7 @@ target_link_libraries(app PRIVATE
 	ota_manager_service
 	device_param_server
 	device_identity_service
+	fault_dump_service
 	modbus_register_service
 	modbus_tcp_server
 	imu_sample_service

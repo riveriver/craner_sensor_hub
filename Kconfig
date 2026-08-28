@@ -6,6 +6,7 @@ rsource "module/time_manager_service/Kconfig"
 rsource "module/ota_manager_service/Kconfig"
 rsource "module/device_param_server/Kconfig"
 rsource "module/device_identity_service/Kconfig"
+rsource "module/fault_dump_service/Kconfig"
 rsource "module/modbus_register_service/Kconfig"
 rsource "module/modbus_tcp_server/Kconfig"
 rsource "module/imu_sample_service/Kconfig"
@@ -43,34 +44,6 @@ config ENABLE_STORAGE_SERVICE
 	  Enable the persistent storage service skeleton. The first
 	  implementation only probes internal flash partitions and exposes
 	  their status through shell diagnostics.
-
-config ENABLE_COREDUMP_SERVICE
-	bool "Enable coredump diagnostic service"
-	default y
-	depends on ENABLE_STORAGE_SERVICE
-	depends on DEBUG_COREDUMP && DEBUG_COREDUMP_BACKEND_FLASH_PARTITION
-	help
-	  Enable project-level coredump diagnostics. This wraps Zephyr's
-	  coredump flash backend with simple status and clear APIs for shell
-	  and future remote diagnostics.
-
-config COREDUMP_EXPORT_CHUNK_BYTES
-	int "Coredump export chunk size in bytes"
-	default 128
-	range 32 256
-	depends on ENABLE_COREDUMP_SERVICE
-	help
-	  Number of raw coredump bytes read per export chunk. The exported
-	  payload is hex encoded, so each shell chunk is about twice this size
-	  plus the #CD: prefix.
-
-config ENABLE_FAULT_INJECTION_SHELL
-	bool "Enable fault injection shell commands"
-	default n
-	depends on SHELL
-	help
-	  Enable local shell commands that deliberately trigger fatal errors
-	  for coredump validation. Keep this disabled in production builds.
 
 config ENABLE_READ_LOAD_SENSOR
 	bool "Enable load sensor application"
