@@ -31,3 +31,6 @@
 [submodule "module/modbus_tcp_server"]
 	path = module/modbus_tcp_server
 	url = https://github.com/HKCRC/modbus_tcp_server.git
+[submodule "module/fault_dump_service"]
+	path = module/fault_dump_service
+	url = https://github.com/HKCRC/fault_dump_service.git
