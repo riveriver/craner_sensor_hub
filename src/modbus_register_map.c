@@ -15,9 +15,10 @@ LOG_MODULE_REGISTER(modbus_register_map, CONFIG_LOG_DEFAULT_LEVEL);
 #define MODBUS_INPUT_ADDRESS_SIZE 100U
 #define MODBUS_HOLDING_ADDRESS_SIZE 10U
 
-#define MODBUS_PROTOCOL_VERSION_BCD 0x3100U
-#define TOWER_TYPE_FLAT_TOP 1U
-#define TOWER_TYPE_LUFFING_JIB 2U
+#define MODBUS_PROTOCOL_VERSION_BCD 0x0032U
+#define CRANE_TYPE_UNINITIALIZED 0xFFFFU
+#define CRANE_TYPE_FLAT_TOP 0x00FAU
+#define CRANE_TYPE_LUFFING_JIB 0x00DBU
 
 #define DEVICE_CAPABILITY_SLEWING_ENCODER BIT(0)
 #define DEVICE_CAPABILITY_LUFFING_ENCODER BIT(1)
@@ -25,11 +26,13 @@ LOG_MODULE_REGISTER(modbus_register_map, CONFIG_LOG_DEFAULT_LEVEL);
 #define DEVICE_CAPABILITY_ANEMOMETER BIT(3)
 #define DEVICE_CAPABILITY_LOAD_SENSOR BIT(4)
 #define DEVICE_CAPABILITY_LUFFING_IMU BIT(5)
-#define DEVICE_CAPABILITY_TOWER_LUFFING_JIB BIT(15)
+#define DEVICE_CAPABILITY_CRANE_LUFFING_JIB BIT(7)
 
-#define MODBUS_TOWER_TYPE \
+#define MODBUS_CRANE_TYPE \
 	(IS_ENABLED(CONFIG_TOWER_TYPE_LUFFING_JIB) ? \
-	 TOWER_TYPE_LUFFING_JIB : TOWER_TYPE_FLAT_TOP)
+	 CRANE_TYPE_LUFFING_JIB : \
+	 (IS_ENABLED(CONFIG_TOWER_TYPE_FLAT_TOP) ? \
+	  CRANE_TYPE_FLAT_TOP : CRANE_TYPE_UNINITIALIZED))
 #define MODBUS_DEVICE_CAPABILITY_FLAGS \
 	((IS_ENABLED(CONFIG_ENABLE_SLEWING_ENCODER) ? DEVICE_CAPABILITY_SLEWING_ENCODER : 0U) | \
 	 (IS_ENABLED(CONFIG_ENABLE_LUFFING_ENCODER) ? DEVICE_CAPABILITY_LUFFING_ENCODER : 0U) | \
@@ -37,14 +40,15 @@ LOG_MODULE_REGISTER(modbus_register_map, CONFIG_LOG_DEFAULT_LEVEL);
 	 (IS_ENABLED(CONFIG_ENABLE_ANEMOMETER_SENSOR) ? DEVICE_CAPABILITY_ANEMOMETER : 0U) | \
 	 (IS_ENABLED(CONFIG_ENABLE_READ_LOAD_SENSOR) ? DEVICE_CAPABILITY_LOAD_SENSOR : 0U) | \
 	 (IS_ENABLED(CONFIG_ENABLE_LUFFING_IMU) ? DEVICE_CAPABILITY_LUFFING_IMU : 0U) | \
-	 (IS_ENABLED(CONFIG_TOWER_TYPE_LUFFING_JIB) ? DEVICE_CAPABILITY_TOWER_LUFFING_JIB : 0U))
+	 (IS_ENABLED(CONFIG_TOWER_TYPE_LUFFING_JIB) ? DEVICE_CAPABILITY_CRANE_LUFFING_JIB : 0U))
+#define MODBUS_OFFLINE_DEFAULT(config) (IS_ENABLED(config) ? 0U : 1U)
 
 enum {
 	REG_FW_VERSION_ADDR = 0x0000,
 	REG_FW_BUILD_YYMM_ADDR = 0x0001,
 	REG_FW_BUILD_DDHH_ADDR = 0x0002,
 	REG_FW_BUILD_MMSS_ADDR = 0x0003,
-	REG_TOWER_TYPE_ADDR = 0x000D,
+	REG_CRANE_TYPE_ADDR = 0x000D,
 	REG_PROTOCOL_VERSION_ADDR = 0x000E,
 	REG_DEVICE_CAPABILITY_FLAGS_ADDR = 0x000F,
 };
@@ -149,35 +153,35 @@ static struct modbus_register_input input_register_table[] = {
 	{ .name = "REG_RESERVED_000A", .addr = 0x000A, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_RESERVED_000B", .addr = 0x000B, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_RESERVED_000C", .addr = 0x000C, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_TOWER_TYPE", .addr = REG_TOWER_TYPE_ADDR, .default_value = MODBUS_TOWER_TYPE, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_CRANE_TYPE", .addr = REG_CRANE_TYPE_ADDR, .default_value = MODBUS_CRANE_TYPE, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_PROTOCOL_VERSION", .addr = REG_PROTOCOL_VERSION_ADDR, .default_value = MODBUS_PROTOCOL_VERSION_BCD, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_DEVICE_CAPABILITY_FLAGS", .addr = REG_DEVICE_CAPABILITY_FLAGS_ADDR, .default_value = MODBUS_DEVICE_CAPABILITY_FLAGS, .flags = MODBUS_REG_ACCESS_RW },
 
 	{ .name = "REG_SLEWING_TIMESTAMP_H", .addr = 0x0010, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_SLEWING_TIMESTAMP_L", .addr = 0x0011, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_SLEWING_ERROR_CODE", .addr = 0x0012, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_SLEWING_OFFLINE_STATUS", .addr = 0x0013, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_SLEWING_OFFLINE_STATUS", .addr = 0x0013, .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_SLEWING_ENCODER), .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_SLEWING_TRUN_CNT", .addr = 0x0014, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_SLEWING_SINAGLE_VAL", .addr = 0x0015, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 
 	{ .name = "REG_LUFFING_TIMESTAMP_H", .addr = 0x0016, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LUFFING_TIMESTAMP_L", .addr = 0x0017, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LUFFING_ERROR_CODE", .addr = 0x0018, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_OFFLINE_STATUS", .addr = 0x0019, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_OFFLINE_STATUS", .addr = 0x0019, .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_LUFFING_ENCODER), .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LUFFING_VALUE_H", .addr = 0x001A, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LUFFING_VALUE_L", .addr = 0x001B, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	
 	{ .name = "REG_HOISTING_TIMESTAMP_H", .addr = 0x001C, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_HOISTING_TIMESTAMP_L", .addr = 0x001D, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_HOISTING_ERROR_CODE", .addr = 0x001E, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_HOISTING_OFFLINE_STATUS", .addr = 0x001F, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_HOISTING_OFFLINE_STATUS", .addr = 0x001F, .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_HOISTING_ENCODER), .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_HOISTING_TRUN_CNT", .addr = 0x0020, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_HOISTING_SINAGLE_VAL", .addr = 0x0021, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	
 	{ .name = "REG_ANEMOMETER_TIMESTAMP_H", .addr = 0x0022, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_ANEMOMETER_TIMESTAMP_L", .addr = 0x0023, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_ANEMOMETER_ERROR_CODE", .addr = 0x0024, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_ANEMOMETER_OFFLINE_STATUS", .addr = 0x0025, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_ANEMOMETER_OFFLINE_STATUS", .addr = 0x0025, .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_ANEMOMETER_SENSOR), .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_ANEMOMETER_TEMPERATURE", .addr = 0x0026, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_ANEMOMETER_HUMIDITY", .addr = 0x0027, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_ANEMOMETER_PRESSURE", .addr = 0x0028, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
@@ -188,7 +192,7 @@ static struct modbus_register_input input_register_table[] = {
 	{ .name = "REG_LOAD_TIMESTAMP_H", .addr = 0x002C, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LOAD_TIMESTAMP_L", .addr = 0x002D, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LOAD_ERROR_CODE", .addr = 0x002E, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_OFFLINE_STATUS", .addr = 0x002F, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_OFFLINE_STATUS", .addr = 0x002F, .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_READ_LOAD_SENSOR), .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LIFTING_MOMENT_H", .addr = 0x0030, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LIFTING_MOMENT_L", .addr = 0x0031, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LIFTING_MOMENT_PCT_H", .addr = 0x0032, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
@@ -201,7 +205,7 @@ static struct modbus_register_input input_register_table[] = {
 	{ .name = "REG_LUFFING_IMU_TIMESTAMP_H", .addr = 0x0038, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LUFFING_IMU_TIMESTAMP_L", .addr = 0x0039, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LUFFING_IMU_ERROR_CODE", .addr = 0x003A, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_OFFLINE_STATUS", .addr = 0x003B, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_OFFLINE_STATUS", .addr = 0x003B, .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_LUFFING_IMU), .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LUFFING_IMU_ROLL_H", .addr = 0x003C, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LUFFING_IMU_ROLL_L", .addr = 0x003D, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LUFFING_IMU_PITCH_H", .addr = 0x003E, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
