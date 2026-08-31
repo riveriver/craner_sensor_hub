@@ -4,7 +4,3 @@ SB_CONFIG_BOOTLOADER_MCUBOOT=y
 # Standard MCUboot OTA layout: boot from slot0, download to slot1, then swap
 # slot0 and slot1 through scratch_partition on reboot.
 SB_CONFIG_MCUBOOT_MODE_SWAP_SCRATCH=y
-
-# Stage 1 uses MCUboot's development P-256 key. Replace with hardware-specific
-# production keys during the production hardening stage.
-SB_CONFIG_BOOT_SIGNATURE_TYPE_ECDSA_P256=y
