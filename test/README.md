@@ -20,6 +20,7 @@ test/
 | 参数与持久化 | [参数与持久化测试用例.md](test_cases/参数与持久化测试用例.md) | `module/device_param_server`、`module/modbus_data_model` |
 | 设备身份 | [设备身份测试用例.md](test_cases/设备身份测试用例.md) | `module/device_identity_service` |
 | 网络管理 | [网络管理测试用例.md](test_cases/网络管理测试用例.md) | `module/network_manager_service` |
+| Shell 与 MQTT 后端 | [Shell测试用例.md](test_cases/Shell测试用例.md) | Zephyr `SHELL_BACKEND_MQTT`、`module/device_identity_service` |
 | 以太网压力与老化 | [以太网压力与老化测试用例.md](test_cases/以太网压力与老化测试用例.md) | `module/network_manager_service`、网络硬件 |
 | 以太网性能 | [以太网性能测试用例.md](test_cases/以太网性能测试用例.md) | 网络接口、TCP/IP 协议栈 |
 | 固件升级 | [固件升级测试用例.md](test_cases/固件升级测试用例.md) | `module/ota_manager_service`、MCUboot |
