@@ -8,7 +8,7 @@
 
 #include "encoder_sample_service.h"
 #include "idecoder_encoder_modbus.h"
-#include "modbus_register_service.h"
+#include "modbus_data_model.h"
 #include "system_health_app.h"
 
 LOG_MODULE_REGISTER(encoder_app, CONFIG_LOG_DEFAULT_LEVEL);
@@ -37,7 +37,7 @@ static int encoder_write_failure(
 		1U,
 	};
 
-	return modbus_register_service_write_inputs_by_name(
+	return modbus_data_model_write_inputs_by_name(
 		binding->error_code_name, values, ARRAY_SIZE(values));
 }
 
@@ -55,7 +55,7 @@ static int encoder_write_success(
 		sample->single_value,
 	};
 
-	return modbus_register_service_write_inputs_by_name(
+	return modbus_data_model_write_inputs_by_name(
 		binding->timestamp_high_name, values, ARRAY_SIZE(values));
 }
 

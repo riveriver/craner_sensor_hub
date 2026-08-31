@@ -4,7 +4,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/util.h>
 
-#include "modbus_register_service.h"
+#include "modbus_data_model.h"
 #include "modbus_tcp_server.h"
 
 LOG_MODULE_REGISTER(modbus_tcp_register_adapter, CONFIG_LOG_DEFAULT_LEVEL);
@@ -13,28 +13,28 @@ static int adapter_coil_read(uint16_t addr, bool *value, void *user_data)
 {
 	ARG_UNUSED(user_data);
 
-	return modbus_register_service_read_coil(addr, value);
+	return modbus_data_model_read_coil(addr, value);
 }
 
 static int adapter_coil_write(uint16_t addr, bool value, void *user_data)
 {
 	ARG_UNUSED(user_data);
 
-	return modbus_register_service_write_coil(addr, value);
+	return modbus_data_model_write_coil(addr, value);
 }
 
 static int adapter_input_read(uint16_t addr, uint16_t *value, void *user_data)
 {
 	ARG_UNUSED(user_data);
 
-	return modbus_register_service_read_input(addr, value);
+	return modbus_data_model_read_input(addr, value);
 }
 
 static int adapter_holding_read(uint16_t addr, uint16_t *value, void *user_data)
 {
 	ARG_UNUSED(user_data);
 
-	return modbus_register_service_read_holding(addr, value);
+	return modbus_data_model_read_holding(addr, value);
 }
 
 static int adapter_holding_write(uint16_t addr, uint16_t value,
@@ -42,7 +42,7 @@ static int adapter_holding_write(uint16_t addr, uint16_t value,
 {
 	ARG_UNUSED(user_data);
 
-	return modbus_register_service_write_holding(addr, value);
+	return modbus_data_model_write_holding(addr, value);
 }
 
 static const struct modbus_tcp_server_callbacks adapter_callbacks = {
@@ -57,9 +57,9 @@ static int modbus_tcp_register_adapter_init(void)
 {
 	int err;
 
-	err = modbus_register_service_init();
+	err = modbus_data_model_init();
 	if (err != 0) {
-		LOG_ERR("Failed to initialize Modbus register service: %d", err);
+		LOG_ERR("Failed to initialize Modbus data model: %d", err);
 		return err;
 	}
 

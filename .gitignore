@@ -1,4 +1,5 @@
 build/
+keys/
 scripts/
 docs/
 *.bin

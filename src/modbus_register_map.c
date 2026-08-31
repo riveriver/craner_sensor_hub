@@ -1,5 +1,3 @@
-#include "modbus_register_map.h"
-
 #include <zephyr/app_version.h>
 #include <zephyr/init.h>
 #include <zephyr/logging/log.h>
@@ -7,7 +5,7 @@
 
 #include <string.h>
 
-#include "modbus_register_service.h"
+#include "modbus_data_model.h"
 
 LOG_MODULE_REGISTER(modbus_register_map, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -129,17 +127,17 @@ static uint16_t build_time_MMSS_bcd(void)
 	return BCD_REG(build_minute(), build_second());
 }
 
-static struct modbus_register_coil coil_table[] = {
+static struct modbus_data_model_coil coil_table[] = {
 	{ .name = "REG_COIL_RESERVER", .addr = 0x0000, .default_value = false,
 	  .flags = MODBUS_REG_ACCESS_RW },
 };
 
-static struct modbus_register_holding holding_register_table[] = {
+static struct modbus_data_model_holding holding_register_table[] = {
 	{ .name = "REG_HOLDING_RESERVER", .addr = 0x0000, .default_value = 0,
 	  .flags = MODBUS_REG_ACCESS_RW_PERSISTENT },
 };
 
-static struct modbus_register_input input_register_table[] = {
+static struct modbus_data_model_input input_register_table[] = {
 	{ .name = "REG_FIRMWARE_VERSION", .addr = REG_FW_VERSION_ADDR, .default_value = APP_VERSION_BCD, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_FIRMWARE_BUILD_YYMM", .addr = REG_FW_BUILD_YYMM_ADDR, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_FIRMWARE_BUILD_DDHH", .addr = REG_FW_BUILD_DDHH_ADDR, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
@@ -214,7 +212,7 @@ static struct modbus_register_input input_register_table[] = {
 	{ .name = "REG_LUFFING_IMU_YAW_L", .addr = 0x0041, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 };
 
-static struct modbus_register_map app_register_map = {
+static struct modbus_data_model_table app_register_map = {
 	.coils = coil_table,
 	.coil_count = ARRAY_SIZE(coil_table),
 	.coil_address_size = MODBUS_COIL_ADDRESS_SIZE,
@@ -246,7 +244,7 @@ static void modbus_register_map_update_build_info(void)
 					      build_time_MMSS_bcd());
 }
 
-struct modbus_register_map *modbus_register_map_get(void)
+struct modbus_data_model_table *modbus_register_map_get(void)
 {
 	return &app_register_map;
 }
@@ -257,12 +255,12 @@ static int modbus_register_map_init(void)
 
 	modbus_register_map_update_build_info();
 
-	err = modbus_register_service_register_map(&app_register_map);
+	err = modbus_data_model_register_table(&app_register_map);
 	if (err != 0) {
 		return err;
 	}
 
-	err = modbus_register_service_init();
+	err = modbus_data_model_init();
 	if (err != 0) {
 		return err;
 	}

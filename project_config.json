@@ -11,7 +11,8 @@
   },
   "Build": {
     "BuildDir": "build/{BoardName}",
-    "ExtraConf": "config/product_{ProductId}.conf"
+    "ExtraConf": "config/product_{ProductId}.conf",
+    "SysbuildConf": "config/product_{ProductId}_sysbuild.conf"
   },
   "Flash": {
     "FlashRunner": "stm32cubeprogrammer",
@@ -25,8 +26,8 @@
     "ConnType": "udp",
     "McuMgr": "mcumgr",
     "ImagePath": "",
-    "AppSignedBinPath": "{BuildDir}/{ProjectName}/zephyr/zephyr.signed.bin",
-    "AppSignedHexPath": "{BuildDir}/{ProjectName}/zephyr/zephyr.signed.hex",
+    "AppSignedBinPath": "{BuildDir}/{ProjectName}/zephyr/zephyr.signed.encrypted.bin",
+    "AppSignedHexPath": "{BuildDir}/{ProjectName}/zephyr/zephyr.signed.encrypted.hex",
     "OtaOutputDir": "{BuildDir}/ota_images",
     "OtaUpdateBinPath": "{OtaOutputDir}/app_update_signed.bin",
     "OtaUpdateHexPath": "{OtaOutputDir}/app_update_signed.hex"

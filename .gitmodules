@@ -34,3 +34,6 @@
 [submodule "module/fault_dump_service"]
 	path = module/fault_dump_service
 	url = https://github.com/HKCRC/fault_dump_service.git
+[submodule "module/modbus_data_model"]
+	path = module/modbus_data_model
+	url = https://github.com/HKCRC/modbus_data_model.git

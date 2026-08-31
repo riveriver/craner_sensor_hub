@@ -7,7 +7,7 @@
 #include <zephyr/sys/util.h>
 
 #include "imu_sample_service.h"
-#include "modbus_register_service.h"
+#include "modbus_data_model.h"
 #include "system_health_app.h"
 #include "wit_imu_modbus.h"
 
@@ -65,7 +65,7 @@ static int luffing_imu_app_write_failure(int err)
 		1U,
 	};
 
-	return modbus_register_service_write_inputs_by_name(
+	return modbus_data_model_write_inputs_by_name(
 		"REG_LUFFING_IMU_ERROR_CODE", failure_values,
 		ARRAY_SIZE(failure_values));
 }
@@ -87,7 +87,7 @@ static int luffing_imu_app_write_success(
 		value_low16(sample->yaw_mdeg),
 	};
 
-	return modbus_register_service_write_inputs_by_name(
+	return modbus_data_model_write_inputs_by_name(
 		"REG_LUFFING_IMU_TIMESTAMP_H", imu_values,
 		ARRAY_SIZE(imu_values));
 }

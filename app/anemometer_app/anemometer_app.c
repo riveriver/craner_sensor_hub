@@ -7,7 +7,7 @@
 
 #include "anemometer_sample_service.h"
 #include "anemometer_modbus.h"
-#include "modbus_register_service.h"
+#include "modbus_data_model.h"
 #include "system_health_app.h"
 
 LOG_MODULE_REGISTER(anemometer_app, CONFIG_LOG_DEFAULT_LEVEL);
@@ -51,7 +51,7 @@ static int anemometer_write_failure(int err)
 		1U,
 	};
 
-	return modbus_register_service_write_inputs_by_name(
+	return modbus_data_model_write_inputs_by_name(
 		"REG_ANEMOMETER_ERROR_CODE", failure_values,
 		ARRAY_SIZE(failure_values));
 }
@@ -72,7 +72,7 @@ static int anemometer_write_success(
 		sample->wind_direction,
 	};
 
-	return modbus_register_service_write_inputs_by_name(
+	return modbus_data_model_write_inputs_by_name(
 		"REG_ANEMOMETER_TIMESTAMP_H", values, ARRAY_SIZE(values));
 }
 

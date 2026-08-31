@@ -1,5 +1,9 @@
-#ifdef CONFIG_MODBUS_REGISTER_STORE
-#include "modbus_register_store.h"
+#if defined(CONFIG_MODBUS_DATA_MODEL_STORE) && \
+	defined(CONFIG_MODBUS_DATA_MODEL_STORE_FLASH)
+#include <zephyr/storage/flash_map.h>
+
+#include "modbus_data_model_store.h"
+#include "modbus_data_model_store_flash.h"
 #endif
 #ifdef CONFIG_ENABLE_STORAGE_SERVICE
 #include "storage_service.h"
@@ -11,6 +15,36 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
+
+#if defined(CONFIG_MODBUS_DATA_MODEL_STORE) && \
+	defined(CONFIG_MODBUS_DATA_MODEL_STORE_FLASH)
+#define MODBUS_DATA_MODEL_STORE_AREA_ID \
+	DT_FIXED_PARTITION_ID(DT_NODELABEL(modbus_store_partition))
+
+static struct modbus_data_model_store_backend modbus_data_model_store_backend;
+
+static int app_modbus_data_model_store_init(void)
+{
+	const struct modbus_data_model_flash_store_config flash_config = {
+		.flash_area_id = MODBUS_DATA_MODEL_STORE_AREA_ID,
+	};
+	const struct modbus_data_model_store_config store_config = {
+		.backend = &modbus_data_model_store_backend,
+		.save_delay_ms =
+			CONFIG_MODBUS_DATA_MODEL_STORE_DEFAULT_SAVE_DELAY_MS,
+	};
+	int rc;
+
+	rc = modbus_data_model_flash_store_backend_init(
+		&flash_config, &modbus_data_model_store_backend);
+	if (rc != 0) {
+		return rc;
+	}
+
+	return modbus_data_model_store_init(&store_config);
+}
+#endif
+
 int main(void)
 {
 	int rc;
@@ -27,10 +61,11 @@ int main(void)
 		printk("Shell app init failed: %d\n", rc);
 	}
 
-#ifdef CONFIG_MODBUS_REGISTER_STORE
-	rc = modbus_register_store_init();
+#if defined(CONFIG_MODBUS_DATA_MODEL_STORE) && \
+	defined(CONFIG_MODBUS_DATA_MODEL_STORE_FLASH)
+	rc = app_modbus_data_model_store_init();
 	if (rc != 0) {
-		printk("Modbus register store init failed: %d\n", rc);
+		printk("Modbus data model store init failed: %d\n", rc);
 	}
 #endif
 

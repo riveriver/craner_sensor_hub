@@ -12,7 +12,7 @@ add_subdirectory(module/ota_manager_service)
 add_subdirectory(module/device_param_server)
 add_subdirectory(module/device_identity_service)
 add_subdirectory(module/fault_dump_service)
-add_subdirectory(module/modbus_register_service)
+add_subdirectory(module/modbus_data_model)
 add_subdirectory(module/modbus_tcp_server)
 add_subdirectory(module/imu_sample_service)
 add_subdirectory(module/encoder_sample_service)
@@ -58,7 +58,7 @@ target_link_libraries(app PRIVATE
 	device_param_server
 	device_identity_service
 	fault_dump_service
-	modbus_register_service
+	modbus_data_model
 	modbus_tcp_server
 	imu_sample_service
 	encoder_sample_service
