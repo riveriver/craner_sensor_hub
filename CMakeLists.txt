@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20.0)
 list(APPEND BOARD_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
-project(craner_encoder_hub)
+project(craner_sensor_hub)
 
 add_subdirectory(module/system_health_service)
 add_subdirectory(module/network_manager_service)

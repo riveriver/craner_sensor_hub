@@ -1,5 +1,5 @@
 # Version: 1.1.0
-$toolScript = Join-Path $PSScriptRoot "zephyr-dev-workflow\script\workflow.ps1"
+$toolScript = Join-Path $PSScriptRoot "tool\zephyr-dev-workflow\script\workflow.ps1"
 $projectConfig = Join-Path $PSScriptRoot "project_config.json"
 
 if (-not (Test-Path $toolScript)) {

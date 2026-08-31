@@ -2,7 +2,7 @@
   "Version": "4.0.0",
   "Base": {
     "BoardName": "craner_general_stm32h743vit6",
-    "ProjectName": "craner_encoder_hub",
+    "ProjectName": "craner_sensor_hub",
     "ProductId": 101,
     "DeviceId": 32,
     "OtaTarget": "192.168.18.32",
@@ -26,8 +26,8 @@
     "ConnType": "udp",
     "McuMgr": "mcumgr",
     "ImagePath": "",
-    "AppSignedBinPath": "{BuildDir}/{ProjectName}/zephyr/zephyr.signed.encrypted.bin",
-    "AppSignedHexPath": "{BuildDir}/{ProjectName}/zephyr/zephyr.signed.encrypted.hex",
+    "AppSignedBinPath": "{BuildDir}/{ProjectName}/zephyr/zephyr.signed.bin",
+    "AppSignedHexPath": "{BuildDir}/{ProjectName}/zephyr/zephyr.signed.hex",
     "OtaOutputDir": "{BuildDir}/ota_images",
     "OtaUpdateBinPath": "{OtaOutputDir}/app_update_signed.bin",
     "OtaUpdateHexPath": "{OtaOutputDir}/app_update_signed.hex"

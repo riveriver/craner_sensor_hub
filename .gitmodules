@@ -1,5 +1,5 @@
 [submodule "zephyr-dev-workflow"]
-	path = zephyr-dev-workflow
+	path = tool/zephyr-dev-workflow
 	url = https://github.com/HKCRC/zephyr-dev-workflow.git
 [submodule "module/anemometer_sample_service"]
 	path = module/anemometer_sample_service

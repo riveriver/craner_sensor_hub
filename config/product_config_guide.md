@@ -204,7 +204,7 @@ Merged configuration '...\config\product_102.conf'
 也可以檢查生成配置：
 
 ```powershell
-Select-String -Path build\craner_general_stm32h743vit6\craner_encoder_hub\zephyr\.config -Pattern "CONFIG_NETWORK_MANAGER_DHCP_ENABLE|CONFIG_NETWORK_STATIC_IPV4|CONFIG_NETWORK_RESCUE_IPV4|CONFIG_TOWER_TYPE"
+Select-String -Path build\craner_general_stm32h743vit6\craner_sensor_hub\zephyr\.config -Pattern "CONFIG_NETWORK_MANAGER_DHCP_ENABLE|CONFIG_NETWORK_STATIC_IPV4|CONFIG_NETWORK_RESCUE_IPV4|CONFIG_TOWER_TYPE"
 ```
 
 ## 9. 新產品配置檢查清單

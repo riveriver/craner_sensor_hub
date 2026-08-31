@@ -1,4 +1,4 @@
-# craner_encoder_hub
+# craner_sensor_hub
 
 用于 `craner_general_stm32h743vit6` 板子的独立 Zephyr 应用。
 
@@ -24,7 +24,7 @@ git submodule update --init --recursive
 在当前目录执行：
 
 ```powershell
-.\zephyr-dev-workflow\script\build.ps1
+.\tool\zephyr-dev-workflow\script\build.ps1
 ```
 
 等价的手动命令：
@@ -39,7 +39,7 @@ python -m west build -b craner_general_stm32h743vit6 . -d build\craner_general_s
 将 ST-LINK 连接到板子后，烧录已有构建产物：
 
 ```powershell
-.\zephyr-dev-workflow\script\flash.ps1
+.\tool\zephyr-dev-workflow\script\flash.ps1
 ```
 
 等价的手动命令：
