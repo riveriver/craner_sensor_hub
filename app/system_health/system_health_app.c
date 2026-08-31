@@ -3,6 +3,7 @@
 
 #include <errno.h>
 
+#include <zephyr/init.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/util.h>
 
@@ -110,3 +111,22 @@ int system_health_app_get_unix_time_s(int64_t *unix_time_s, void *user_data)
 	*unix_time_s = utc_ms / 1000LL;
 	return 0;
 }
+
+static int system_health_app_init(void)
+{
+	const struct sys_health_time_provider time_provider = {
+		.get_unix_time_s = system_health_app_get_unix_time_s,
+	};
+	int err;
+
+	err = sys_health_init(system_health_app_event_table,
+			      system_health_app_event_table_size,
+			      &time_provider);
+	if (err != 0) {
+		LOG_ERR("Failed to initialize system health app: %d", err);
+	}
+
+	return err;
+}
+
+SYS_INIT(system_health_app_init, APPLICATION, 91);

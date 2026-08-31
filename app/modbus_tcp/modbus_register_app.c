@@ -1,13 +1,20 @@
 #include <zephyr/app_version.h>
 #include <zephyr/init.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/util.h>
 
 #include <string.h>
 
 #include "modbus_data_model.h"
+#include "modbus_data_model_store.h"
+#include "modbus_data_model_store_flash.h"
+#include "modbus_tcp_server.h"
 
-LOG_MODULE_REGISTER(modbus_register_map, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(modbus_register_app, CONFIG_LOG_DEFAULT_LEVEL);
+
+#define MODBUS_DATA_MODEL_STORE_AREA_ID \
+	DT_FIXED_PARTITION_ID(DT_NODELABEL(modbus_store_partition))
 
 #define MODBUS_COIL_ADDRESS_SIZE 10U
 #define MODBUS_INPUT_ADDRESS_SIZE 100U
@@ -224,7 +231,7 @@ static struct modbus_data_model_table app_register_map = {
 	.holding_address_size = MODBUS_HOLDING_ADDRESS_SIZE,
 };
 
-static void modbus_register_map_set_input_default(uint16_t addr, uint16_t value)
+static void modbus_register_app_set_input_default(uint16_t addr, uint16_t value)
 {
 	for (size_t i = 0; i < ARRAY_SIZE(input_register_table); i++) {
 		if (input_register_table[i].addr == addr) {
@@ -234,26 +241,93 @@ static void modbus_register_map_set_input_default(uint16_t addr, uint16_t value)
 	}
 }
 
-static void modbus_register_map_update_build_info(void)
+static void modbus_register_app_update_build_info(void)
 {
-	modbus_register_map_set_input_default(REG_FW_BUILD_YYMM_ADDR,
+	modbus_register_app_set_input_default(REG_FW_BUILD_YYMM_ADDR,
 					      build_time_YYMM_bcd());
-	modbus_register_map_set_input_default(REG_FW_BUILD_DDHH_ADDR,
+	modbus_register_app_set_input_default(REG_FW_BUILD_DDHH_ADDR,
 					      build_time_DDHH_bcd());
-	modbus_register_map_set_input_default(REG_FW_BUILD_MMSS_ADDR,
+	modbus_register_app_set_input_default(REG_FW_BUILD_MMSS_ADDR,
 					      build_time_MMSS_bcd());
 }
 
-struct modbus_data_model_table *modbus_register_map_get(void)
+#if defined(CONFIG_MODBUS_TCP_SERVER)
+static int adapter_coil_read(uint16_t addr, bool *value, void *user_data)
 {
-	return &app_register_map;
+	ARG_UNUSED(user_data);
+
+	return modbus_data_model_read_coil(addr, value);
 }
 
-static int modbus_register_map_init(void)
+static int adapter_coil_write(uint16_t addr, bool value, void *user_data)
+{
+	ARG_UNUSED(user_data);
+
+	return modbus_data_model_write_coil(addr, value);
+}
+
+static int adapter_input_read(uint16_t addr, uint16_t *value, void *user_data)
+{
+	ARG_UNUSED(user_data);
+
+	return modbus_data_model_read_input(addr, value);
+}
+
+static int adapter_holding_read(uint16_t addr, uint16_t *value, void *user_data)
+{
+	ARG_UNUSED(user_data);
+
+	return modbus_data_model_read_holding(addr, value);
+}
+
+static int adapter_holding_write(uint16_t addr, uint16_t value,
+				 void *user_data)
+{
+	ARG_UNUSED(user_data);
+
+	return modbus_data_model_write_holding(addr, value);
+}
+
+static const struct modbus_tcp_server_callbacks adapter_callbacks = {
+	.coil_read = adapter_coil_read,
+	.coil_write = adapter_coil_write,
+	.input_read = adapter_input_read,
+	.holding_read = adapter_holding_read,
+	.holding_write = adapter_holding_write,
+};
+#endif
+
+#if defined(CONFIG_MODBUS_DATA_MODEL_STORE) && \
+	defined(CONFIG_MODBUS_DATA_MODEL_STORE_FLASH)
+static struct modbus_data_model_store_backend modbus_store_backend;
+
+static int modbus_register_app_store_init(void)
+{
+	const struct modbus_data_model_flash_store_config flash_config = {
+		.flash_area_id = MODBUS_DATA_MODEL_STORE_AREA_ID,
+	};
+	const struct modbus_data_model_store_config store_config = {
+		.backend = &modbus_store_backend,
+		.save_delay_ms =
+			CONFIG_MODBUS_DATA_MODEL_STORE_DEFAULT_SAVE_DELAY_MS,
+	};
+	int err;
+
+	err = modbus_data_model_flash_store_backend_init(
+		&flash_config, &modbus_store_backend);
+	if (err != 0) {
+		return err;
+	}
+
+	return modbus_data_model_store_init(&store_config);
+}
+#endif
+
+static int modbus_register_app_init(void)
 {
 	int err;
 
-	modbus_register_map_update_build_info();
+	modbus_register_app_update_build_info();
 
 	err = modbus_data_model_register_table(&app_register_map);
 	if (err != 0) {
@@ -265,9 +339,26 @@ static int modbus_register_map_init(void)
 		return err;
 	}
 
-	LOG_INF("Project Modbus register map is ready");
+#if defined(CONFIG_MODBUS_DATA_MODEL_STORE) && \
+	defined(CONFIG_MODBUS_DATA_MODEL_STORE_FLASH)
+	err = modbus_register_app_store_init();
+	if (err != 0) {
+		LOG_ERR("Failed to initialize Modbus data model store: %d", err);
+		return err;
+	}
+#endif
+
+#if defined(CONFIG_MODBUS_TCP_SERVER)
+	err = modbus_tcp_server_register_callbacks(&adapter_callbacks, NULL);
+	if (err != 0) {
+		LOG_ERR("Failed to register Modbus TCP callbacks: %d", err);
+		return err;
+	}
+#endif
+
+	LOG_INF("Project Modbus register app is ready");
 
 	return 0;
 }
 
-SYS_INIT(modbus_register_map_init, APPLICATION, 90);
+SYS_INIT(modbus_register_app_init, APPLICATION, 90);

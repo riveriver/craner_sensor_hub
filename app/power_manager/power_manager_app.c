@@ -7,7 +7,7 @@
 
 #include <errno.h>
 
-LOG_MODULE_REGISTER(power_control_app, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(power_manager_app, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define LOAD_SWITCH_3V3_NODE DT_ALIAS(load_switch_3v3)
 #define LOAD_SWITCH_5V_NODE DT_ALIAS(load_switch_5v)
@@ -20,12 +20,12 @@ BUILD_ASSERT(DT_NODE_HAS_STATUS(LOAD_SWITCH_5V_NODE, okay),
 BUILD_ASSERT(DT_NODE_HAS_STATUS(LOAD_SWITCH_NET_BRIDGE_NODE, okay),
 	     "Missing load-switch-net-bridge alias");
 
-struct power_control_gpio {
+struct power_manager_gpio {
 	const char *name;
 	struct gpio_dt_spec gpio;
 };
 
-static const struct power_control_gpio power_control_gpios[] = {
+static const struct power_manager_gpio power_manager_gpios[] = {
 	{
 		.name = "LOAD_SWITCH_3V3",
 		.gpio = GPIO_DT_SPEC_GET(LOAD_SWITCH_3V3_NODE, gpios),
@@ -40,12 +40,12 @@ static const struct power_control_gpio power_control_gpios[] = {
 	},
 };
 
-static int power_control_app_init(void)
+static int power_manager_app_init(void)
 {
 	int err;
 
-	for (size_t i = 0; i < ARRAY_SIZE(power_control_gpios); i++) {
-		const struct power_control_gpio *power = &power_control_gpios[i];
+	for (size_t i = 0; i < ARRAY_SIZE(power_manager_gpios); i++) {
+		const struct power_manager_gpio *power = &power_manager_gpios[i];
 
 		if (!gpio_is_ready_dt(&power->gpio)) {
 			LOG_ERR("%s GPIO controller is not ready", power->name);
@@ -64,4 +64,4 @@ static int power_control_app_init(void)
 	return 0;
 }
 
-SYS_INIT(power_control_app_init, POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
+SYS_INIT(power_manager_app_init, POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);

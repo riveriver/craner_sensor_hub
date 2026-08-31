@@ -36,15 +36,6 @@ config TOWER_TYPE_LUFFING_JIB
 
 endchoice
 
-config ENABLE_STORAGE_SERVICE
-	bool "Enable persistent storage service skeleton"
-	default y
-	depends on FLASH && FLASH_MAP
-	help
-	  Enable the persistent storage service skeleton. The first
-	  implementation only probes internal flash partitions and exposes
-	  their status through shell diagnostics.
-
 config ENABLE_READ_LOAD_SENSOR
 	bool "Enable load sensor application"
 	default n

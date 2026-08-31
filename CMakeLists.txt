@@ -17,37 +17,17 @@ add_subdirectory(module/modbus_tcp_server)
 add_subdirectory(module/imu_sample_service)
 add_subdirectory(module/encoder_sample_service)
 add_subdirectory(module/anemometer_sample_service)
+add_subdirectory(app/modbus_tcp)
+add_subdirectory(app/power_manager)
+add_subdirectory(app/system_health)
 add_subdirectory(app/luffing_imu_app)
 add_subdirectory(app/encoder_app)
 add_subdirectory(app/anemometer_app)
 
-target_include_directories(app PRIVATE include src)
+target_include_directories(app PRIVATE include src app/system_health)
 
 target_sources(app PRIVATE
 	src/main.c
-	src/power_control_app.c
-	src/shell_app.c
-	src/modbus_register_map.c
-)
-
-target_sources_ifdef(CONFIG_MODBUS_TCP_SERVER app PRIVATE
-	src/modbus_tcp_register_adapter.c
-)
-
-target_sources_ifdef(CONFIG_ENABLE_LOG_SENSOR_THREAD app PRIVATE
-	src/log_app_sensor.c
-)
-
-target_sources_ifdef(CONFIG_ENABLE_LOG_COMM_THREAD app PRIVATE
-	src/log_app_comm.c
-)
-
-target_sources_ifdef(CONFIG_SYS_HEALTH_SERVICE app PRIVATE
-	src/system_health_app.c
-)
-
-target_sources_ifdef(CONFIG_ENABLE_STORAGE_SERVICE app PRIVATE
-	src/storage_service.c
 )
 
 target_link_libraries(app PRIVATE
