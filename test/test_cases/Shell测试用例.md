@@ -2,7 +2,7 @@
 
 ## 1. 测试信息
 
-- 支持串口和 MQTT Shell。MQTT 默认使用 Zephyr 硬件短 ID：例如 `363838/sh/rx` 接收、`363838/sh/tx` 发布。
+- 支持串口和 MQTT Shell。MQTT Shell Topic 使用设备身份服务生成的 `cid`：例如 `sea82f/sh/rx` 接收、`sea82f/sh/tx` 发布。
 - 工具：串口终端、MQTT 客户端。服务器地址、端口、账号按项目配置填写：________。
 - MQTT Shell 只回传 Shell 命令结果；正常业务日志不应大量进入 `/sh/tx`。
 
