@@ -27,7 +27,6 @@ add_subdirectory(module/fault_dump_service)
 add_subdirectory(module/modbus_data_model)
 add_subdirectory(module/modbus_tcp_server)
 add_subdirectory(module/shell_mqtt_service)
-add_subdirectory(module/sensor_manage_service)
 add_subdirectory(module/imu_sample_service)
 add_subdirectory(module/encoder_sample_service)
 add_subdirectory(app/modbus_tcp)
@@ -37,8 +36,9 @@ add_subdirectory(app/luffing_imu_app)
 add_subdirectory(app/encoder_app)
 add_subdirectory(app/anemometer_load_app)
 add_subdirectory(app/log_manage_app)
+add_subdirectory(app/sensor_manage_app)
 
-target_include_directories(app PRIVATE include src app/system_health)
+target_include_directories(app PRIVATE include src app/system_health app/sensor_manage_app)
 
 target_sources(app PRIVATE
 	src/main.c
@@ -55,7 +55,6 @@ target_link_libraries(app PRIVATE
 	modbus_data_model
 	modbus_tcp_server
 	shell_mqtt_service
-	sensor_manage_service
 	imu_sample_service
 	encoder_sample_service
 )

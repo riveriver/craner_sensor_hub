@@ -1,6 +1,6 @@
 #include "system_health_app.h"
 #include "time_manager_service.h"
-#include "sensor_manage_service.h"
+#include "sensor_manage_app.h"
 
 #include <errno.h>
 

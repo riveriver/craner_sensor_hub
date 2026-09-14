@@ -11,7 +11,7 @@
 
 #include "modbus_data_model.h"
 #include "system_health_app.h"
-#include "sensor_manage_service.h"
+#include "sensor_manage_app.h"
 
 LOG_MODULE_REGISTER(anemometer_load_app, CONFIG_LOG_DEFAULT_LEVEL);
 

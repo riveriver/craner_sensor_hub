@@ -1,5 +1,5 @@
 menuconfig SENSOR_MANAGE_SERVICE
-	bool "Sensor runtime manage service"
+	bool "Sensor runtime manage application"
 	default y
 	depends on DEVICE_PARAM_SERVER
 	select SHELL

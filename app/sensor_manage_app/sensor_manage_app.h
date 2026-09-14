@@ -1,5 +1,5 @@
-#ifndef SENSOR_MANAGE_SERVICE_H_
-#define SENSOR_MANAGE_SERVICE_H_
+#ifndef SENSOR_MANAGE_APP_H_
+#define SENSOR_MANAGE_APP_H_
 
 #include <stdbool.h>
 

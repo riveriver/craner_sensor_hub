@@ -1,4 +1,4 @@
-#include "sensor_manage_service.h"
+#include "sensor_manage_app.h"
 #include <errno.h>
 #include <string.h>
 #include <zephyr/init.h>

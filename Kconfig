@@ -10,12 +10,12 @@ rsource "module/fault_dump_service/Kconfig"
 rsource "module/modbus_data_model/Kconfig"
 rsource "module/modbus_tcp_server/Kconfig"
 rsource "module/shell_mqtt_service/Kconfig"
-rsource "module/sensor_manage_service/Kconfig"
 rsource "module/imu_sample_service/Kconfig"
 rsource "module/encoder_sample_service/Kconfig"
 rsource "app/luffing_imu_app/Kconfig"
 rsource "app/encoder_app/Kconfig"
 rsource "app/anemometer_load_app/Kconfig"
+rsource "app/sensor_manage_app/Kconfig"
 
 menu "Craner Encoder Hub application"
 
