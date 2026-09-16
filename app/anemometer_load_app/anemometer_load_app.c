@@ -173,26 +173,26 @@ static void sensor_thread_entry(void *p1, void *p2, void *p3)
 	while (true) {
 		int err;
 
-		#if defined(CONFIG_ENABLE_ANEMOMETER_SENSOR)
-		err = modbus_read_input_regs(iface, ANEMOMETER_UNIT,
+		if (IS_ENABLED(CONFIG_ENABLE_ANEMOMETER_SENSOR)) {
+			err = modbus_read_input_regs(iface, ANEMOMETER_UNIT,
 					      ANEMOMETER_ADDR, anemometer_regs,
 					      ANEMOMETER_COUNT);
-		if (err == 0) {
-			write_anemometer(anemometer_regs);
-		} else {
-			write_anemometer_error(err);
+			if (err == 0) {
+				write_anemometer(anemometer_regs);
+			} else {
+				write_anemometer_error(err);
+			}
 		}
-		#endif
 
-		#if defined(CONFIG_ENABLE_READ_LOAD_SENSOR)
-		err = modbus_read_input_regs(iface, LOAD_ADC_UNIT, LOAD_ADC_ADDR,
+		if (IS_ENABLED(CONFIG_ENABLE_READ_LOAD_SENSOR)) {
+			err = modbus_read_input_regs(iface, LOAD_ADC_UNIT, LOAD_ADC_ADDR,
 					      load_adc_regs, LOAD_ADC_COUNT);
-		if (err == 0 && load_adc_regs[0] <= 4095U) {
-			write_load_adc(load_adc_regs[0]);
-		} else {
-			write_load_adc_error(err != 0 ? err : -ERANGE);
+			if (err == 0 && load_adc_regs[0] <= 4095U) {
+				write_load_adc(load_adc_regs[0]);
+			} else {
+				write_load_adc_error(err != 0 ? err : -ERANGE);
+			}
 		}
-		#endif
 
 		next_poll += k_ms_to_ticks_ceil32(SAMPLE_PERIOD_MS);
 		k_sleep(K_TIMEOUT_ABS_TICKS(next_poll));
@@ -201,17 +201,17 @@ static void sensor_thread_entry(void *p1, void *p2, void *p3)
 
 static int anemometer_load_app_init(void)
 {
-	#if !defined(CONFIG_ENABLE_ANEMOMETER_SENSOR) && \
-	    !defined(CONFIG_ENABLE_READ_LOAD_SENSOR)
-	return 0;
-	#else
+	if (!IS_ENABLED(CONFIG_ENABLE_ANEMOMETER_SENSOR) &&
+	    !IS_ENABLED(CONFIG_ENABLE_READ_LOAD_SENSOR)) {
+		return 0;
+	}
+
 	k_thread_create(&sensor_thread, sensor_stack,
 			K_THREAD_STACK_SIZEOF(sensor_stack), sensor_thread_entry,
 			NULL, NULL, NULL, K_PRIO_PREEMPT(CONFIG_ANEMOMETER_THREAD_PRIORITY),
 			0, K_NO_WAIT);
 	k_thread_name_set(&sensor_thread, "anem_load_modbus");
 	return 0;
-	#endif
 }
 
 SYS_INIT(anemometer_load_app_init, APPLICATION, 95);
