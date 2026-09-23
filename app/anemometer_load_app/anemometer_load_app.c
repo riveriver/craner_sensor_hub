@@ -38,6 +38,7 @@ static const struct modbus_iface_param modbus_param = {
 K_THREAD_STACK_DEFINE(sensor_stack, CONFIG_ANEMOMETER_THREAD_STACK_SIZE);
 static struct k_thread sensor_thread;
 static K_MUTEX_DEFINE(load_lock);
+static K_MUTEX_DEFINE(anemo_lock);
 static struct {
 	uint16_t value;
 	uint32_t timestamp_ms;
@@ -46,6 +47,19 @@ static struct {
 	int last_error;
 	bool online;
 } load_state;
+
+static struct {
+	int16_t temperature;
+	uint16_t humidity;
+	uint16_t pressure;
+	uint16_t wind_speed;
+	uint16_t wind_direction;
+	uint32_t timestamp_ms;
+	uint32_t success_count;
+	uint32_t error_count;
+	int last_error;
+	bool online;
+} anemo_state;
 
 static uint16_t error_code_to_reg(int err)
 {
@@ -68,6 +82,11 @@ static void write_anemometer_error(int err)
 
 	(void)modbus_data_model_write_inputs_by_name(
 		"REG_ANEMOMETER_ERROR_CODE", values, ARRAY_SIZE(values));
+	k_mutex_lock(&anemo_lock, K_FOREVER);
+	anemo_state.error_count++;
+	anemo_state.last_error = err;
+	anemo_state.online = false;
+	k_mutex_unlock(&anemo_lock);
 }
 
 static void write_anemometer(const uint16_t *regs)
@@ -81,6 +100,17 @@ static void write_anemometer(const uint16_t *regs)
 
 	(void)modbus_data_model_write_inputs_by_name(
 		"REG_ANEMOMETER_TIMESTAMP_H", values, ARRAY_SIZE(values));
+	k_mutex_lock(&anemo_lock, K_FOREVER);
+	anemo_state.temperature = (int16_t)(regs[0] - ANEMOMETER_TEMP_OFFSET);
+	anemo_state.humidity = regs[1];
+	anemo_state.pressure = regs[2];
+	anemo_state.wind_speed = regs[3];
+	anemo_state.wind_direction = regs[4];
+	anemo_state.timestamp_ms = timestamp;
+	anemo_state.success_count++;
+	anemo_state.last_error = 0;
+	anemo_state.online = true;
+	k_mutex_unlock(&anemo_lock);
 	system_health_update_event(SYSTEM_HEALTH_READ_ANEMOMETER);
 }
 
@@ -114,6 +144,42 @@ static void write_load_adc(uint16_t value)
 	load_state.online = true;
 	k_mutex_unlock(&load_lock);
 }
+
+#if defined(CONFIG_ANEMOMETER_SHELL)
+static int cmd_anemo_sample(const struct shell *shell, size_t argc, char **argv)
+{
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+	k_mutex_lock(&anemo_lock, K_FOREVER);
+	shell_print(shell,
+		    "online=%s temperature=%d humidity=%u pressure=%u wind_speed=%u wind_direction=%u timestamp_ms=%u last_error=%d",
+		    anemo_state.online ? "yes" : "no", anemo_state.temperature,
+		    anemo_state.humidity, anemo_state.pressure, anemo_state.wind_speed,
+		    anemo_state.wind_direction, anemo_state.timestamp_ms,
+		    anemo_state.last_error);
+	k_mutex_unlock(&anemo_lock);
+	return 0;
+}
+
+static int cmd_anemo_stats(const struct shell *shell, size_t argc, char **argv)
+{
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+	k_mutex_lock(&anemo_lock, K_FOREVER);
+	shell_print(shell, "success=%u error=%u last_error=%d",
+		    anemo_state.success_count, anemo_state.error_count,
+		    anemo_state.last_error);
+	k_mutex_unlock(&anemo_lock);
+	return 0;
+}
+
+SHELL_STATIC_SUBCMD_SET_CREATE(anemo_cmds,
+	SHELL_CMD(sample, NULL, "Show latest anemometer sample.", cmd_anemo_sample),
+	SHELL_CMD(stats, NULL, "Show anemometer statistics.", cmd_anemo_stats),
+	SHELL_SUBCMD_SET_END
+);
+SHELL_CMD_REGISTER(anemo, &anemo_cmds, "Anemometer commands.", NULL);
+#endif
 
 #if defined(CONFIG_LOAD_ADC_SHELL)
 static int cmd_load_sample(const struct shell *shell, size_t argc, char **argv)

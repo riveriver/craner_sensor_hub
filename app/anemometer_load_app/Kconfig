@@ -50,6 +50,11 @@ config ANEMOMETER_THREAD_PRIORITY
 	default 6
 	range 0 15
 
+config ANEMOMETER_SHELL
+	bool "Enable anemometer shell commands"
+	default y
+	depends on SHELL
+
 config LOAD_ADC_SHELL
 	bool "Enable load ADC shell commands"
 	default y
