@@ -13,6 +13,11 @@ config ANEMOMETER_MODBUS_UNIT_ID
 	default 1
 	range 1 247
 
+config LOAD_SENSOR_MODBUS_UNIT_ID
+	int "Load sensor Modbus unit id"
+	default 2
+	range 1 247
+
 config ANEMOMETER_MODBUS_BAUD
 	int "Anemometer Modbus baud rate"
 	default 9600
@@ -21,9 +26,9 @@ config ANEMOMETER_MODBUS_RX_TIMEOUT_MS
 	int "Anemometer Modbus RX timeout in milliseconds"
 	default 100
 
-config ANEMOMETER_SAMPLE_PERIOD_MS
-	int "Anemometer sample period in milliseconds"
-	default 1000
+config ANEMOMETER_READ_SLOT_BUDGET_MS
+	int "Per-sensor read slot budget in milliseconds"
+	default 500
 	range 100 60000
 
 config ANEMOMETER_MODBUS_START_ADDR

@@ -19,10 +19,11 @@ LOG_MODULE_REGISTER(anemometer_load_app, CONFIG_LOG_DEFAULT_LEVEL);
 #define ANEMOMETER_ADDR CONFIG_ANEMOMETER_MODBUS_START_ADDR
 #define ANEMOMETER_COUNT 5U
 #define ANEMOMETER_TEMP_OFFSET 4000U
-#define LOAD_ADC_UNIT 2U
+#define LOAD_ADC_UNIT CONFIG_LOAD_SENSOR_MODBUS_UNIT_ID
 #define LOAD_ADC_ADDR 0x0000U
 #define LOAD_ADC_COUNT 1U
-#define SAMPLE_PERIOD_MS CONFIG_ANEMOMETER_SAMPLE_PERIOD_MS
+#define READ_SLOT_BUDGET_MS CONFIG_ANEMOMETER_READ_SLOT_BUDGET_MS
+#define CYCLE_BUDGET_MS (READ_SLOT_BUDGET_MS * 2U)
 
 static const struct modbus_iface_param modbus_param = {
 	.mode = MODBUS_MODE_RTU,
@@ -49,6 +50,16 @@ static struct {
 static uint16_t error_code_to_reg(int err)
 {
 	return err < 0 ? (uint16_t)(-err) : (uint16_t)err;
+}
+
+static void wait_until_slot_end(uint32_t slot_start_ms, uint32_t slot_budget_ms)
+{
+	uint32_t elapsed = k_uptime_get_32() - slot_start_ms;
+	uint32_t wait_ms = elapsed < slot_budget_ms ? (slot_budget_ms - elapsed) : 0U;
+
+	if (wait_ms > 0U) {
+		k_sleep(K_MSEC(wait_ms));
+	}
 }
 
 static void write_anemometer_error(int err)
@@ -154,7 +165,6 @@ static void sensor_thread_entry(void *p1, void *p2, void *p3)
 {
 	uint16_t anemometer_regs[ANEMOMETER_COUNT];
 	uint16_t load_adc_regs[LOAD_ADC_COUNT];
-	int64_t next_poll;
 
 	ARG_UNUSED(p1);
 	ARG_UNUSED(p2);
@@ -168,10 +178,10 @@ static void sensor_thread_entry(void *p1, void *p2, void *p3)
 
 	LOG_INF("Anemometer/load ADC Modbus started: iface=%s 9600 8N1, units=%u/%u",
 		ANEMOMETER_IFACE, ANEMOMETER_UNIT, LOAD_ADC_UNIT);
-	next_poll = k_uptime_get();
 
 	while (true) {
 		int err;
+		uint32_t cycle_start_ms = k_uptime_get_32();
 
 		if (IS_ENABLED(CONFIG_ENABLE_ANEMOMETER_SENSOR)) {
 			err = modbus_read_input_regs(iface, ANEMOMETER_UNIT,
@@ -185,6 +195,7 @@ static void sensor_thread_entry(void *p1, void *p2, void *p3)
 		}
 
 		if (IS_ENABLED(CONFIG_ENABLE_READ_LOAD_SENSOR)) {
+			wait_until_slot_end(cycle_start_ms, READ_SLOT_BUDGET_MS);
 			err = modbus_read_input_regs(iface, LOAD_ADC_UNIT, LOAD_ADC_ADDR,
 					      load_adc_regs, LOAD_ADC_COUNT);
 			if (err == 0 && load_adc_regs[0] <= 4095U) {
@@ -194,8 +205,7 @@ static void sensor_thread_entry(void *p1, void *p2, void *p3)
 			}
 		}
 
-		next_poll += k_ms_to_ticks_ceil32(SAMPLE_PERIOD_MS);
-		k_sleep(K_TIMEOUT_ABS_TICKS(next_poll));
+		wait_until_slot_end(cycle_start_ms, CYCLE_BUDGET_MS);
 	}
 }
 
