@@ -21,7 +21,7 @@ LOG_MODULE_REGISTER(anemometer_load_app, CONFIG_LOG_DEFAULT_LEVEL);
 #define ANEMOMETER_TEMP_OFFSET 4000U
 #define LOAD_ADC_UNIT CONFIG_LOAD_SENSOR_MODBUS_UNIT_ID
 #define LOAD_ADC_ADDR 0x0000U
-#define LOAD_ADC_COUNT 1U
+#define LOAD_ADC_COUNT 2U
 #define READ_SLOT_BUDGET_MS CONFIG_ANEMOMETER_READ_SLOT_BUDGET_MS
 #define CYCLE_BUDGET_MS (READ_SLOT_BUDGET_MS * 2U)
 
@@ -40,7 +40,8 @@ static struct k_thread sensor_thread;
 static K_MUTEX_DEFINE(load_lock);
 static K_MUTEX_DEFINE(anemo_lock);
 static struct {
-	uint16_t value;
+	uint16_t in0;
+	uint16_t in01;
 	uint32_t timestamp_ms;
 	uint32_t success_count;
 	uint32_t error_count;
@@ -127,17 +128,19 @@ static void write_load_adc_error(int err)
 	k_mutex_unlock(&load_lock);
 }
 
-static void write_load_adc(uint16_t value)
+static void write_load_adc(const uint16_t *regs)
 {
 	const uint32_t timestamp = k_uptime_get_32();
 	const uint16_t values[] = {
-		(uint16_t)(timestamp >> 16), (uint16_t)timestamp, 0U, 0U, value,
+		(uint16_t)(timestamp >> 16), (uint16_t)timestamp, 0U, 0U,
+		regs[0], regs[1],
 	};
 
 	(void)modbus_data_model_write_inputs_by_name(
 		"REG_LOAD_ADC_TIMESTAMP_H", values, ARRAY_SIZE(values));
 	k_mutex_lock(&load_lock, K_FOREVER);
-	load_state.value = value;
+	load_state.in0 = regs[0];
+	load_state.in01 = regs[1];
 	load_state.timestamp_ms = timestamp;
 	load_state.success_count++;
 	load_state.last_error = 0;
@@ -187,8 +190,9 @@ static int cmd_load_sample(const struct shell *shell, size_t argc, char **argv)
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 	k_mutex_lock(&load_lock, K_FOREVER);
-	shell_print(shell, "online=%s value=%u timestamp_ms=%u last_error=%d",
-			load_state.online ? "yes" : "no", load_state.value,
+	shell_print(shell, "online=%s in0=%u in01=%u timestamp_ms=%u last_error=%d",
+			load_state.online ? "yes" : "no", load_state.in0,
+			load_state.in01,
 			load_state.timestamp_ms, load_state.last_error);
 	k_mutex_unlock(&load_lock);
 	return 0;
@@ -211,9 +215,10 @@ static int cmd_load_status(const struct shell *shell, size_t argc, char **argv)
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 	k_mutex_lock(&load_lock, K_FOREVER);
-	shell_print(shell, "enabled=%s online=%s value=%u",
+	shell_print(shell, "enabled=%s online=%s in0=%u in01=%u",
 			IS_ENABLED(CONFIG_ENABLE_READ_LOAD_SENSOR) ? "yes" : "no",
-			load_state.online ? "yes" : "no", load_state.value);
+			load_state.online ? "yes" : "no", load_state.in0,
+			load_state.in01);
 	k_mutex_unlock(&load_lock);
 	return 0;
 }
@@ -264,8 +269,9 @@ static void sensor_thread_entry(void *p1, void *p2, void *p3)
 			wait_until_slot_end(cycle_start_ms, READ_SLOT_BUDGET_MS);
 			err = modbus_read_input_regs(iface, LOAD_ADC_UNIT, LOAD_ADC_ADDR,
 					      load_adc_regs, LOAD_ADC_COUNT);
-			if (err == 0 && load_adc_regs[0] <= 4095U) {
-				write_load_adc(load_adc_regs[0]);
+			if (err == 0 && load_adc_regs[0] <= 4095U &&
+			    load_adc_regs[1] <= 4095U) {
+				write_load_adc(load_adc_regs);
 			} else {
 				write_load_adc_error(err != 0 ? err : -ERANGE);
 			}

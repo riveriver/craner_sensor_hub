@@ -222,7 +222,8 @@ static struct modbus_data_model_input input_register_table[] = {
 	{ .name = "REG_LOAD_ADC_TIMESTAMP_L", .addr = 0x0043, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LOAD_ADC_ERROR_CODE", .addr = 0x0044, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_LOAD_ADC_OFFLINE_STATUS", .addr = 0x0045, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_ADC_VALUE", .addr = 0x0046, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_ADC_IN0", .addr = 0x0046, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_ADC_IN1", .addr = 0x0047, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 };
 
 static struct modbus_data_model_table app_register_map = {
