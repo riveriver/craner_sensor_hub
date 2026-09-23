@@ -24,7 +24,7 @@ config ANEMOMETER_MODBUS_BAUD
 
 config ANEMOMETER_MODBUS_RX_TIMEOUT_MS
 	int "Anemometer Modbus RX timeout in milliseconds"
-	default 100
+	default 400
 
 config ANEMOMETER_READ_SLOT_BUDGET_MS
 	int "Per-sensor read slot budget in milliseconds"
