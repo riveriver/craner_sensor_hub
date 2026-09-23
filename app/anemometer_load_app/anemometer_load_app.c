@@ -41,7 +41,7 @@ static K_MUTEX_DEFINE(load_lock);
 static K_MUTEX_DEFINE(anemo_lock);
 static struct {
 	uint16_t in0;
-	uint16_t in01;
+	uint16_t in1;
 	uint32_t timestamp_ms;
 	uint32_t success_count;
 	uint32_t error_count;
@@ -140,7 +140,7 @@ static void write_load_adc(const uint16_t *regs)
 		"REG_LOAD_ADC_TIMESTAMP_H", values, ARRAY_SIZE(values));
 	k_mutex_lock(&load_lock, K_FOREVER);
 	load_state.in0 = regs[0];
-	load_state.in01 = regs[1];
+	load_state.in1 = regs[1];
 	load_state.timestamp_ms = timestamp;
 	load_state.success_count++;
 	load_state.last_error = 0;
@@ -190,9 +190,9 @@ static int cmd_load_sample(const struct shell *shell, size_t argc, char **argv)
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 	k_mutex_lock(&load_lock, K_FOREVER);
-	shell_print(shell, "online=%s in0=%u in01=%u timestamp_ms=%u last_error=%d",
+	shell_print(shell, "online=%s in0=%u in1=%u timestamp_ms=%u last_error=%d",
 			load_state.online ? "yes" : "no", load_state.in0,
-			load_state.in01,
+			load_state.in1,
 			load_state.timestamp_ms, load_state.last_error);
 	k_mutex_unlock(&load_lock);
 	return 0;
@@ -215,10 +215,10 @@ static int cmd_load_status(const struct shell *shell, size_t argc, char **argv)
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 	k_mutex_lock(&load_lock, K_FOREVER);
-	shell_print(shell, "enabled=%s online=%s in0=%u in01=%u",
+	shell_print(shell, "enabled=%s online=%s in0=%u in1=%u",
 			IS_ENABLED(CONFIG_ENABLE_READ_LOAD_SENSOR) ? "yes" : "no",
 			load_state.online ? "yes" : "no", load_state.in0,
-			load_state.in01);
+			load_state.in1);
 	k_mutex_unlock(&load_lock);
 	return 0;
 }
