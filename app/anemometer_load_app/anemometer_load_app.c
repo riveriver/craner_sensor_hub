@@ -247,15 +247,16 @@ static void sensor_thread_entry(void *p1, void *p2, void *p3)
 		return;
 	}
 
-	LOG_INF("Anemometer/load ADC Modbus started: iface=%s 9600 8N1, units=%u/%u",
-		ANEMOMETER_IFACE, ANEMOMETER_UNIT, LOAD_ADC_UNIT);
+	LOG_INF("Anemometer/load ADC Modbus started: iface=%s %u 8N1, units=%u/%u",
+		ANEMOMETER_IFACE, CONFIG_ANEMOMETER_MODBUS_BAUD,
+		ANEMOMETER_UNIT, LOAD_ADC_UNIT);
 
 	while (true) {
 		int err;
 		uint32_t cycle_start_ms = k_uptime_get_32();
 
 		if (IS_ENABLED(CONFIG_ENABLE_ANEMOMETER_SENSOR)) {
-			err = modbus_read_input_regs(iface, ANEMOMETER_UNIT,
+			err = modbus_read_holding_regs(iface, ANEMOMETER_UNIT,
 					      ANEMOMETER_ADDR, anemometer_regs,
 					      ANEMOMETER_COUNT);
 			if (err == 0) {
