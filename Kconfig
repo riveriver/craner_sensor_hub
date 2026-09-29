@@ -36,12 +36,12 @@ config TOWER_TYPE_LUFFING_JIB
 
 endchoice
 
-config ENABLE_READ_LOAD_SENSOR
-	bool "Enable load sensor application"
+config ENABLE_LOAD_ADC_CHANNEL
+	bool "Enable load ADC channel application"
 	default n
 	help
-	  Enable product-level load sensor sampling when a load sensor
-	  application is available. Current code uses this symbol to publish
-	  the product capability bit.
+	  Enable product-level load ADC channel sampling when the load ADC
+	  channel is available. Current code uses this symbol to publish
+	  the load ADC capability bit.
 
 endmenu

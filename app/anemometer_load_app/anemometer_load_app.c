@@ -215,8 +215,8 @@ static int cmd_load_status(const struct shell *shell, size_t argc, char **argv)
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 	k_mutex_lock(&load_lock, K_FOREVER);
-	shell_print(shell, "enabled=%s online=%s in0=%u in1=%u",
-			IS_ENABLED(CONFIG_ENABLE_READ_LOAD_SENSOR) ? "yes" : "no",
+		shell_print(shell, "enabled=%s online=%s in0=%u in1=%u",
+			IS_ENABLED(CONFIG_ENABLE_LOAD_ADC_CHANNEL) ? "yes" : "no",
 			load_state.online ? "yes" : "no", load_state.in0,
 			load_state.in1);
 	k_mutex_unlock(&load_lock);
@@ -266,7 +266,7 @@ static void sensor_thread_entry(void *p1, void *p2, void *p3)
 			}
 		}
 
-		if (IS_ENABLED(CONFIG_ENABLE_READ_LOAD_SENSOR)) {
+		if (IS_ENABLED(CONFIG_ENABLE_LOAD_ADC_CHANNEL)) {
 			wait_until_slot_end(cycle_start_ms, READ_SLOT_BUDGET_MS);
 			err = modbus_read_input_regs(iface, LOAD_ADC_UNIT, LOAD_ADC_ADDR,
 					      load_adc_regs, LOAD_ADC_COUNT);
@@ -285,7 +285,7 @@ static void sensor_thread_entry(void *p1, void *p2, void *p3)
 static int anemometer_load_app_init(void)
 {
 	if (!IS_ENABLED(CONFIG_ENABLE_ANEMOMETER_SENSOR) &&
-	    !IS_ENABLED(CONFIG_ENABLE_READ_LOAD_SENSOR)) {
+	    !IS_ENABLED(CONFIG_ENABLE_LOAD_ADC_CHANNEL)) {
 		return 0;
 	}
 

@@ -151,7 +151,7 @@ CONFIG_ENABLE_LUFFING_ENCODER=y
 CONFIG_ENABLE_HOISTING_ENCODER=y
 CONFIG_ENABLE_LUFFING_IMU=n
 CONFIG_ENABLE_ANEMOMETER_SENSOR=y
-CONFIG_ENABLE_READ_LOAD_SENSOR=y
+CONFIG_ENABLE_LOAD_ADC_CHANNEL=y
 ```
 
 未啟用能力對應的離線狀態寄存器默認為 `1`，避免上位機誤讀未接入設備的數據。
@@ -163,9 +163,9 @@ bit0: 回轉編碼器
 bit1: 變幅編碼器
 bit2: 起升編碼器
 bit3: 風速儀/氣象傳感器
-bit4: 載荷傳感器
+bit4: 吊重 UDP 通道
 bit5: 變幅 IMU
-bit6: 保留
+bit6: 吊重 ADC 通道
 bit7: 動臂塔機類型標志
 ```
 
