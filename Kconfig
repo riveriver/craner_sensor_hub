@@ -44,4 +44,12 @@ config ENABLE_LOAD_ADC_CHANNEL
 	  channel is available. Current code uses this symbol to publish
 	  the load ADC capability bit.
 
+config MODBUS_REGISTER_LAYOUT_V2_COMPAT
+	bool "Use Modbus register layout v2 compatibility"
+	default n
+	help
+	  Move the system information block behind the data block to keep
+	  the legacy v2 register address layout. Product 46 enables this
+	  option, while other products keep the default v3 layout.
+
 endmenu

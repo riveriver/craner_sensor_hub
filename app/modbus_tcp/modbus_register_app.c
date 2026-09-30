@@ -20,7 +20,8 @@ LOG_MODULE_REGISTER(modbus_register_app, CONFIG_LOG_DEFAULT_LEVEL);
 #define MODBUS_INPUT_ADDRESS_SIZE 100U
 #define MODBUS_HOLDING_ADDRESS_SIZE 10U
 
-#define MODBUS_PROTOCOL_VERSION_BCD 0x0032U
+#define MODBUS_PROTOCOL_VERSION_V2_BCD 0x0020U
+#define MODBUS_PROTOCOL_VERSION_V3_BCD 0x0030U
 #define CRANE_TYPE_UNINITIALIZED 0xFFFFU
 #define CRANE_TYPE_FLAT_TOP 0x00FAU
 #define CRANE_TYPE_LUFFING_JIB 0x00DBU
@@ -48,16 +49,25 @@ LOG_MODULE_REGISTER(modbus_register_app, CONFIG_LOG_DEFAULT_LEVEL);
 	 (IS_ENABLED(CONFIG_ENABLE_LUFFING_IMU) ? DEVICE_CAPABILITY_LUFFING_IMU : 0U) | \
 	 (IS_ENABLED(CONFIG_ENABLE_LOAD_ADC_CHANNEL) ? DEVICE_CAPABILITY_LOAD_ADC_CHANNEL : 0U) | \
 	 (IS_ENABLED(CONFIG_TOWER_TYPE_LUFFING_JIB) ? DEVICE_CAPABILITY_CRANE_LUFFING_JIB : 0U))
+#define MODBUS_PROTOCOL_VERSION_BCD \
+	(IS_ENABLED(CONFIG_MODBUS_REGISTER_LAYOUT_V2_COMPAT) ? \
+	 MODBUS_PROTOCOL_VERSION_V2_BCD : MODBUS_PROTOCOL_VERSION_V3_BCD)
 #define MODBUS_OFFLINE_DEFAULT(config) (IS_ENABLED(config) ? 0U : 1U)
+#define MODBUS_LAYOUT_SYSTEM_ADDR(addr) \
+	(IS_ENABLED(CONFIG_MODBUS_REGISTER_LAYOUT_V2_COMPAT) ? \
+	 ((addr) + 0x0038U) : (addr))
+#define MODBUS_LAYOUT_DATA_ADDR(addr) \
+	(IS_ENABLED(CONFIG_MODBUS_REGISTER_LAYOUT_V2_COMPAT) ? \
+	 ((addr) - 0x0010U) : (addr))
 
 enum {
-	REG_FW_VERSION_ADDR = 0x0000,
-	REG_FW_BUILD_YYMM_ADDR = 0x0001,
-	REG_FW_BUILD_DDHH_ADDR = 0x0002,
-	REG_FW_BUILD_MMSS_ADDR = 0x0003,
-	REG_CRANE_TYPE_ADDR = 0x000D,
-	REG_PROTOCOL_VERSION_ADDR = 0x000E,
-	REG_DEVICE_CAPABILITY_FLAGS_ADDR = 0x000F,
+	REG_FW_VERSION_ADDR = MODBUS_LAYOUT_SYSTEM_ADDR(0x0000),
+	REG_FW_BUILD_YYMM_ADDR = MODBUS_LAYOUT_SYSTEM_ADDR(0x0001),
+	REG_FW_BUILD_DDHH_ADDR = MODBUS_LAYOUT_SYSTEM_ADDR(0x0002),
+	REG_FW_BUILD_MMSS_ADDR = MODBUS_LAYOUT_SYSTEM_ADDR(0x0003),
+	REG_CRANE_TYPE_ADDR = MODBUS_LAYOUT_SYSTEM_ADDR(0x000D),
+	REG_PROTOCOL_VERSION_ADDR = MODBUS_LAYOUT_SYSTEM_ADDR(0x000E),
+	REG_DEVICE_CAPABILITY_FLAGS_ADDR = MODBUS_LAYOUT_SYSTEM_ADDR(0x000F),
 };
 
 #define BCD_BYTE(value) ((((value) / 10U) << 4) | ((value) % 10U))
@@ -151,81 +161,81 @@ static struct modbus_data_model_input input_register_table[] = {
 	{ .name = "REG_FIRMWARE_BUILD_YYMM", .addr = REG_FW_BUILD_YYMM_ADDR, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_FIRMWARE_BUILD_DDHH", .addr = REG_FW_BUILD_DDHH_ADDR, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_FIRMWARE_BUILD_MMSS", .addr = REG_FW_BUILD_MMSS_ADDR, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_RESERVED_0004", .addr = 0x0004, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_RESERVED_0005", .addr = 0x0005, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_RESERVED_0006", .addr = 0x0006, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_RESERVED_0007", .addr = 0x0007, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_RESERVED_0008", .addr = 0x0008, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_RESERVED_0009", .addr = 0x0009, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_RESERVED_000A", .addr = 0x000A, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_RESERVED_000B", .addr = 0x000B, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_RESERVED_000C", .addr = 0x000C, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_RESERVED_0004", .addr = MODBUS_LAYOUT_SYSTEM_ADDR(0x0004), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_RESERVED_0005", .addr = MODBUS_LAYOUT_SYSTEM_ADDR(0x0005), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_RESERVED_0006", .addr = MODBUS_LAYOUT_SYSTEM_ADDR(0x0006), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_RESERVED_0007", .addr = MODBUS_LAYOUT_SYSTEM_ADDR(0x0007), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_RESERVED_0008", .addr = MODBUS_LAYOUT_SYSTEM_ADDR(0x0008), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_RESERVED_0009", .addr = MODBUS_LAYOUT_SYSTEM_ADDR(0x0009), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_RESERVED_000A", .addr = MODBUS_LAYOUT_SYSTEM_ADDR(0x000A), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_RESERVED_000B", .addr = MODBUS_LAYOUT_SYSTEM_ADDR(0x000B), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_RESERVED_000C", .addr = MODBUS_LAYOUT_SYSTEM_ADDR(0x000C), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_CRANE_TYPE", .addr = REG_CRANE_TYPE_ADDR, .default_value = MODBUS_CRANE_TYPE, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_PROTOCOL_VERSION", .addr = REG_PROTOCOL_VERSION_ADDR, .default_value = MODBUS_PROTOCOL_VERSION_BCD, .flags = MODBUS_REG_ACCESS_RW },
 	{ .name = "REG_DEVICE_CAPABILITY_FLAGS", .addr = REG_DEVICE_CAPABILITY_FLAGS_ADDR, .default_value = MODBUS_DEVICE_CAPABILITY_FLAGS, .flags = MODBUS_REG_ACCESS_RW },
 
-	{ .name = "REG_SLEWING_TIMESTAMP_H", .addr = 0x0010, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_SLEWING_TIMESTAMP_L", .addr = 0x0011, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_SLEWING_ERROR_CODE", .addr = 0x0012, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_SLEWING_OFFLINE_STATUS", .addr = 0x0013, .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_SLEWING_ENCODER), .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_SLEWING_TRUN_CNT", .addr = 0x0014, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_SLEWING_SINAGLE_VAL", .addr = 0x0015, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_SLEWING_TIMESTAMP_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0010), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_SLEWING_TIMESTAMP_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0011), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_SLEWING_ERROR_CODE", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0012), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_SLEWING_OFFLINE_STATUS", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0013), .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_SLEWING_ENCODER), .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_SLEWING_TRUN_CNT", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0014), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_SLEWING_SINAGLE_VAL", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0015), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 
-	{ .name = "REG_LUFFING_TIMESTAMP_H", .addr = 0x0016, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_TIMESTAMP_L", .addr = 0x0017, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_ERROR_CODE", .addr = 0x0018, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_OFFLINE_STATUS", .addr = 0x0019, .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_LUFFING_ENCODER), .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_VALUE_H", .addr = 0x001A, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_VALUE_L", .addr = 0x001B, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_TIMESTAMP_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0016), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_TIMESTAMP_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0017), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_ERROR_CODE", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0018), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_OFFLINE_STATUS", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0019), .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_LUFFING_ENCODER), .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_VALUE_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x001A), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_VALUE_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x001B), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	
-	{ .name = "REG_HOISTING_TIMESTAMP_H", .addr = 0x001C, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_HOISTING_TIMESTAMP_L", .addr = 0x001D, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_HOISTING_ERROR_CODE", .addr = 0x001E, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_HOISTING_OFFLINE_STATUS", .addr = 0x001F, .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_HOISTING_ENCODER), .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_HOISTING_TRUN_CNT", .addr = 0x0020, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_HOISTING_SINAGLE_VAL", .addr = 0x0021, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_HOISTING_TIMESTAMP_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x001C), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_HOISTING_TIMESTAMP_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x001D), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_HOISTING_ERROR_CODE", .addr = MODBUS_LAYOUT_DATA_ADDR(0x001E), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_HOISTING_OFFLINE_STATUS", .addr = MODBUS_LAYOUT_DATA_ADDR(0x001F), .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_HOISTING_ENCODER), .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_HOISTING_TRUN_CNT", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0020), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_HOISTING_SINAGLE_VAL", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0021), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 	
-	{ .name = "REG_ANEMOMETER_TIMESTAMP_H", .addr = 0x0022, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_ANEMOMETER_TIMESTAMP_L", .addr = 0x0023, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_ANEMOMETER_ERROR_CODE", .addr = 0x0024, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_ANEMOMETER_OFFLINE_STATUS", .addr = 0x0025, .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_ANEMOMETER_SENSOR), .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_ANEMOMETER_TEMPERATURE", .addr = 0x0026, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_ANEMOMETER_HUMIDITY", .addr = 0x0027, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_ANEMOMETER_PRESSURE", .addr = 0x0028, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_ANEMOMETER_WIND_SPEED", .addr = 0x0029, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_ANEMOMETER_WIND_DIRECTION", .addr = 0x002A, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_RESERVED_002B", .addr = 0x002B, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_ANEMOMETER_TIMESTAMP_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0022), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_ANEMOMETER_TIMESTAMP_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0023), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_ANEMOMETER_ERROR_CODE", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0024), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_ANEMOMETER_OFFLINE_STATUS", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0025), .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_ANEMOMETER_SENSOR), .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_ANEMOMETER_TEMPERATURE", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0026), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_ANEMOMETER_HUMIDITY", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0027), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_ANEMOMETER_PRESSURE", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0028), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_ANEMOMETER_WIND_SPEED", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0029), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_ANEMOMETER_WIND_DIRECTION", .addr = MODBUS_LAYOUT_DATA_ADDR(0x002A), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_RESERVED_002B", .addr = MODBUS_LAYOUT_DATA_ADDR(0x002B), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 
-	{ .name = "REG_LOAD_TIMESTAMP_H", .addr = 0x002C, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_TIMESTAMP_L", .addr = 0x002D, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_ERROR_CODE", .addr = 0x002E, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_OFFLINE_STATUS", .addr = 0x002F, .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_LOAD_ADC_CHANNEL), .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LIFTING_MOMENT_H", .addr = 0x0030, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LIFTING_MOMENT_L", .addr = 0x0031, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LIFTING_MOMENT_PCT_H", .addr = 0x0032, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LIFTING_MOMENT_PCT_L", .addr = 0x0033, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_WEIGHT_H", .addr = 0x0034, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_WEIGHT_L", .addr = 0x0035, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_WEIGHT_PCT_H", .addr = 0x0036, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_WEIGHT_PCT_L", .addr = 0x0037, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_TIMESTAMP_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x002C), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_TIMESTAMP_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x002D), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_ERROR_CODE", .addr = MODBUS_LAYOUT_DATA_ADDR(0x002E), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_OFFLINE_STATUS", .addr = MODBUS_LAYOUT_DATA_ADDR(0x002F), .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_LOAD_ADC_CHANNEL), .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LIFTING_MOMENT_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0030), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LIFTING_MOMENT_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0031), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LIFTING_MOMENT_PCT_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0032), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LIFTING_MOMENT_PCT_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0033), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_WEIGHT_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0034), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_WEIGHT_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0035), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_WEIGHT_PCT_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0036), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_WEIGHT_PCT_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0037), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 
-	{ .name = "REG_LUFFING_IMU_TIMESTAMP_H", .addr = 0x0038, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_TIMESTAMP_L", .addr = 0x0039, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_ERROR_CODE", .addr = 0x003A, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_OFFLINE_STATUS", .addr = 0x003B, .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_LUFFING_IMU), .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_ROLL_H", .addr = 0x003C, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_ROLL_L", .addr = 0x003D, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_PITCH_H", .addr = 0x003E, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_PITCH_L", .addr = 0x003F, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_YAW_H", .addr = 0x0040, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LUFFING_IMU_YAW_L", .addr = 0x0041, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_TIMESTAMP_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0038), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_TIMESTAMP_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0039), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_ERROR_CODE", .addr = MODBUS_LAYOUT_DATA_ADDR(0x003A), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_OFFLINE_STATUS", .addr = MODBUS_LAYOUT_DATA_ADDR(0x003B), .default_value = MODBUS_OFFLINE_DEFAULT(CONFIG_ENABLE_LUFFING_IMU), .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_ROLL_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x003C), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_ROLL_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x003D), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_PITCH_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x003E), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_PITCH_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x003F), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_YAW_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0040), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LUFFING_IMU_YAW_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0041), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 
-	{ .name = "REG_LOAD_ADC_TIMESTAMP_H", .addr = 0x0042, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_ADC_TIMESTAMP_L", .addr = 0x0043, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_ADC_ERROR_CODE", .addr = 0x0044, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_ADC_OFFLINE_STATUS", .addr = 0x0045, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_ADC_IN0", .addr = 0x0046, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
-	{ .name = "REG_LOAD_ADC_IN1", .addr = 0x0047, .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_ADC_TIMESTAMP_H", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0042), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_ADC_TIMESTAMP_L", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0043), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_ADC_ERROR_CODE", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0044), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_ADC_OFFLINE_STATUS", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0045), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_ADC_IN0", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0046), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
+	{ .name = "REG_LOAD_ADC_IN1", .addr = MODBUS_LAYOUT_DATA_ADDR(0x0047), .default_value = 0, .flags = MODBUS_REG_ACCESS_RW },
 };
 
 static struct modbus_data_model_table app_register_map = {
@@ -371,3 +381,4 @@ static int modbus_register_app_init(void)
 }
 
 SYS_INIT(modbus_register_app_init, APPLICATION, 90);
+
